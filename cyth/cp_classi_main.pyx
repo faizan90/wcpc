@@ -228,8 +228,8 @@ cpdef classify_cps(dict args_dict):
         for x, y in zip(uni_cps, cp_rel_freqs):
             print('%10d:%-20.2f' % (x, y))
 
-        print('\ncp_rules_idx_ctr:\n', cp_rules_idx_ctr)
-        print('\nbest_cp_rules_idx_ctr:\n', best_cp_rules_idx_ctr)
+        print('\ncp_rules_idx_ctr:\n', cp_rules_idx_ctr.T)
+        print('\nbest_cp_rules_idx_ctr:\n', best_cp_rules_idx_ctr.T)
         print(50 * '#', '\n\n')
 
     mu_i_k_arr = np.zeros(shape=(n_time_steps, n_cps, n_pts), dtype=DT_D_NP)

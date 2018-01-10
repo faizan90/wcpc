@@ -1174,6 +1174,8 @@ def write_cp_classi_main_lines(params_dict):
 
 
 if __name__ == '__main__':
+    # some text to check git
+
     print('\a\a\a\a Started on %s \a\a\a\a\n' % time.asctime())
     START = timeit.default_timer()  # to get the runtime of the program
 
