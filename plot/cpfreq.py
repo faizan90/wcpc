@@ -310,13 +310,6 @@ class CPHistPlot:
 
                 _rel_freq = _cp_ct_ser / self.cp_freqs_ser[_cp_ct_ser.index]
                 
-                print(30 * '#',
-                      '\n',
-                      _cp_ct_ser,
-                      '\n',
-                      self.cp_freqs_ser[_cp_ct_ser.index],
-                      _rel_freq)
-
                 _ax.bar(_dumm_cp_range, _rel_freq.values)
                 _ax.set_xticks(_dumm_cp_range)
 
