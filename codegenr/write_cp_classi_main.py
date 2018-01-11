@@ -118,7 +118,7 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('DT_UL curr_fuzz_idx, last_best_accept_n_iter, max_idxs_ct')
     pyxcd.w('DT_UL rollback_iters_ct, new_iters_ct, update_iters_ct')
     pyxcd.w('DT_UL max_temp_adj_atmps, curr_temp_adj_iter = 0')
-    pyxcd.w('DT_UL max_iters_wo_chng, curr_iters_wo_chng, temp_adjed = 0')
+    pyxcd.w('DT_UL max_iters_wo_chng, curr_iters_wo_chng = 0, temp_adjed = 0')
     pyxcd.w('DT_UL temp_adj_iters, min_acc_rate, max_acc_rate')
     pyxcd.els()
 
@@ -354,6 +354,7 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('print(\'anom shape: (%d, %d)\' % '
             '(slp_anom.shape[0], slp_anom.shape[1]))')
 
+    pyxcd.w('print(\'max_iters_wo_chng:\', max_iters_wo_chng)')
     pyxcd.w('print(\'temp_adj_iters:\', temp_adj_iters)')
     pyxcd.w('print(\'min_acc_rate:\', min_acc_rate)')
     pyxcd.w('print(\'max_acc_rate:\', max_acc_rate)')
@@ -578,7 +579,7 @@ def write_cp_classi_main_lines(params_dict):
         pyxcd.ded(lev=2)
 
     pyxcd.w('# start simulated annealing')
-    pyxcd.w('while (curr_n_iter < max_n_iters) or (not temp_adjed):')
+    pyxcd.w('while ((curr_n_iter < max_n_iters) and (curr_iters_wo_chng < max_iters_wo_chng)) or (not temp_adjed):')
     pyxcd.ind()
 
     pyxcd.w('if (curr_m_iter >= max_m_iters) and (run_type == 2) and (temp_adjed):')
@@ -891,7 +892,6 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.ind()
     pyxcd.w('best_cps[j, k] = cp_rules[j, k]')
     pyxcd.ded()
-
     pyxcd.w('for l in range(n_fuzz_nos):')
     pyxcd.ind()
     pyxcd.w('best_cp_rules_idx_ctr[j, l] = cp_rules_idx_ctr[j, l]')
@@ -920,6 +920,17 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('#cp_rules[rand_k, rand_i] = old_v_i_k')
     pyxcd.w('reject_iters += 1')
     pyxcd.ded(lev=2)
+
+    pyxcd.w('if run_type == 3:')
+    pyxcd.ind()
+    pyxcd.w('curr_iters_wo_chng += 1')
+    pyxcd.ded()
+    pyxcd.w('else:')
+    pyxcd.ind()
+    pyxcd.w('curr_iters_wo_chng = 0')
+    pyxcd.ded()
+
+    pyxcd.els()
 
     pyxcd.w('acc_rate = round(100.0 * (accept_iters + rand_acc_iters) / '
             '(accept_iters + rand_acc_iters + reject_iters), 6)')
@@ -960,6 +971,7 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.els()
 
     pyxcd.w('print(\'acceptance rate (%age):\', acc_rate)')
+    pyxcd.w('print(\'curr_iters_wo_chng:\', curr_iters_wo_chng)')
     pyxcd.els()
 
     pyxcd.w('print(\'cp_dof_arr min, max:\', cp_dof_arr.min(), cp_dof_arr.max())')
@@ -1001,7 +1013,7 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.ind()
     pyxcd.w('print(\'accp_rate (%0.2f%%) is too low!\' % acc_rate)')
     pyxcd.w('temp_inc = (1 + ((min_acc_rate) * 0.01))')
-    pyxcd.w('print(\'Increasing anneal_temp_ini by %0.2f%%...\' % (100 * temp_inc))')
+    pyxcd.w('print(\'Increasing anneal_temp_ini by %0.2f%%...\' % (100 * (1 - temp_inc)))')
     pyxcd.w('anneal_temp_ini = anneal_temp_ini * temp_inc')
     pyxcd.w('curr_anneal_temp = anneal_temp_ini')
     pyxcd.ded()
@@ -1009,7 +1021,7 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.ind()
     pyxcd.w('print(\'accp_rate (%0.2f%%) is too high!\' % acc_rate)')
     pyxcd.w('temp_inc = max(1e-6, (1 - ((acc_rate) * 0.01)))')
-    pyxcd.w('print(\'Reducing anneal_temp_ini to %0.2f%%...\' %  (100 * temp_inc))')
+    pyxcd.w('print(\'Reducing anneal_temp_ini to %0.2f%%...\' %  (100 * (1 - temp_inc)))')
     pyxcd.w('anneal_temp_ini = anneal_temp_ini * temp_inc')
     pyxcd.w('curr_anneal_temp = anneal_temp_ini')
     pyxcd.ded(lev=2)
@@ -1035,6 +1047,8 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('rand_i = n_pts - 1')
     pyxcd.w('rand_v = n_fuzz_nos')
     pyxcd.w('old_v_i_k = n_fuzz_nos')
+
+    pyxcd.w('curr_iters_wo_chng = 0')
 
     pyxcd.w('curr_temp_adj_iter += 1')
 

@@ -50,7 +50,7 @@ cpdef classify_cps(dict args_dict):
         DT_UL curr_fuzz_idx, last_best_accept_n_iter, max_idxs_ct
         DT_UL rollback_iters_ct, new_iters_ct, update_iters_ct
         DT_UL max_temp_adj_atmps, curr_temp_adj_iter = 0
-        DT_UL max_iters_wo_chng, curr_iters_wo_chng, temp_adjed = 0
+        DT_UL max_iters_wo_chng, curr_iters_wo_chng = 0, temp_adjed = 0
         DT_UL temp_adj_iters, min_acc_rate, max_acc_rate
 
         # doubles
@@ -155,6 +155,7 @@ cpdef classify_cps(dict args_dict):
         print('max_idxs_ct:', max_idxs_ct)
         print('obj_ftn_wts_arr:', obj_ftn_wts_arr)
         print('anom shape: (%d, %d)' % (slp_anom.shape[0], slp_anom.shape[1]))
+        print('max_iters_wo_chng:', max_iters_wo_chng)
         print('temp_adj_iters:', temp_adj_iters)
         print('min_acc_rate:', min_acc_rate)
         print('max_acc_rate:', max_acc_rate)
@@ -255,7 +256,7 @@ cpdef classify_cps(dict args_dict):
             assert (not isnan(ppt_mean_pis_arr[m, p]) and (ppt_mean_pis_arr[m, p] > 0))
 
     # start simulated annealing
-    while (curr_n_iter < max_n_iters) or (not temp_adjed):
+    while ((curr_n_iter < max_n_iters) and (curr_iters_wo_chng < max_iters_wo_chng)) or (not temp_adjed):
         if (curr_m_iter >= max_m_iters) and (run_type == 2) and (temp_adjed):
             curr_m_iter = 0
             curr_anneal_temp *= temp_red_alpha
@@ -451,6 +452,12 @@ cpdef classify_cps(dict args_dict):
                 #cp_rules[rand_k, rand_i] = old_v_i_k
                 reject_iters += 1
 
+        if run_type == 3:
+            curr_iters_wo_chng += 1
+
+        else:
+            curr_iters_wo_chng = 0
+
         acc_rate = round(100.0 * (accept_iters + rand_acc_iters) / (accept_iters + rand_acc_iters + reject_iters), 6)
 
         if not curr_m_iter:
@@ -474,6 +481,7 @@ cpdef classify_cps(dict args_dict):
                 print('rollback_iters_ct:', rollback_iters_ct)
 
                 print('acceptance rate (%age):', acc_rate)
+                print('curr_iters_wo_chng:', curr_iters_wo_chng)
 
                 print('cp_dof_arr min, max:', cp_dof_arr.min(), cp_dof_arr.max())
 
@@ -498,14 +506,14 @@ cpdef classify_cps(dict args_dict):
                 if acc_rate < min_acc_rate:
                     print('accp_rate (%0.2f%%) is too low!' % acc_rate)
                     temp_inc = (1 + ((min_acc_rate) * 0.01))
-                    print('Increasing anneal_temp_ini by %0.2f%%...' % (100 * temp_inc))
+                    print('Increasing anneal_temp_ini by %0.2f%%...' % (100 * (1 - temp_inc)))
                     anneal_temp_ini = anneal_temp_ini * temp_inc
                     curr_anneal_temp = anneal_temp_ini
 
                 elif acc_rate > max_acc_rate:
                     print('accp_rate (%0.2f%%) is too high!' % acc_rate)
                     temp_inc = max(1e-6, (1 - ((acc_rate) * 0.01)))
-                    print('Reducing anneal_temp_ini to %0.2f%%...' %  (100 * temp_inc))
+                    print('Reducing anneal_temp_ini to %0.2f%%...' %  (100 * (1 - temp_inc)))
                     anneal_temp_ini = anneal_temp_ini * temp_inc
                     curr_anneal_temp = anneal_temp_ini
 
@@ -526,6 +534,7 @@ cpdef classify_cps(dict args_dict):
                 rand_i = n_pts - 1
                 rand_v = n_fuzz_nos
                 old_v_i_k = n_fuzz_nos
+                curr_iters_wo_chng = 0
                 curr_temp_adj_iter += 1
                 gen_cp_rules(
                     cp_rules,
