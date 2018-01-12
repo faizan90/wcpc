@@ -219,6 +219,7 @@ class CPClassiA(CPOPTBase):
     def plot_iter_obj_vals(self, out_fig_loc, fig_size=(17, 10)):
         if self.msgs:
             print('\n\nPlotting objective function evolution...')
+
         assert self._classified_flag
 
         assert isinstance(out_fig_loc, (str, Path))

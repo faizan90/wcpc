@@ -51,6 +51,7 @@ class CPDataBase:
         assert check_nans_finite(stn_ppt_arr)
         assert len(stn_ppt_arr.shape) == 2
         assert np.all(stn_ppt_arr >= 0)
+        assert stn_ppt_arr.shape[0] > 0
 
         self.stn_ppt_arr = np.array(stn_ppt_arr, dtype=DT_D_NP, order='C')
 
@@ -63,6 +64,7 @@ class CPDataBase:
         assert check_nans_finite(cat_ppt_arr)
         assert len(cat_ppt_arr.shape) == 2
         assert np.all(cat_ppt_arr >= 0)
+        assert cat_ppt_arr.shape[0] > 0
 
         self.cat_ppt_arr = np.array(cat_ppt_arr, dtype=DT_D_NP, order='C')
 
@@ -75,6 +77,7 @@ class CPDataBase:
         assert check_nans_finite(neb_wett_arr)
         assert len(neb_wett_arr.shape) == 2
         assert np.all(neb_wett_arr >= 0)
+        assert neb_wett_arr.shape[0] > 0
 
         self.neb_wett_arr = np.array(neb_wett_arr, dtype=DT_D_NP, order='C')
 
@@ -275,6 +278,7 @@ class CPOPTBase(CPDataBase):
         assert isinstance(vals_tot_anom, np.ndarray)
         assert check_nans_finite(vals_tot_anom)
         assert len(vals_tot_anom.shape) == 2
+        assert vals_tot_anom.shape[0] > 0
 
         self.vals_tot_anom = np.array(vals_tot_anom, dtype=DT_D_NP, order='C')
 
