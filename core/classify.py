@@ -90,7 +90,8 @@ class CPClassiA(CPOPTBase):
                     self.obj_2_flag,
                     self.obj_3_flag,
                     self.obj_4_flag,
-                    self.obj_5_flag))
+                    self.obj_5_flag,
+                    self.obj_6_flag))
 
         if self.obj_1_flag or self.obj_3_flag:
             assert self.vals_tot_anom.shape[0] == self.stn_ppt_arr.shape[0]
@@ -98,7 +99,7 @@ class CPClassiA(CPOPTBase):
         if self.obj_2_flag or self.obj_5_flag:
             assert self.vals_tot_anom.shape[0] == self.cat_ppt_arr.shape[0]
 
-        if self.obj_4_flag:
+        if self.obj_4_flag or self.obj_6_flag:
             assert self.vals_tot_anom.shape[0] == self.neb_wett_arr.shape[0]
 
         self.obj_ftn_wts_arr = np.zeros(self._n_obj_ftns,
@@ -119,6 +120,11 @@ class CPClassiA(CPOPTBase):
 
         if self.obj_5_flag:
             self.obj_ftn_wts_arr[4] = self.o_5_obj_wt
+
+        if self.obj_6_flag:
+            self.obj_ftn_wts_arr[5] = self.o_6_obj_wt
+            assert self.neb_wett_arr.shape[1] == 2, 'For two nebs right now!'
+
         return
 
     def _gen_classi_cyth_mods(self, force_compile=False):
@@ -130,6 +136,7 @@ class CPClassiA(CPOPTBase):
                                    self.obj_3_flag,
                                    self.obj_4_flag,
                                    self.obj_5_flag,
+                                   self.obj_6_flag,
                                    self.cyth_nonecheck,
                                    self.cyth_boundscheck,
                                    self.cyth_wraparound,
@@ -171,7 +178,7 @@ class CPClassiA(CPOPTBase):
             calib_dict['o_4_p_thresh_arr'] = self.o_4_wett_thresh_arr
 
         if self.temp_adj_iters == 'auto':
-            self.temp_adj_iters = self.vals_tot_anom.shape[0] * 1500
+            self.temp_adj_iters = self.vals_tot_anom.shape[1] * 1500
 
         calib_dict['n_cps'] = self.n_cps
         calib_dict['no_cp_val'] = self.no_cp_val

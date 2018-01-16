@@ -21,6 +21,7 @@ def create_classi_cython_files(obj_1_flag=False,
                                obj_3_flag=False,
                                obj_4_flag=False,
                                obj_5_flag=False,
+                               obj_6_flag=False,
                                nonecheck=True,
                                boundscheck=True,
                                wraparound=True,
@@ -30,7 +31,12 @@ def create_classi_cython_files(obj_1_flag=False,
                                force_compile=False,
                                out_dir=''):
 
-    assert any([obj_1_flag, obj_2_flag, obj_3_flag, obj_4_flag, obj_5_flag])
+    assert any([obj_1_flag,
+                obj_2_flag,
+                obj_3_flag,
+                obj_4_flag,
+                obj_5_flag,
+                obj_6_flag])
     assert out_dir
 
     tab = '    '
@@ -50,6 +56,7 @@ def create_classi_cython_files(obj_1_flag=False,
     params_dict['obj_3_flag'] = obj_3_flag
     params_dict['obj_4_flag'] = obj_4_flag
     params_dict['obj_5_flag'] = obj_5_flag
+    params_dict['obj_6_flag'] = obj_6_flag
     
     out_dir = Path(out_dir)
     
@@ -68,7 +75,8 @@ def create_classi_cython_files(obj_1_flag=False,
                           obj_2_flag,
                           obj_3_flag,
                           obj_4_flag,
-                          obj_5_flag]
+                          obj_5_flag,
+                          obj_6_flag]
         
         with open(path_to_main_pyx, 'r') as pyx_hdl:
             for line in pyx_hdl:
@@ -79,8 +87,10 @@ def create_classi_cython_files(obj_1_flag=False,
         if mtch_str:
             _ = (mtch_str.split(':')[1]).strip().split(';')
             old_flags_list = [True if x == 'True' else False for x in _]
-            assert len(new_flags_list) == len(old_flags_list)
             
+            print('Activate this assert!')
+#             assert len(new_flags_list) == len(old_flags_list)
+
             if new_flags_list == old_flags_list:
                 compile_classi_main = False
     else:

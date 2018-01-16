@@ -28,6 +28,7 @@ def write_cp_classi_main_lines(params_dict):
     obj_3_flag = params_dict['obj_3_flag']
     obj_4_flag = params_dict['obj_4_flag']
     obj_5_flag = params_dict['obj_5_flag']
+    obj_6_flag = params_dict['obj_6_flag']
 
     pyxcd = CodeGenr(tab=tab)
     pyxbldcd = CodeGenr(tab=tab)
@@ -46,7 +47,8 @@ def write_cp_classi_main_lines(params_dict):
                            obj_2_flag,
                            obj_3_flag,
                            obj_4_flag,
-                           obj_5_flag]))
+                           obj_5_flag,
+                           obj_6_flag]))
     pyxcd.w('### obj_ftns:' + _)
     pyxcd.els()
 
@@ -168,7 +170,7 @@ def write_cp_classi_main_lines(params_dict):
         pyxcd.w('np.ndarray[DT_D_NP_t, ndim=2, mode=\'c\'] in_cats_ppt_arr')
     pyxcd.els()
 
-    if obj_1_flag or obj_3_flag or obj_4_flag or obj_2_flag or obj_5_flag:
+    if any([obj_1_flag, obj_3_flag, obj_4_flag, obj_2_flag, obj_5_flag]):
         pyxcd.w('# ulongs for obj. ftns.')
     if obj_1_flag or obj_3_flag:
         pyxcd.w('Py_ssize_t m')
@@ -180,9 +182,9 @@ def write_cp_classi_main_lines(params_dict):
 
     pyxcd.els()
 
-    if obj_1_flag or obj_3_flag or obj_4_flag or obj_2_flag or obj_5_flag:
+    if any([obj_1_flag, obj_3_flag, obj_4_flag, obj_2_flag, obj_5_flag]):
         pyxcd.w('# doubles for obj. ftns.')
-    if obj_1_flag or obj_3_flag or obj_2_flag or obj_5_flag:
+    if any([obj_1_flag, obj_3_flag, obj_2_flag, obj_5_flag]):
         pyxcd.w('DT_D min_abs_ppt_thresh')
     pyxcd.els()
 
@@ -249,7 +251,7 @@ def write_cp_classi_main_lines(params_dict):
 
     pyxcd.w('# read everythings from the given dict. Must do explicitly.')
 
-    if obj_1_flag or obj_3_flag or obj_2_flag or obj_5_flag:
+    if any([obj_1_flag, obj_3_flag, obj_2_flag, obj_5_flag]):
         pyxcd.w('min_abs_ppt_thresh = args_dict[\'min_abs_ppt_thresh\']')
 
     if obj_1_flag or obj_3_flag:
@@ -337,7 +339,7 @@ def write_cp_classi_main_lines(params_dict):
         pyxcd.w('print(\'n_nebs:\', n_nebs)')
         pyxcd.w('print(\'n_o_4_threshs:\', n_o_4_threshs)')
 
-    if obj_1_flag or obj_3_flag or obj_2_flag or obj_5_flag:
+    if any([obj_1_flag, obj_3_flag, obj_2_flag, obj_5_flag]):
         pyxcd.w('print(\'min_abs_ppt_thresh:\', min_abs_ppt_thresh)')
 
     pyxcd.w('print(\'n_cps:\', n_cps)')
@@ -745,7 +747,7 @@ def write_cp_classi_main_lines(params_dict):
         pyxcd.w('in_cats_ppt_arr,')
         pyxcd.w('n_cats,')
 
-    if obj_1_flag or obj_3_flag or obj_2_flag or obj_5_flag:
+    if any([obj_1_flag, obj_3_flag, obj_2_flag, obj_5_flag]):
         pyxcd.w('min_abs_ppt_thresh,')
 
     if obj_1_flag:
@@ -808,7 +810,7 @@ def write_cp_classi_main_lines(params_dict):
         pyxcd.w('in_cats_ppt_arr,')
         pyxcd.w('n_cats,')
 
-    if obj_1_flag or obj_3_flag or obj_2_flag or obj_5_flag:
+    if any([obj_1_flag, obj_3_flag, obj_2_flag, obj_5_flag]):
         pyxcd.w('min_abs_ppt_thresh,')
 
     if obj_1_flag:
