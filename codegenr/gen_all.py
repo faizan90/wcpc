@@ -88,8 +88,7 @@ def create_classi_cython_files(obj_1_flag=False,
             _ = (mtch_str.split(':')[1]).strip().split(';')
             old_flags_list = [True if x == 'True' else False for x in _]
             
-            print('Activate this assert!')
-#             assert len(new_flags_list) == len(old_flags_list)
+            assert len(new_flags_list) == len(old_flags_list)
 
             if new_flags_list == old_flags_list:
                 compile_classi_main = False
