@@ -618,7 +618,7 @@ def write_cp_classi_main_lines(params_dict):
         pyxcd.w('for i in range(n_time_steps):')
         pyxcd.ind()
         pyxcd.w('wet_dofs_arr[i] = in_wet_arr_calib[i, 0] + '
-                'in_wet_arr_calib[i, 1] + (2 * in_wet_arr_calib[i, 0] * '
+                'in_wet_arr_calib[i, 1] - (2 * in_wet_arr_calib[i, 0] * '
                 'in_wet_arr_calib[i, 1])')
 
         pyxcd.ded()
@@ -1060,7 +1060,7 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.ind()
     pyxcd.w('print(\'accp_rate (%0.2f%%) is too low!\' % acc_rate)')
     pyxcd.w('temp_inc = (1 + ((min_acc_rate) * 0.01))')
-    pyxcd.w('print(\'Increasing anneal_temp_ini by %0.2f%%...\' % (100 * (1 - temp_inc)))')
+    pyxcd.w('print(\'Increasing anneal_temp_ini by %0.2f%%...\' % (100 * (temp_inc - 1)))')
     pyxcd.w('anneal_temp_ini = anneal_temp_ini * temp_inc')
     pyxcd.w('curr_anneal_temp = anneal_temp_ini')
     pyxcd.ded()

@@ -238,7 +238,7 @@ cpdef classify_cps(dict args_dict):
 
     # obj. 6 ftns.
     for i in range(n_time_steps):
-        wet_dofs_arr[i] = in_wet_arr_calib[i, 0] + in_wet_arr_calib[i, 1] + (2 * in_wet_arr_calib[i, 0] * in_wet_arr_calib[i, 1])
+        wet_dofs_arr[i] = in_wet_arr_calib[i, 0] + in_wet_arr_calib[i, 1] - (2 * in_wet_arr_calib[i, 0] * in_wet_arr_calib[i, 1])
 
     mean_wet_dof = wet_dofs_arr.mean()
     assert ((not isnan(mean_wet_dof)) and (mean_wet_dof > 0))
@@ -486,7 +486,7 @@ cpdef classify_cps(dict args_dict):
                 if acc_rate < min_acc_rate:
                     print('accp_rate (%0.2f%%) is too low!' % acc_rate)
                     temp_inc = (1 + ((min_acc_rate) * 0.01))
-                    print('Increasing anneal_temp_ini by %0.2f%%...' % (100 * (1 - temp_inc)))
+                    print('Increasing anneal_temp_ini by %0.2f%%...' % (100 * (temp_inc - 1)))
                     anneal_temp_ini = anneal_temp_ini * temp_inc
                     curr_anneal_temp = anneal_temp_ini
 
