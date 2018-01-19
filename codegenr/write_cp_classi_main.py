@@ -622,6 +622,7 @@ def write_cp_classi_main_lines(params_dict):
                 'in_wet_arr_calib[i, 1])')
 
         pyxcd.ded()
+        pyxcd.w('wet_dofs_arr[wet_dofs_arr < 0.85] = 0.0')
         pyxcd.w('mean_wet_dof = wet_dofs_arr.mean()')
         pyxcd.w('assert ((not isnan(mean_wet_dof)) and (mean_wet_dof > 0))')
         

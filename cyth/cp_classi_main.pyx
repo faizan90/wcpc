@@ -240,6 +240,7 @@ cpdef classify_cps(dict args_dict):
     for i in range(n_time_steps):
         wet_dofs_arr[i] = in_wet_arr_calib[i, 0] + in_wet_arr_calib[i, 1] - (2 * in_wet_arr_calib[i, 0] * in_wet_arr_calib[i, 1])
 
+    wet_dofs_arr[wet_dofs_arr < 0.85] = 0.0
     mean_wet_dof = wet_dofs_arr.mean()
     assert ((not isnan(mean_wet_dof)) and (mean_wet_dof > 0))
 
