@@ -3,6 +3,7 @@ Created on Dec 29, 2017
 
 @author: Faizan
 '''
+from itertools import product as iprod
 from pathlib import Path
 
 import numpy as np
@@ -34,11 +35,6 @@ class Anomaly:
         assert isinstance(self.time_int, str)
         assert isinstance(self.file_type, str)
         
-        if (self.val_nan_rep is not None):
-            assert isinstance(self.val_nan_rep, (int, float))
-        else:
-            assert (self.val_nan_rep is None)
-
         # TODO: implement for other resolutions
         assert self.time_int == 'D'
 
@@ -84,20 +80,57 @@ class Anomaly:
         self.n_tot_vals = (self.vals_tot_rav.shape[0] * 
                            self.vals_tot_rav.shape[1])
 
-        self.min_vals_tot_rav = np.min(self.vals_tot_rav, axis=1)
-        self.max_vals_tot_rav = np.max(self.vals_tot_rav, axis=1)
+        self.min_vals_tot_rav = np.nanmin(self.vals_tot_rav, axis=1)
+        self.max_vals_tot_rav = np.nanmax(self.vals_tot_rav, axis=1)
 
-        nan_ct = np.sum(np.isnan(self.vals_tot_rav))
+        _nan_idxs = np.isnan(self.vals_tot_rav)
+        nan_ct = np.sum(_nan_idxs)
         _msg = '%d NaN(s) out of %d input values.' % (nan_ct, self.n_tot_vals)
-        if self.val_nan_rep is None:
-            assert not nan_ct, _msg
-        elif nan_ct:
+
+        if nan_ct:
             if self.msgs:
                 print_warning(('\nWarning in read_vars: %s'
-                               ' Setting all to %s.') %
-                               (_msg, str(self.val_nan_rep)))
+                               ' Setting all to the mean of the D8 at the '
+                               'given time steps.') % (_msg))
 
-            self.vals_tot_rav[np.isnan(self.vals_tot_rav)] = self.val_nan_rep
+            nan_rows, nan_cols = np.where(_nan_idxs)
+            max_row = self.vals_tot_rav.shape[0] - 1
+            max_col = self.vals_tot_rav.shape[1] - 1
+            
+            for i in range(nan_rows.shape[0]):
+                curr_row = nan_rows[i]
+                curr_col = nan_cols[i]
+
+                _back_row = curr_row
+                _back_col = curr_col
+                _fore_row = curr_row
+                _fore_col = curr_col
+                
+                if _back_row:
+                    _back_row -= 1
+                
+                if _back_col:
+                    _back_col -= 1
+                    
+                if _fore_row < max_row:
+                    _fore_row += 1
+
+                if _fore_col < max_col:
+                    _fore_col += 1
+
+                _rows_seq = np.repeat(np.arange(_back_row, _fore_row + 1),
+                                      _fore_row - _back_row)
+                _cols_seq = np.tile(np.arange(_back_col, _fore_col + 1),
+                                    _fore_col - _back_col)
+
+                _row_col_seq = list(iprod(np.arange(_back_row, _fore_row + 1),
+                                          np.arange(_back_col, _fore_col + 1)))
+                _row_col_seq = np.array(_row_col_seq, dtype=int)
+
+                self.vals_tot_rav[curr_row, curr_col] = \
+                    np.nanmean(self.vals_tot_rav[_row_col_seq[:, 0],
+                                                 _row_col_seq[:, 1]])
+                    
         return
 
     def read_vars(self,
@@ -107,8 +140,7 @@ class Anomaly:
                   time_dim_lab='time',
                   vals_dim_lab='slp',
                   file_type='nc',
-                  time_int='D',
-                  val_nan_rep=None):
+                  time_int='D'):
 
         self.in_ds_path = Path(in_ds_path)
 
@@ -117,7 +149,6 @@ class Anomaly:
         self.vals_dim_lab = vals_dim_lab
         self.time_dim_lab = time_dim_lab
         self.time_int = time_int
-        self.val_nan_rep = val_nan_rep
 
         self.file_type = file_type
 

@@ -62,6 +62,7 @@ cpdef classify_cps(dict args_dict):
         list curr_obj_vals_list = []
         list best_obj_vals_list = []
         list acc_rate_list = []
+        list ants = [[], []]
 
         # 1D ulong arrays
         np.ndarray[DT_UL_NP_t, ndim=1, mode='c'] best_sel_cps
@@ -484,20 +485,49 @@ cpdef classify_cps(dict args_dict):
                 temp_adjed = 1
 
             else:
-                if acc_rate < min_acc_rate:
-                    print('accp_rate (%0.2f%%) is too low!' % acc_rate)
-                    temp_inc = (1 + ((min_acc_rate) * 0.01))
-                    print('Increasing anneal_temp_ini by %0.2f%%...' % (100 * (temp_inc - 1)))
+                if ants[0] and ants[1]:
+                    print(ants)
+                    
+                    if acc_rate < min_acc_rate:
+                        print('accp_rate (%0.2f%%) is too low!' % acc_rate)
+                        ants[0] = [acc_rate, anneal_temp_ini]
+                    
+                    elif acc_rate > max_acc_rate:
+                        print('accp_rate (%0.2f%%) is too high!' % acc_rate)
+                        ants[1] = [acc_rate, anneal_temp_ini]
+
+                    print(anneal_temp_ini)                        
+#                     anneal_temp_ini = (((0.5 * (max_acc_rate + min_acc_rate)) - ants[0][0]) / (ants[1][0] - ants[0][0])) * (ants[1][1] - ants[0][1])
+                    anneal_temp_ini = 0.5 * ((ants[1][1] + ants[0][1]))
+                    
+                    curr_anneal_temp = anneal_temp_ini
+                    print(anneal_temp_ini)
+                    print(ants)
+                    
+                    
+                
+                else:
+                    if acc_rate < min_acc_rate:
+                        ants[0] = [acc_rate, anneal_temp_ini]
+                        print('accp_rate (%0.2f%%) is too low!' % acc_rate)
+                        temp_inc = (1 + (min_acc_rate * 0.5))
+                        print('Increasing anneal_temp_ini by %0.2f%%...' % (100 * (temp_inc - 1)))
+                        
+                    elif acc_rate > max_acc_rate:
+                        ants[1] = [acc_rate, anneal_temp_ini]
+                        print('accp_rate (%0.2f%%) is too high!' % acc_rate)
+                        temp_inc = max(1e-6, 0.1)
+                        print('Reducing anneal_temp_ini to %0.2f%%...' %  (100 * (1 - temp_inc)))
+                    
                     anneal_temp_ini = anneal_temp_ini * temp_inc
                     curr_anneal_temp = anneal_temp_ini
-
-                elif acc_rate > max_acc_rate:
-                    print('accp_rate (%0.2f%%) is too high!' % acc_rate)
-                    temp_inc = max(1e-6, (1 - ((acc_rate) * 0.01)))
-                    print('Reducing anneal_temp_ini to %0.2f%%...' %  (100 * (1 - temp_inc)))
-                    anneal_temp_ini = anneal_temp_ini * temp_inc
-                    curr_anneal_temp = anneal_temp_ini
-
+                        
+                
+                if anneal_temp_ini <= 0.0:
+                    raise RuntimeError('Incorrect anneal temperature: %0.2f' % anneal_temp_ini)
+                else:
+                    print('new anneal_temp_ini:', anneal_temp_ini)
+            
             if curr_temp_adj_iter < max_temp_adj_atmps:
                 run_type = 1
                 curr_n_iter = 0
