@@ -29,9 +29,9 @@ warm_up()
 
 
 cdef DT_D obj_ftn_refresh(
-    const DT_D mean_wet_dof,
-    DT_D_NP_t[:] mean_cp_wet_dof_arr,
-    const DT_D_NP_t[:] wet_dofs_arr,
+    const DT_D mean_tri_wet,
+    DT_D_NP_t[:] mean_cp_tri_wet_arr,
+    const DT_D_NP_t[:] tri_wet_arr,
     DT_D_NP_t[:] ppt_cp_n_vals_arr,
     const DT_D_NP_t[:] obj_ftn_wts_arr,
     const DT_UL_NP_t[:] sel_cps,
@@ -44,10 +44,17 @@ cdef DT_D obj_ftn_refresh(
     # declare/initialize variables
     cdef:
         Py_ssize_t i, j, s
+        DT_UL num_threads
         DT_D _, obj_val = 0.0
 
-        DT_D o_6 = 0.0
-        DT_D curr_ppt_wet_dof_diff
+        DT_D o_7 = 0.0
+        DT_D curr_ppt_tri_wet_diff
+
+    if n_max < n_cpus:
+        num_threads = n_max
+
+    else:
+        num_threads = n_cpus
 
     for j in range(n_cps):
         ppt_cp_n_vals_arr[j] = 0
@@ -57,11 +64,11 @@ cdef DT_D obj_ftn_refresh(
 
             ppt_cp_n_vals_arr[j] += 1
 
-    for s in prange(n_max, schedule='dynamic', nogil=True, num_threads=n_cpus):
-        curr_ppt_wet_dof_diff = 0.0
+    for s in prange(n_max, schedule='dynamic', nogil=True, num_threads=num_threads):
+        curr_ppt_tri_wet_diff = 0.0
         if s == 0:
             for j in range(n_cps):
-                mean_cp_wet_dof_arr[j] = 0.0
+                mean_cp_tri_wet_arr[j] = 0.0
 
             for j in range(n_cps):
                 if ppt_cp_n_vals_arr[j] == 0:
@@ -71,19 +78,19 @@ cdef DT_D obj_ftn_refresh(
                     if sel_cps[i] != j:
                         continue
 
-                    mean_cp_wet_dof_arr[j] = mean_cp_wet_dof_arr[j] + wet_dofs_arr[i]
+                    mean_cp_tri_wet_arr[j] = mean_cp_tri_wet_arr[j] + tri_wet_arr[i]
 
-                curr_ppt_wet_dof_diff = curr_ppt_wet_dof_diff + ppt_cp_n_vals_arr[j] * ((mean_cp_wet_dof_arr[j] / ppt_cp_n_vals_arr[j]) - mean_wet_dof)**2
+                curr_ppt_tri_wet_diff = curr_ppt_tri_wet_diff + ppt_cp_n_vals_arr[j] * ((mean_cp_tri_wet_arr[j] / ppt_cp_n_vals_arr[j]) - mean_tri_wet) ** 2
 
-        o_6 += (curr_ppt_wet_dof_diff / n_time_steps)
+        o_7 += (curr_ppt_tri_wet_diff / n_time_steps)
 
-    obj_val += (o_6 * obj_ftn_wts_arr[5])
+    obj_val += (o_7 * obj_ftn_wts_arr[6])
     return obj_val
 
 cdef DT_D obj_ftn_update(
-    const DT_D mean_wet_dof,
-    DT_D_NP_t[:] mean_cp_wet_dof_arr,
-    const DT_D_NP_t[:] wet_dofs_arr,
+    const DT_D mean_tri_wet,
+    DT_D_NP_t[:] mean_cp_tri_wet_arr,
+    const DT_D_NP_t[:] tri_wet_arr,
     DT_D_NP_t[:] ppt_cp_n_vals_arr,
     const DT_D_NP_t[:] obj_ftn_wts_arr,
     const DT_UL_NP_t[:] sel_cps,
@@ -97,10 +104,17 @@ cdef DT_D obj_ftn_update(
 
     cdef:
         Py_ssize_t i, j, s
+        DT_UL num_threads
         DT_D _, obj_val = 0.0
 
-        DT_D o_6 = 0.0
-        DT_D curr_ppt_wet_dof_diff
+        DT_D o_7 = 0.0
+        DT_D curr_ppt_tri_wet_diff
+
+    if n_max < n_cpus:
+        num_threads = n_max
+
+    else:
+        num_threads = n_cpus
 
     for j in range(n_cps):
         for i in range(n_time_steps):
@@ -113,8 +127,8 @@ cdef DT_D obj_ftn_update(
             if sel_cps[i] == j:
                 ppt_cp_n_vals_arr[j] += 1
 
-    for s in prange(n_max, schedule='dynamic', nogil=True, num_threads=n_cpus):
-        curr_ppt_wet_dof_diff = 0.0
+    for s in prange(n_max, schedule='dynamic', nogil=True, num_threads=num_threads):
+        curr_ppt_tri_wet_diff = 0.0
         if s == 0:
             for j in range(n_cps):
                 for i in range(n_time_steps):
@@ -122,17 +136,17 @@ cdef DT_D obj_ftn_update(
                         continue
 
                     if old_sel_cps[i] == j:
-                        mean_cp_wet_dof_arr[j] = mean_cp_wet_dof_arr[j] - wet_dofs_arr[i]
+                        mean_cp_tri_wet_arr[j] = mean_cp_tri_wet_arr[j] - tri_wet_arr[i]
 
                     if sel_cps[i] == j:
-                        mean_cp_wet_dof_arr[j] = mean_cp_wet_dof_arr[j] + wet_dofs_arr[i]
+                        mean_cp_tri_wet_arr[j] = mean_cp_tri_wet_arr[j] + tri_wet_arr[i]
 
                 if not ppt_cp_n_vals_arr[j]:
                     continue
 
-                curr_ppt_wet_dof_diff = curr_ppt_wet_dof_diff + ppt_cp_n_vals_arr[j] * ((mean_cp_wet_dof_arr[j] / ppt_cp_n_vals_arr[j]) - mean_wet_dof)**2
+                curr_ppt_tri_wet_diff = curr_ppt_tri_wet_diff + ppt_cp_n_vals_arr[j] * ((mean_cp_tri_wet_arr[j] / ppt_cp_n_vals_arr[j]) - mean_tri_wet) ** 2
 
-        o_6 += (curr_ppt_wet_dof_diff / n_time_steps)
+        o_7 += (curr_ppt_tri_wet_diff / n_time_steps)
 
-    obj_val += (o_6 * obj_ftn_wts_arr[5])
+    obj_val += (o_7 * obj_ftn_wts_arr[6])
     return obj_val

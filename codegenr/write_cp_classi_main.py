@@ -29,6 +29,7 @@ def write_cp_classi_main_lines(params_dict):
     obj_4_flag = params_dict['obj_4_flag']
     obj_5_flag = params_dict['obj_5_flag']
     obj_6_flag = params_dict['obj_6_flag']
+    obj_7_flag = params_dict['obj_7_flag']
 
     pyxcd = CodeGenr(tab=tab)
     pyxbldcd = CodeGenr(tab=tab)
@@ -48,7 +49,8 @@ def write_cp_classi_main_lines(params_dict):
                            obj_3_flag,
                            obj_4_flag,
                            obj_5_flag,
-                           obj_6_flag]))
+                           obj_6_flag,
+                           obj_7_flag]))
     pyxcd.w('### obj_ftns:' + _)
     pyxcd.els()
 
@@ -131,9 +133,11 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.els()
 
     pyxcd.w('# other variables')
+    pyxcd.w('list curr_n_iters_list = []')
     pyxcd.w('list curr_obj_vals_list = []')
     pyxcd.w('list best_obj_vals_list = []')
     pyxcd.w('list acc_rate_list = []')
+    pyxcd.w('list cp_pcntge_list = []')
     pyxcd.els()
 
     pyxcd.w('# 1D ulong arrays')
@@ -161,6 +165,7 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('# arrays for all obj. ftns.')
     pyxcd.w('np.ndarray[DT_D_NP_t, ndim=1, mode=\'c\'] obj_ftn_wts_arr')
     pyxcd.w('np.ndarray[DT_D_NP_t, ndim=1, mode=\'c\'] ppt_cp_n_vals_arr')
+    pyxcd.els()
 
     if obj_1_flag or obj_3_flag:
         pyxcd.w('np.ndarray[DT_D_NP_t, ndim=2, mode=\'c\'] in_ppt_arr')
@@ -224,8 +229,8 @@ def write_cp_classi_main_lines(params_dict):
         pyxcd.w('np.ndarray[DT_D_NP_t, ndim=2, mode=\'c\'] ppt_cp_mean_arr')
         pyxcd.els()
 
-    if obj_4_flag or obj_6_flag:
-        pyxcd.w('# ulongs obj. ftns. 4 and 6')
+    if obj_4_flag:
+        pyxcd.w('# ulongs obj. ftns. 4')
         pyxcd.w('DT_UL n_nebs')
         pyxcd.els()
 
@@ -257,7 +262,8 @@ def write_cp_classi_main_lines(params_dict):
         pyxcd.els()
 
     if obj_6_flag:
-        pyxcd.w('DT_D mean_wet_dof = 0.0')
+        pyxcd.w('DT_D mean_wet_dof = 0.0, min_wettness_thresh')
+        pyxcd.els()
 
         pyxcd.w('# arrays for obj. ftn. 6')
         pyxcd.w(
@@ -266,6 +272,14 @@ def write_cp_classi_main_lines(params_dict):
             'np.ndarray[DT_D_NP_t, ndim=1, mode=\'c\'] wet_dofs_arr')
         pyxcd.els()
 
+    if obj_7_flag:
+        pyxcd.w('# for obj. ftn. 7')
+        pyxcd.w('DT_D mean_tri_wet = 0.0')
+
+        pyxcd.w('np.ndarray[DT_D_NP_t, ndim=1, mode=\'c\'] mean_cp_tri_wet_arr')
+        pyxcd.w('np.ndarray[DT_D_NP_t, ndim=1, mode=\'c\'] tri_wet_arr')
+        pyxcd.els()
+        
     pyxcd.ded()
 
     pyxcd.w('# read everythings from the given dict. Must do explicitly.')
@@ -291,17 +305,20 @@ def write_cp_classi_main_lines(params_dict):
         pyxcd.w('o_2_ppt_thresh_arr = args_dict[\'o_2_ppt_thresh_arr\']')
         pyxcd.w('n_o_2_threshs = o_2_ppt_thresh_arr.shape[0]')
 
-    if obj_4_flag or obj_6_flag:
+    if obj_4_flag or obj_6_flag or obj_7_flag:
         pyxcd.w('in_wet_arr_calib = args_dict[\'in_wet_arr_calib\']')
+        pyxcd.w('n_max = max(n_max, in_wet_arr_calib.shape[1])')
+
+    if obj_4_flag:
         pyxcd.w('n_nebs = in_wet_arr_calib.shape[1]')
-        pyxcd.w('n_max = max(n_max, n_nebs)')
         pyxcd.w('assert n_nebs, \'n_nebs cannot be zero!\'')
-        pyxcd.els()
+
+    if obj_6_flag:
+        pyxcd.w('min_wettness_thresh = args_dict[\'min_wettness_thresh\']')
 
     if obj_4_flag:
         pyxcd.w('o_4_p_thresh_arr = args_dict[\'o_4_p_thresh_arr\']')
         pyxcd.w('n_o_4_threshs = o_4_p_thresh_arr.shape[0]')
-        pyxcd.els()
 
     pyxcd.w('obj_ftn_wts_arr = args_dict[\'obj_ftn_wts_arr\']')
     pyxcd.w('n_cps = args_dict[\'n_cps\']')
@@ -355,7 +372,7 @@ def write_cp_classi_main_lines(params_dict):
         pyxcd.w('print(\'o_2_ppt_thresh_arr:\', o_2_ppt_thresh_arr)')
         pyxcd.w('print(\'n_o_2_threshs:\', n_o_2_threshs)')
 
-    if obj_4_flag or obj_6_flag:
+    if obj_4_flag:
         pyxcd.w('print(\'n_nebs:\', n_nebs)')
 
     if obj_4_flag:
@@ -560,6 +577,15 @@ def write_cp_classi_main_lines(params_dict):
 
         pyxcd.els()
 
+    if obj_7_flag:
+        pyxcd.w('# initialize obj. ftn. 6 variables')
+        pyxcd.w('mean_cp_tri_wet_arr = np.full(n_cps, '
+                '0.0, dtype=DT_D_NP)')
+        pyxcd.w('tri_wet_arr = np.full(n_time_steps, '
+                '0.0, dtype=DT_D_NP)')
+
+        pyxcd.els()
+
     if obj_1_flag or obj_3_flag:
         pyxcd.w('# fill some arrays used for obj. 1 and 3 ftns.')
         pyxcd.w('for m in range(n_stns):')
@@ -622,10 +648,23 @@ def write_cp_classi_main_lines(params_dict):
                 'in_wet_arr_calib[i, 1])')
 
         pyxcd.ded()
-        pyxcd.w('wet_dofs_arr[wet_dofs_arr < 0.85] = 0.0')
+        pyxcd.w('wet_dofs_arr[wet_dofs_arr < min_wettness_thresh] = 0.0')
         pyxcd.w('mean_wet_dof = wet_dofs_arr.mean()')
         pyxcd.w('assert ((not isnan(mean_wet_dof)) and (mean_wet_dof > 0))')
-        
+        pyxcd.els()
+
+    if obj_7_flag:
+        pyxcd.w('# obj. 7 ftns.')
+        pyxcd.w('for i in range(n_time_steps):')
+        pyxcd.ind()
+        pyxcd.w('tri_wet_arr[i] += np.sum(in_wet_arr_calib[i, :])')
+        pyxcd.w('tri_wet_arr[i] += in_wet_arr_calib[i, 0] + in_wet_arr_calib[i, 1] - in_wet_arr_calib[i, 2] + 1')
+        pyxcd.w('tri_wet_arr[i] += in_wet_arr_calib[i, 1] + in_wet_arr_calib[i, 2] - in_wet_arr_calib[i, 0] + 1')
+        pyxcd.w('tri_wet_arr[i] += in_wet_arr_calib[i, 0] + in_wet_arr_calib[i, 2] - in_wet_arr_calib[i, 1] + 1')
+
+        pyxcd.ded()
+        pyxcd.w('mean_tri_wet = tri_wet_arr.mean()')
+        pyxcd.w('assert ((not isnan(mean_tri_wet)) and (mean_tri_wet > 0))')
         pyxcd.els()
 
     pyxcd.w('# start simulated annealing')
@@ -819,6 +858,11 @@ def write_cp_classi_main_lines(params_dict):
         pyxcd.w('mean_cp_wet_dof_arr,')
         pyxcd.w('wet_dofs_arr,')
 
+    if obj_7_flag:
+        pyxcd.w('mean_tri_wet,')
+        pyxcd.w('mean_cp_tri_wet_arr,')
+        pyxcd.w('tri_wet_arr,')
+
     pyxcd.w('ppt_cp_n_vals_arr,')
     pyxcd.w('obj_ftn_wts_arr,')
     pyxcd.w('sel_cps,')
@@ -886,6 +930,11 @@ def write_cp_classi_main_lines(params_dict):
         pyxcd.w('mean_wet_dof,')
         pyxcd.w('mean_cp_wet_dof_arr,')
         pyxcd.w('wet_dofs_arr,')
+
+    if obj_7_flag:
+        pyxcd.w('mean_tri_wet,')
+        pyxcd.w('mean_cp_tri_wet_arr,')
+        pyxcd.w('tri_wet_arr,')
 
     pyxcd.w('ppt_cp_n_vals_arr,')
     pyxcd.w('obj_ftn_wts_arr,')
@@ -1120,9 +1169,11 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('raise Exception')
     pyxcd.ded(lev=2)
 
-    pyxcd.w('curr_obj_vals_list.append([curr_n_iter, curr_obj_val])')
-    pyxcd.w('best_obj_vals_list.append([curr_n_iter, best_obj_val])')
-    pyxcd.w('acc_rate_list.append([curr_n_iter, acc_rate])')
+    pyxcd.w('curr_obj_vals_list.append(curr_obj_val)')
+    pyxcd.w('best_obj_vals_list.append(best_obj_val)')
+    pyxcd.w('acc_rate_list.append(acc_rate)')
+    pyxcd.w('cp_pcntge_list.append(ppt_cp_n_vals_arr.copy() / n_time_steps)')
+    pyxcd.w('curr_n_iters_list.append(curr_n_iter)')
         
     pyxcd.w('curr_m_iter += 1')
     pyxcd.w('curr_n_iter += 1')
@@ -1199,6 +1250,9 @@ def write_cp_classi_main_lines(params_dict):
 
     pyxcd.w('out_dict[\'curr_obj_vals_arr\'] = np.array(curr_obj_vals_list)')
     pyxcd.w('out_dict[\'best_obj_vals_arr\'] = np.array(best_obj_vals_list)')
+    pyxcd.w('out_dict[\'cp_pcntge_arr\'] = np.array(cp_pcntge_list)')
+    pyxcd.w('out_dict[\'curr_n_iters_arr\'] = np.array(curr_n_iters_list, '
+            'dtype=np.uint64)')
     pyxcd.w('out_dict[\'acc_rate_arr\'] = np.array(acc_rate_list)')
 
     pyxcd.w('return out_dict')

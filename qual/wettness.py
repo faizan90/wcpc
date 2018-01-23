@@ -18,6 +18,8 @@ class WettnessIndex(QualBases):
     def __init__(self, msgs=True):
         super(WettnessIndex, self).__init__(msgs)
 
+        self.old_new_cp_map_arr = None
+
         self._wettness_cmptd_flag = False
         self._cps_reordered_flag = False
         return
@@ -58,6 +60,10 @@ class WettnessIndex(QualBases):
 
         self.cp_rules_sorted = cp_rules[sorted_idxs, :]
         self.mean_cp_wett_sorted_arr = self.mean_cp_wett_arr[sorted_idxs]
+        self.old_new_cp_map_arr = np.zeros((self.n_cps, 2), dtype=np.int64)
+
+        for i in range(self.n_cps):
+            self.old_new_cp_map_arr[i, :] = sorted_idxs[i], i
 
         if self.msgs:
             print('\n\nSorted wettness sequence:')

@@ -28,6 +28,7 @@ def write_obj_ftns_lines(params_dict):
     obj_4_flag = params_dict['obj_4_flag']
     obj_5_flag = params_dict['obj_5_flag']
     obj_6_flag = params_dict['obj_6_flag']
+    obj_7_flag = params_dict['obj_7_flag']
 
     pyxcd = CodeGenr(tab=tab)
     pxdcd = CodeGenr(tab=tab)
@@ -127,7 +128,7 @@ def write_obj_ftns_lines(params_dict):
         pyxcd.w('const DT_D_NP_t[:, :] in_cats_ppt_arr,')
         pyxcd.w('const DT_UL n_cats,')
 
-    if obj_1_flag or obj_3_flag or obj_2_flag or obj_5_flag:
+    if any([obj_1_flag, obj_3_flag, obj_2_flag, obj_5_flag]):
         pyxcd.w('const DT_D min_abs_ppt_thresh,')
 
     if obj_1_flag:
@@ -166,6 +167,11 @@ def write_obj_ftns_lines(params_dict):
         pyxcd.w('DT_D_NP_t[:] mean_cp_wet_dof_arr,')
         pyxcd.w('const DT_D_NP_t[:] wet_dofs_arr,')
 
+    if obj_7_flag:
+        pyxcd.w('const DT_D mean_tri_wet,')
+        pyxcd.w('DT_D_NP_t[:] mean_cp_tri_wet_arr,')
+        pyxcd.w('const DT_D_NP_t[:] tri_wet_arr,')
+
     pyxcd.w('DT_D_NP_t[:] ppt_cp_n_vals_arr,')
     pyxcd.w('const DT_D_NP_t[:] obj_ftn_wts_arr,')
     pyxcd.w('const DT_UL_NP_t[:] sel_cps,')
@@ -187,7 +193,7 @@ def write_obj_ftns_lines(params_dict):
         pxdcd.w('const DT_D_NP_t[:, :] in_cats_ppt_arr,')
         pxdcd.w('const DT_UL n_cats,')
 
-    if obj_1_flag or obj_3_flag or obj_2_flag or obj_5_flag:
+    if any([obj_1_flag, obj_3_flag, obj_2_flag, obj_5_flag]):
         pxdcd.w('const DT_D min_abs_ppt_thresh,')
 
     if obj_1_flag:
@@ -226,6 +232,11 @@ def write_obj_ftns_lines(params_dict):
         pxdcd.w('DT_D_NP_t[:] mean_cp_wet_dof_arr,')
         pxdcd.w('const DT_D_NP_t[:] wet_dofs_arr,')
 
+    if obj_7_flag:
+        pxdcd.w('const DT_D mean_tri_wet,')
+        pxdcd.w('DT_D_NP_t[:] mean_cp_tri_wet_arr,')
+        pxdcd.w('const DT_D_NP_t[:] tri_wet_arr,')
+
     pxdcd.w('DT_D_NP_t[:] ppt_cp_n_vals_arr,')
     pxdcd.w('const DT_D_NP_t[:] obj_ftn_wts_arr,')
     pxdcd.w('const DT_UL_NP_t[:] sel_cps,')
@@ -242,6 +253,7 @@ def write_obj_ftns_lines(params_dict):
 
     pyxcd.ind()
     pyxcd.w('Py_ssize_t i, j, s')
+    pyxcd.w('DT_UL num_threads')
     pyxcd.w('DT_D _, obj_val = 0.0')
     pyxcd.els()
 
@@ -290,6 +302,20 @@ def write_obj_ftns_lines(params_dict):
         pyxcd.w('DT_D curr_ppt_wet_dof_diff')
         pyxcd.els()
 
+    if obj_7_flag:
+        pyxcd.w('DT_D o_7 = 0.0')
+        pyxcd.w('DT_D curr_ppt_tri_wet_diff')
+        pyxcd.els()
+
+    pyxcd.ded()
+
+    pyxcd.w('if n_max < n_cpus:')
+    pyxcd.ind()
+    pyxcd.w('num_threads = n_max')
+    pyxcd.ded()
+    pyxcd.w('else:')
+    pyxcd.ind()
+    pyxcd.w('num_threads = n_cpus')
     pyxcd.ded()
 
     pyxcd.w('for j in range(n_cps):')
@@ -305,8 +331,8 @@ def write_obj_ftns_lines(params_dict):
     pyxcd.ded(lev=2)
 
     # the main loop
-    pyxcd.w(
-        'for s in prange(n_max, schedule=\'dynamic\', nogil=True, num_threads=n_cpus):')
+    pyxcd.w('for s in prange(n_max, schedule=\'dynamic\', nogil=True, '
+            'num_threads=num_threads):')
     if obj_1_flag or obj_3_flag:
         pyxcd.ind()
         pyxcd.w('if s < n_stns:')
@@ -357,8 +383,8 @@ def write_obj_ftns_lines(params_dict):
             pyxcd.w('break')
             pyxcd.ded()
 
-            pyxcd.w(
-                'ppt_cp_mean_pis_arr[m, j, p] = ppt_cp_mean_pis_arr[m, j, p] + 1')
+            pyxcd.w('ppt_cp_mean_pis_arr[m, j, p] = '
+                    'ppt_cp_mean_pis_arr[m, j, p] + 1')
             pyxcd.ded()
 
         if obj_3_flag:
@@ -386,8 +412,8 @@ def write_obj_ftns_lines(params_dict):
             pyxcd.ind()
             pyxcd.w('_ = 1e-100')
             pyxcd.ded()
-            pyxcd.w(
-                'curr_ppt_diff = curr_ppt_diff + (ppt_cp_n_vals_arr[j] * abs(log(_)))')
+            pyxcd.w('curr_ppt_diff = curr_ppt_diff + (ppt_cp_n_vals_arr[j] * '
+                    'abs(log(_)))')
             pyxcd.ded(lev=2)
             pyxcd.w('o_3 += (curr_ppt_diff / n_time_steps)')
         else:
@@ -529,9 +555,6 @@ def write_obj_ftns_lines(params_dict):
                 'ppt_cp_n_vals_arr[j]) - ppt_mean_wet_arr[n, o])**2')
         pyxcd.ded(lev=4)
 
-#==============================================================================
-# obj 6 strt
-#==============================================================================
     if obj_6_flag:
         pyxcd.ind()
         pyxcd.w('curr_ppt_wet_dof_diff = 0.0')
@@ -564,13 +587,47 @@ def write_obj_ftns_lines(params_dict):
                 'ppt_cp_n_vals_arr[j] * '
                 '((mean_cp_wet_dof_arr[j] / ppt_cp_n_vals_arr[j]) - '
                 'mean_wet_dof)**2')
+
         pyxcd.ded(lev=2)
         pyxcd.w('o_6 += (curr_ppt_wet_dof_diff / n_time_steps)')
         pyxcd.ded()
 
-#==============================================================================
-# obj 6 end
-#==============================================================================
+    if obj_7_flag:
+        pyxcd.ind()
+        pyxcd.w('curr_ppt_tri_wet_diff = 0.0')
+        pyxcd.w('if s == 0:')
+        pyxcd.ind()
+        pyxcd.w('for j in range(n_cps):')
+        pyxcd.ind()
+        pyxcd.w('mean_cp_tri_wet_arr[j] = 0.0')
+        pyxcd.ded()
+
+        pyxcd.w('for j in range(n_cps):')
+        pyxcd.ind()
+        pyxcd.w('if ppt_cp_n_vals_arr[j] == 0:')
+        pyxcd.ind()
+        pyxcd.w('continue')
+        pyxcd.ded()
+
+        pyxcd.w('for i in range(n_time_steps):')
+        pyxcd.ind()
+        pyxcd.w('if sel_cps[i] != j:')
+        pyxcd.ind()
+        pyxcd.w('continue')
+        pyxcd.ded()
+
+        pyxcd.w('mean_cp_tri_wet_arr[j] = mean_cp_tri_wet_arr[j] + '
+                'tri_wet_arr[i]')
+        pyxcd.ded()
+
+        pyxcd.w('curr_ppt_tri_wet_diff = curr_ppt_tri_wet_diff + '
+                'ppt_cp_n_vals_arr[j] * ((mean_cp_tri_wet_arr[j] / '
+                'ppt_cp_n_vals_arr[j]) - mean_tri_wet) ** 2')
+
+        pyxcd.ded(lev=2)
+        pyxcd.w('o_7 += (curr_ppt_tri_wet_diff / n_time_steps)')
+        pyxcd.ded()
+
     if obj_1_flag:
         pyxcd.w('for p in range(n_o_1_threshs):')
         pyxcd.ind()
@@ -618,7 +675,8 @@ def write_obj_ftns_lines(params_dict):
         pyxcd.w('obj_val += (o_5 * obj_ftn_wts_arr[4])')
     if obj_6_flag:
         pyxcd.w('obj_val += (o_6 * obj_ftn_wts_arr[5])')
-    
+    if obj_7_flag:
+        pyxcd.w('obj_val += (o_7 * obj_ftn_wts_arr[6])')
     pyxcd.w('return obj_val')
     pyxcd.ded()
 
@@ -675,6 +733,11 @@ def write_obj_ftns_lines(params_dict):
         pyxcd.w('const DT_D mean_wet_dof,')
         pyxcd.w('DT_D_NP_t[:] mean_cp_wet_dof_arr,')
         pyxcd.w('const DT_D_NP_t[:] wet_dofs_arr,')
+
+    if obj_7_flag:
+        pyxcd.w('const DT_D mean_tri_wet,')
+        pyxcd.w('DT_D_NP_t[:] mean_cp_tri_wet_arr,')
+        pyxcd.w('const DT_D_NP_t[:] tri_wet_arr,')
 
     pyxcd.w('DT_D_NP_t[:] ppt_cp_n_vals_arr,')
     pyxcd.w('const DT_D_NP_t[:] obj_ftn_wts_arr,')
@@ -737,6 +800,11 @@ def write_obj_ftns_lines(params_dict):
         pxdcd.w('DT_D_NP_t[:] mean_cp_wet_dof_arr,')
         pxdcd.w('const DT_D_NP_t[:] wet_dofs_arr,')
 
+    if obj_7_flag:
+        pxdcd.w('const DT_D mean_tri_wet,')
+        pxdcd.w('DT_D_NP_t[:] mean_cp_tri_wet_arr,')
+        pxdcd.w('const DT_D_NP_t[:] tri_wet_arr,')
+
     pxdcd.w('DT_D_NP_t[:] ppt_cp_n_vals_arr,')
     pxdcd.w('const DT_D_NP_t[:] obj_ftn_wts_arr,')
     pxdcd.w('const DT_UL_NP_t[:] sel_cps,')
@@ -753,6 +821,7 @@ def write_obj_ftns_lines(params_dict):
     pyxcd.w('cdef:')
     pyxcd.ind()
     pyxcd.w('Py_ssize_t i, j, s')
+    pyxcd.w('DT_UL num_threads')
     pyxcd.w('DT_D _, obj_val = 0.0')
     pyxcd.els()
 
@@ -805,6 +874,20 @@ def write_obj_ftns_lines(params_dict):
         pyxcd.w('DT_D curr_ppt_wet_dof_diff')
         pyxcd.els()
 
+    if obj_7_flag:
+        pyxcd.w('DT_D o_7 = 0.0')
+        pyxcd.w('DT_D curr_ppt_tri_wet_diff')
+        pyxcd.els()
+
+    pyxcd.ded()
+
+    pyxcd.w('if n_max < n_cpus:')
+    pyxcd.ind()
+    pyxcd.w('num_threads = n_max')
+    pyxcd.ded()
+    pyxcd.w('else:')
+    pyxcd.ind()
+    pyxcd.w('num_threads = n_cpus')
     pyxcd.ded()
 
     pyxcd.w('for j in range(n_cps):')
@@ -825,8 +908,8 @@ def write_obj_ftns_lines(params_dict):
     pyxcd.w('ppt_cp_n_vals_arr[j] += 1')
     pyxcd.ded(lev=3)
 
-    pyxcd.w(
-        'for s in prange(n_max, schedule=\'dynamic\', nogil=True, num_threads=n_cpus):')
+    pyxcd.w('for s in prange(n_max, schedule=\'dynamic\', nogil=True, '
+            'num_threads=num_threads):')
 
     if obj_1_flag or obj_3_flag:
         pyxcd.ind()
@@ -1111,10 +1194,6 @@ def write_obj_ftns_lines(params_dict):
                 'ppt_cp_n_vals_arr[j]) - ppt_mean_wet_arr[n, o])**2')
         pyxcd.ded(lev=4)
 
-#==============================================================================
-# obj 6 strt
-#==============================================================================
-
     if obj_6_flag:
         pyxcd.ind()
         pyxcd.w('curr_ppt_wet_dof_diff = 0.0')
@@ -1154,10 +1233,42 @@ def write_obj_ftns_lines(params_dict):
         pyxcd.w('o_6 += (curr_ppt_wet_dof_diff / n_time_steps)')
         pyxcd.ded()
 
-#==============================================================================
-# obj 6 end
-#==============================================================================
+    if obj_7_flag:
+        pyxcd.ind()
+        pyxcd.w('curr_ppt_tri_wet_diff = 0.0')
+        pyxcd.w('if s == 0:')
+        pyxcd.ind()
 
+        pyxcd.w('for j in range(n_cps):')
+        pyxcd.ind()
+        pyxcd.w('for i in range(n_time_steps):')
+        pyxcd.ind()
+        pyxcd.w('if not chnge_steps[i]:')
+        pyxcd.ind()
+        pyxcd.w('continue')
+        pyxcd.ded()
+
+        pyxcd.w('if old_sel_cps[i] == j:')
+        pyxcd.ind()
+        pyxcd.w('mean_cp_tri_wet_arr[j] = mean_cp_tri_wet_arr[j] - tri_wet_arr[i]')
+        pyxcd.ded()
+
+        pyxcd.w('if sel_cps[i] == j:')
+        pyxcd.ind()
+        pyxcd.w('mean_cp_tri_wet_arr[j] = mean_cp_tri_wet_arr[j] + tri_wet_arr[i]')
+        pyxcd.ded(lev=2)
+
+        pyxcd.w('if not ppt_cp_n_vals_arr[j]:')
+        pyxcd.ind()
+        pyxcd.w('continue')
+        pyxcd.ded()
+
+        pyxcd.w('curr_ppt_tri_wet_diff = curr_ppt_tri_wet_diff + ppt_cp_n_vals_arr[j] * ((mean_cp_tri_wet_arr[j] / ppt_cp_n_vals_arr[j]) - mean_tri_wet) ** 2')
+        pyxcd.ded(lev=2)
+
+        pyxcd.w('o_7 += (curr_ppt_tri_wet_diff / n_time_steps)')
+        pyxcd.ded()
+        
     if obj_1_flag:
         pyxcd.w('for p in range(n_o_1_threshs):')
         pyxcd.ind()
@@ -1203,6 +1314,9 @@ def write_obj_ftns_lines(params_dict):
         pyxcd.w('obj_val += (o_5 * obj_ftn_wts_arr[4])')
     if obj_6_flag:
         pyxcd.w('obj_val += (o_6 * obj_ftn_wts_arr[5])')
+    if obj_7_flag:
+        pyxcd.w('obj_val += (o_7 * obj_ftn_wts_arr[6])')
+
     pyxcd.w('return obj_val')
     pyxcd.ded(False)
 

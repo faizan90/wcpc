@@ -34,6 +34,7 @@ class CPDataBase:
         self.obj_4_flag = False
         self.obj_5_flag = False
         self.obj_6_flag = False
+        self.obj_7_flag = False
 
         self.cyth_nonecheck = False
         self.cyth_boundscheck = False
@@ -42,7 +43,7 @@ class CPDataBase:
         self.cyth_language_level = 3
         self.cyth_infer_types = None
 
-        self._n_obj_ftns = 6
+        self._n_obj_ftns = 7
         self.min_abs_ppt_thresh = 0.0
         return
 
@@ -249,14 +250,17 @@ class CPDataBase:
         self.obj_5_flag = False
         return
 
-    def set_obj_6_on(self, o_6_obj_wt):
+    def set_obj_6_on(self, o_6_obj_wt, min_wettness_thresh):
 
         assert self._neb_wett_set_flag
 
         assert isinstance(o_6_obj_wt, (int, float))
         assert check_nans_finite(o_6_obj_wt)
+        assert isinstance(min_wettness_thresh, float)
+        assert 0 <= min_wettness_thresh < 1.0
 
         self.o_6_obj_wt = o_6_obj_wt
+        self.min_wettness_thresh = min_wettness_thresh
 
         self.obj_6_flag = True
         return
@@ -266,6 +270,25 @@ class CPDataBase:
         del self.o_6_obj_wt
 
         self.obj_6_flag = False
+        return
+
+    def set_obj_7_on(self, o_7_obj_wt):
+
+        assert self._neb_wett_set_flag
+
+        assert isinstance(o_7_obj_wt, (int, float))
+        assert check_nans_finite(o_7_obj_wt)
+
+        self.o_7_obj_wt = o_7_obj_wt
+
+        self.obj_7_flag = True
+        return
+
+    def set_obj_7_off(self):
+
+        del self.o_7_obj_wt
+
+        self.obj_7_flag = False
         return
 
     def set_cyth_flags(self,

@@ -4,7 +4,7 @@
 # cython: cdivision=True
 # cython: language_level=3
 
-### obj_ftns:False;False;False;False;False;True
+### obj_ftns:False;False;False;False;False;False;True
 
 import numpy as np
 cimport numpy as np
@@ -59,10 +59,11 @@ cpdef classify_cps(dict args_dict):
         DT_D acc_rate, temp_inc
 
         # other variables
+        list curr_n_iters_list = []
         list curr_obj_vals_list = []
         list best_obj_vals_list = []
         list acc_rate_list = []
-        list ants = [[], []]
+        list cp_pcntge_list = []
 
         # 1D ulong arrays
         np.ndarray[DT_UL_NP_t, ndim=1, mode='c'] best_sel_cps
@@ -86,23 +87,14 @@ cpdef classify_cps(dict args_dict):
         np.ndarray[DT_D_NP_t, ndim=1, mode='c'] obj_ftn_wts_arr
         np.ndarray[DT_D_NP_t, ndim=1, mode='c'] ppt_cp_n_vals_arr
 
-        # ulongs obj. ftns. 4 and 6
-        DT_UL n_nebs
-
-        # arrays for obj. ftns. 4 and 6
-        np.ndarray[DT_D_NP_t, ndim=2, mode='c'] in_wet_arr_calib
-
-        DT_D mean_wet_dof = 0.0
-        # arrays for obj. ftn. 6
-        np.ndarray[DT_D_NP_t, ndim=1, mode='c'] mean_cp_wet_dof_arr
-        np.ndarray[DT_D_NP_t, ndim=1, mode='c'] wet_dofs_arr
+        # for obj. ftn. 7
+        DT_D mean_tri_wet = 0.0
+        np.ndarray[DT_D_NP_t, ndim=1, mode='c'] mean_cp_tri_wet_arr
+        np.ndarray[DT_D_NP_t, ndim=1, mode='c'] tri_wet_arr
 
     # read everythings from the given dict. Must do explicitly.
     in_wet_arr_calib = args_dict['in_wet_arr_calib']
-    n_nebs = in_wet_arr_calib.shape[1]
-    n_max = max(n_max, n_nebs)
-    assert n_nebs, 'n_nebs cannot be zero!'
-
+    n_max = max(n_max, in_wet_arr_calib.shape[1])
     obj_ftn_wts_arr = args_dict['obj_ftn_wts_arr']
     n_cps = args_dict['n_cps']
     no_cp_val = args_dict['no_cp_val']
@@ -132,7 +124,6 @@ cpdef classify_cps(dict args_dict):
     if msgs:
         print('\n')
         print('Calibrating CPs...')
-        print('n_nebs:', n_nebs)
         print('n_cps:', n_cps)
         print('n_cpus:', n_cpus)
         print('no_cp_val:', no_cp_val)
@@ -234,16 +225,18 @@ cpdef classify_cps(dict args_dict):
     ppt_cp_n_vals_arr = np.full(n_cps, 0.0, dtype=DT_D_NP)
 
     # initialize obj. ftn. 6 variables
-    mean_cp_wet_dof_arr = np.full(n_cps, 0.0, dtype=DT_D_NP)
-    wet_dofs_arr = np.full(n_time_steps, 0.0, dtype=DT_D_NP)
+    mean_cp_tri_wet_arr = np.full(n_cps, 0.0, dtype=DT_D_NP)
+    tri_wet_arr = np.full(n_time_steps, 0.0, dtype=DT_D_NP)
 
-    # obj. 6 ftns.
+    # obj. 7 ftns.
     for i in range(n_time_steps):
-        wet_dofs_arr[i] = in_wet_arr_calib[i, 0] + in_wet_arr_calib[i, 1] - (2 * in_wet_arr_calib[i, 0] * in_wet_arr_calib[i, 1])
+        tri_wet_arr[i] += np.sum(in_wet_arr_calib[i, :])
+        tri_wet_arr[i] += in_wet_arr_calib[i, 0] + in_wet_arr_calib[i, 1] - in_wet_arr_calib[i, 2] + 1
+        tri_wet_arr[i] += in_wet_arr_calib[i, 1] + in_wet_arr_calib[i, 2] - in_wet_arr_calib[i, 0] + 1
+        tri_wet_arr[i] += in_wet_arr_calib[i, 0] + in_wet_arr_calib[i, 2] - in_wet_arr_calib[i, 1] + 1
 
-    wet_dofs_arr[wet_dofs_arr < 0.85] = 0.0
-    mean_wet_dof = wet_dofs_arr.mean()
-    assert ((not isnan(mean_wet_dof)) and (mean_wet_dof > 0))
+    mean_tri_wet = tri_wet_arr.mean()
+    assert ((not isnan(mean_tri_wet)) and (mean_tri_wet > 0))
 
     # start simulated annealing
     while ((curr_n_iter < max_n_iters) and (curr_iters_wo_chng < max_iters_wo_chng)) or (not temp_adjed):
@@ -355,9 +348,9 @@ cpdef classify_cps(dict args_dict):
         if run_type == 1:
             # start from the begining
             curr_obj_val = obj_ftn_refresh(
-                mean_wet_dof,
-                mean_cp_wet_dof_arr,
-                wet_dofs_arr,
+                mean_tri_wet,
+                mean_cp_tri_wet_arr,
+                tri_wet_arr,
                 ppt_cp_n_vals_arr,
                 obj_ftn_wts_arr,
                 sel_cps,
@@ -372,9 +365,9 @@ cpdef classify_cps(dict args_dict):
         else:
             # only update at steps where the CP has changed
             curr_obj_val = obj_ftn_update(
-                mean_wet_dof,
-                mean_cp_wet_dof_arr,
-                wet_dofs_arr,
+                mean_tri_wet,
+                mean_cp_tri_wet_arr,
+                tri_wet_arr,
                 ppt_cp_n_vals_arr,
                 obj_ftn_wts_arr,
                 sel_cps,
@@ -485,49 +478,20 @@ cpdef classify_cps(dict args_dict):
                 temp_adjed = 1
 
             else:
-                if ants[0] and ants[1]:
-                    print(ants)
-                    
-                    if acc_rate < min_acc_rate:
-                        print('accp_rate (%0.2f%%) is too low!' % acc_rate)
-                        ants[0] = [acc_rate, anneal_temp_ini]
-                    
-                    elif acc_rate > max_acc_rate:
-                        print('accp_rate (%0.2f%%) is too high!' % acc_rate)
-                        ants[1] = [acc_rate, anneal_temp_ini]
-
-                    print(anneal_temp_ini)                        
-#                     anneal_temp_ini = (((0.5 * (max_acc_rate + min_acc_rate)) - ants[0][0]) / (ants[1][0] - ants[0][0])) * (ants[1][1] - ants[0][1])
-                    anneal_temp_ini = 0.5 * ((ants[1][1] + ants[0][1]))
-                    
-                    curr_anneal_temp = anneal_temp_ini
-                    print(anneal_temp_ini)
-                    print(ants)
-                    
-                    
-                
-                else:
-                    if acc_rate < min_acc_rate:
-                        ants[0] = [acc_rate, anneal_temp_ini]
-                        print('accp_rate (%0.2f%%) is too low!' % acc_rate)
-                        temp_inc = (1 + (min_acc_rate * 0.5))
-                        print('Increasing anneal_temp_ini by %0.2f%%...' % (100 * (temp_inc - 1)))
-                        
-                    elif acc_rate > max_acc_rate:
-                        ants[1] = [acc_rate, anneal_temp_ini]
-                        print('accp_rate (%0.2f%%) is too high!' % acc_rate)
-                        temp_inc = max(1e-6, 0.1)
-                        print('Reducing anneal_temp_ini to %0.2f%%...' %  (100 * (1 - temp_inc)))
-                    
+                if acc_rate < min_acc_rate:
+                    print('accp_rate (%0.2f%%) is too low!' % acc_rate)
+                    temp_inc = (1 + ((min_acc_rate) * 0.01))
+                    print('Increasing anneal_temp_ini by %0.2f%%...' % (100 * (temp_inc - 1)))
                     anneal_temp_ini = anneal_temp_ini * temp_inc
                     curr_anneal_temp = anneal_temp_ini
-                        
-                
-                if anneal_temp_ini <= 0.0:
-                    raise RuntimeError('Incorrect anneal temperature: %0.2f' % anneal_temp_ini)
-                else:
-                    print('new anneal_temp_ini:', anneal_temp_ini)
-            
+
+                elif acc_rate > max_acc_rate:
+                    print('accp_rate (%0.2f%%) is too high!' % acc_rate)
+                    temp_inc = max(1e-6, (1 - ((acc_rate) * 0.01)))
+                    print('Reducing anneal_temp_ini to %0.2f%%...' %  (100 * (1 - temp_inc)))
+                    anneal_temp_ini = anneal_temp_ini * temp_inc
+                    curr_anneal_temp = anneal_temp_ini
+
             if curr_temp_adj_iter < max_temp_adj_atmps:
                 run_type = 1
                 curr_n_iter = 0
@@ -563,9 +527,11 @@ cpdef classify_cps(dict args_dict):
                 print('Terminating optimization....')
                 raise Exception
 
-        curr_obj_vals_list.append([curr_n_iter, curr_obj_val])
-        best_obj_vals_list.append([curr_n_iter, best_obj_val])
-        acc_rate_list.append([curr_n_iter, acc_rate])
+        curr_obj_vals_list.append(curr_obj_val)
+        best_obj_vals_list.append(best_obj_val)
+        acc_rate_list.append(acc_rate)
+        cp_pcntge_list.append(ppt_cp_n_vals_arr.copy() / n_time_steps)
+        curr_n_iters_list.append(curr_n_iter)
         curr_m_iter += 1
         curr_n_iter += 1
 
@@ -603,6 +569,8 @@ cpdef classify_cps(dict args_dict):
     out_dict['best_cp_rules_idx_ctr'] = best_cp_rules_idx_ctr
     out_dict['curr_obj_vals_arr'] = np.array(curr_obj_vals_list)
     out_dict['best_obj_vals_arr'] = np.array(best_obj_vals_list)
+    out_dict['cp_pcntge_arr'] = np.array(cp_pcntge_list)
+    out_dict['curr_n_iters_arr'] = np.array(curr_n_iters_list, dtype=np.uint64)
     out_dict['acc_rate_arr'] = np.array(acc_rate_list)
     return out_dict
 

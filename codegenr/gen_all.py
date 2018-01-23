@@ -22,6 +22,7 @@ def create_classi_cython_files(obj_1_flag=False,
                                obj_4_flag=False,
                                obj_5_flag=False,
                                obj_6_flag=False,
+                               obj_7_flag=False,
                                nonecheck=True,
                                boundscheck=True,
                                wraparound=True,
@@ -36,7 +37,8 @@ def create_classi_cython_files(obj_1_flag=False,
                 obj_3_flag,
                 obj_4_flag,
                 obj_5_flag,
-                obj_6_flag])
+                obj_6_flag,
+                obj_7_flag])
     assert out_dir
 
     tab = '    '
@@ -57,6 +59,7 @@ def create_classi_cython_files(obj_1_flag=False,
     params_dict['obj_4_flag'] = obj_4_flag
     params_dict['obj_5_flag'] = obj_5_flag
     params_dict['obj_6_flag'] = obj_6_flag
+    params_dict['obj_7_flag'] = obj_7_flag
     
     out_dir = Path(out_dir)
     
@@ -76,7 +79,8 @@ def create_classi_cython_files(obj_1_flag=False,
                           obj_3_flag,
                           obj_4_flag,
                           obj_5_flag,
-                          obj_6_flag]
+                          obj_6_flag,
+                          obj_7_flag]
         
         with open(path_to_main_pyx, 'r') as pyx_hdl:
             for line in pyx_hdl:
@@ -88,8 +92,6 @@ def create_classi_cython_files(obj_1_flag=False,
             _ = (mtch_str.split(':')[1]).strip().split(';')
             old_flags_list = [True if x == 'True' else False for x in _]
             
-            assert len(new_flags_list) == len(old_flags_list)
-
             if new_flags_list == old_flags_list:
                 compile_classi_main = False
     else:

@@ -91,7 +91,8 @@ class CPClassiA(CPOPTBase):
                     self.obj_3_flag,
                     self.obj_4_flag,
                     self.obj_5_flag,
-                    self.obj_6_flag))
+                    self.obj_6_flag,
+                    self.obj_7_flag))
 
         if self.obj_1_flag or self.obj_3_flag:
             assert self.vals_tot_anom.shape[0] == self.stn_ppt_arr.shape[0]
@@ -99,7 +100,7 @@ class CPClassiA(CPOPTBase):
         if self.obj_2_flag or self.obj_5_flag:
             assert self.vals_tot_anom.shape[0] == self.cat_ppt_arr.shape[0]
 
-        if self.obj_4_flag or self.obj_6_flag:
+        if self.obj_4_flag or self.obj_6_flag or self.obj_7_flag:
             assert self.vals_tot_anom.shape[0] == self.neb_wett_arr.shape[0]
 
         self.obj_ftn_wts_arr = np.zeros(self._n_obj_ftns,
@@ -125,6 +126,10 @@ class CPClassiA(CPOPTBase):
             self.obj_ftn_wts_arr[5] = self.o_6_obj_wt
             assert self.neb_wett_arr.shape[1] == 2, 'For two nebs right now!'
 
+        if self.obj_7_flag:
+            self.obj_ftn_wts_arr[6] = self.o_7_obj_wt
+            assert self.neb_wett_arr.shape[1] == 3, 'For three nebs right now!'
+
         return
 
     def _gen_classi_cyth_mods(self, force_compile=False):
@@ -137,6 +142,7 @@ class CPClassiA(CPOPTBase):
                                    self.obj_4_flag,
                                    self.obj_5_flag,
                                    self.obj_6_flag,
+                                   self.obj_7_flag,
                                    self.cyth_nonecheck,
                                    self.cyth_boundscheck,
                                    self.cyth_wraparound,
@@ -215,6 +221,8 @@ class CPClassiA(CPOPTBase):
         self.curr_obj_vals_arr = self.calib_dict['curr_obj_vals_arr']
         self.best_obj_vals_arr = self.calib_dict['best_obj_vals_arr']
         self.acc_rate_arr = self.calib_dict['acc_rate_arr']
+        self.cp_pcntge_arr = self.calib_dict['cp_pcntge_arr']
+        self.curr_n_iters_arr = self.calib_dict['curr_n_iters_arr']
 
         assert check_nans_finite(self.calib_dict['mu_i_k_arr_calib'])
         assert check_nans_finite(self.calib_dict['dofs_arr_calib'])
@@ -236,13 +244,13 @@ class CPClassiA(CPOPTBase):
         fig = plt.figure(figsize=fig_size)
         ax = fig.gca()
 
-        pl_1 = ax.plot(self.curr_obj_vals_arr[:, 0],
-                       self.curr_obj_vals_arr[:, 1],
+        pl_1 = ax.plot(self.curr_n_iters_arr,
+                       self.curr_obj_vals_arr,
                        label='curr_obj_val',
                        color='red',
                        alpha=0.75)
-        pl_2 = ax.plot(self.best_obj_vals_arr[:, 0],
-                       self.best_obj_vals_arr[:, 1],
+        pl_2 = ax.plot(self.curr_n_iters_arr,
+                       self.best_obj_vals_arr,
                        label='best_obj_val',
                        color='blue',
                        alpha=0.75)
@@ -251,8 +259,8 @@ class CPClassiA(CPOPTBase):
         ax.grid()
 
         ax_twin = ax.twinx()
-        pl_3 = ax_twin.plot(self.acc_rate_arr[:, 0],
-                            self.acc_rate_arr[:, 1],
+        pl_3 = ax_twin.plot(self.curr_n_iters_arr,
+                            self.acc_rate_arr,
                             label='acc_rate',
                             color='black',
                             alpha=0.5)

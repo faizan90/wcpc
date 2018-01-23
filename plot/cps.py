@@ -24,7 +24,6 @@ from ..alg_dtypes import DT_D_NP, DT_UL_NP
 class PlotCPs:
 
     def __init__(self, msgs=True):
-
         assert isinstance(msgs, (int, bool))
         self.msgs = msgs
 
@@ -352,7 +351,7 @@ class PlotCPs:
 
             fig = plt.figure(figsize=fig_size)
             ax = fig.gca()
-            
+
             if self.bck_polys_list is not None:
                 for poly in self.bck_polys_list:
                     ax.add_patch(PolygonPatch(poly,
@@ -386,7 +385,6 @@ class PlotCPs:
                         bbox_inches='tight')
 
             plt.close()
-#             break
 
         max_n_coords = 10
         n_x_coords = self.x_coords.shape[0]
@@ -405,6 +403,8 @@ class PlotCPs:
         else:
             y_step_size = 1
 
+        cmap = plt.get_cmap('autumn')
+
         # CP Std.
         for j in range(self.n_cps):
             if self.msgs:
@@ -415,7 +415,24 @@ class PlotCPs:
 
             cax = ax.imshow(self.best_cps_std_anoms[j],
                             origin='upper',
-                            interpolation=None)
+                            interpolation=None,
+                            cmap=cmap)
+
+            _cp_rules_str = self.cp_rules_arr[j].reshape(self.best_cps_std_anoms[j].shape).astype('|U')
+
+            txt_x_corrs = np.tile(range(_cp_rules_str.shape[1]),
+                                  _cp_rules_str.shape[0])
+
+            txt_y_corrs = np.repeat(range(_cp_rules_str.shape[0]),
+                                    _cp_rules_str.shape[1])
+
+            for k in range(txt_x_corrs.shape[0]):
+                ax.text(txt_x_corrs[k],
+                        txt_y_corrs[k],
+                        _cp_rules_str[txt_y_corrs[k], txt_x_corrs[k]],
+                        va='center',
+                        ha='center',
+                        color='black')
 
             ax.set_xticks(x_ticks_pos[::x_step_size])
             ax.set_yticks(y_ticks_pos[::y_step_size])
@@ -435,7 +452,6 @@ class PlotCPs:
                         bbox_inches='tight')
 
             plt.close()
-#             break
 
         min_cbar_val = min(self.best_cps_min_anoms.min(),
                            self.best_cps_max_anoms.min())
@@ -455,7 +471,8 @@ class PlotCPs:
                           origin='upper',
                           interpolation=None,
                           vmin=min_cbar_val,
-                          vmax=max_cbar_val)
+                          vmax=max_cbar_val,
+                          cmap=cmap)
 
             ax_min.set_xticks(x_ticks_pos[::x_step_size])
             ax_min.set_yticks(y_ticks_pos[::y_step_size])
@@ -473,7 +490,8 @@ class PlotCPs:
                                     origin='upper',
                                     interpolation=None,
                                     vmin=min_cbar_val,
-                                    vmax=max_cbar_val)
+                                    vmax=max_cbar_val,
+                                    cmap=cmap)
 
             ax_max.set_xticks(x_ticks_pos[::x_step_size])
             ax_max.set_yticks(y_ticks_pos[::y_step_size])
@@ -496,3 +514,78 @@ class PlotCPs:
 #             break
 
         return
+
+
+def plot_iter_cp_pcntgs(n_cps,
+                        curr_n_iters_arr,
+                        cp_pcntge_arr,
+                        out_fig_loc,
+                        best_iter_idx,
+                        old_new_cp_map_arr=None,
+                        fig_size=(17, 10),
+                        msgs=True):
+    if msgs:
+        print('\n\nPlotting CP frequency evolution...')
+
+    assert isinstance(n_cps, int)
+    assert n_cps > 0
+
+    assert isinstance(curr_n_iters_arr, np.ndarray)
+    assert check_nans_finite(curr_n_iters_arr)
+    assert len(curr_n_iters_arr.shape) == 1
+
+    assert isinstance(cp_pcntge_arr, np.ndarray)
+    assert check_nans_finite(cp_pcntge_arr)
+    assert len(cp_pcntge_arr.shape) == 2
+    assert cp_pcntge_arr.shape[1] == n_cps
+
+    assert isinstance(out_fig_loc, (str, Path))
+    out_fig_loc = Path(out_fig_loc)
+    assert out_fig_loc.parents[0].exists()
+
+    assert isinstance(best_iter_idx, int)
+    assert best_iter_idx >= 0
+
+    if old_new_cp_map_arr is not None:
+        assert isinstance(old_new_cp_map_arr, np.ndarray)
+        assert check_nans_finite(old_new_cp_map_arr)
+        assert len(old_new_cp_map_arr.shape) == 2
+        assert old_new_cp_map_arr.shape[1] == 2
+        assert old_new_cp_map_arr.shape[0] == n_cps
+    else:
+        old_new_cp_map_arr = np.array([range(n_cps), range(n_cps)])
+
+    out_fig_pre_path = out_fig_loc.parents[0]
+    out_fig_name, out_ext = out_fig_loc.name.rsplit('.', 1)
+
+    fig = plt.figure(figsize=fig_size)
+    ax = fig.gca()
+    
+    best_idx = np.where(curr_n_iters_arr == best_iter_idx)
+
+    for i in range(n_cps):
+        curr_cp_pcntge_arr = cp_pcntge_arr[:, old_new_cp_map_arr[i, 0]]
+        ax.plot(curr_n_iters_arr,
+                curr_cp_pcntge_arr,
+                label='CP %2d' % i,
+                color='blue',
+                alpha=0.75)
+        ax.scatter(best_iter_idx,
+                   cp_pcntge_arr[best_idx, old_new_cp_map_arr[i, 0]],
+                   color='red',
+                   label='Final freq.',
+                   alpha=0.9)
+
+        ax.set_xlabel('Iteration No. (-)')
+        ax.set_ylabel('Relative CP frequency (-)')
+        ax.grid()
+        ax.legend(loc=0)
+        ax.set_title('CP classification - CP frequency evolution')
+
+        plt.savefig(str(out_fig_pre_path / ((out_fig_name + ('_cp_%0.2d.' % i) + out_ext))),
+                    bbox_inches='tight')
+
+        ax.cla()
+
+    plt.close()
+    return
