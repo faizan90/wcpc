@@ -299,24 +299,30 @@ def write_obj_ftns_lines(params_dict):
 
     if obj_6_flag:
         pyxcd.w('DT_D o_6 = 0.0')
-        pyxcd.w('DT_D curr_ppt_wet_dof_diff')
+        pyxcd.w('DT_D curr_ppt_wet_dof_diff = 0.0')
         pyxcd.els()
 
     if obj_7_flag:
         pyxcd.w('DT_D o_7 = 0.0')
-        pyxcd.w('DT_D curr_ppt_tri_wet_diff')
+        pyxcd.w('DT_D curr_ppt_tri_wet_diff = 0.0')
         pyxcd.els()
 
     pyxcd.ded()
+    
+    if any([obj_1_flag, 
+            obj_2_flag,
+            obj_3_flag,
+            obj_4_flag,
+            obj_5_flag]):
 
-    pyxcd.w('if n_max < n_cpus:')
-    pyxcd.ind()
-    pyxcd.w('num_threads = n_max')
-    pyxcd.ded()
-    pyxcd.w('else:')
-    pyxcd.ind()
-    pyxcd.w('num_threads = n_cpus')
-    pyxcd.ded()
+        pyxcd.w('if n_max < n_cpus:')
+        pyxcd.ind()
+        pyxcd.w('num_threads = n_max')
+        pyxcd.ded()
+        pyxcd.w('else:')
+        pyxcd.ind()
+        pyxcd.w('num_threads = n_cpus')
+        pyxcd.ded()
 
     pyxcd.w('for j in range(n_cps):')
     pyxcd.ind()
@@ -330,243 +336,241 @@ def write_obj_ftns_lines(params_dict):
     pyxcd.w('ppt_cp_n_vals_arr[j] += 1')
     pyxcd.ded(lev=2)
 
-    # the main loop
-    pyxcd.w('for s in prange(n_max, schedule=\'dynamic\', nogil=True, '
-            'num_threads=num_threads):')
-    if obj_1_flag or obj_3_flag:
-        pyxcd.ind()
-        pyxcd.w('if s < n_stns:')
-        pyxcd.ind()
-        pyxcd.w('m = s')
+    if any([obj_1_flag, 
+            obj_2_flag,
+            obj_3_flag,
+            obj_4_flag,
+            obj_5_flag]):
+        
+        # the main loop
+        pyxcd.w('for s in prange(n_max, schedule=\'dynamic\', nogil=True, '
+                'num_threads=num_threads):')
+        if obj_1_flag or obj_3_flag:
+            pyxcd.ind()
+            pyxcd.w('if s < n_stns:')
+            pyxcd.ind()
+            pyxcd.w('m = s')
 
-        if obj_3_flag:
-            pyxcd.w('curr_ppt_diff = 0')
+            if obj_3_flag:
+                pyxcd.w('curr_ppt_diff = 0')
+                pyxcd.els()
+
+            if obj_1_flag:
+                pyxcd.w('for p in range(n_o_1_threshs):')
+                pyxcd.ind()
+                pyxcd.w('stns_obj_1_vals_arr[m, p] = 0.0')
+                pyxcd.els()
+                pyxcd.w('for j in range(n_cps):')
+                pyxcd.ind()
+                pyxcd.w('ppt_cp_mean_pis_arr[m, j, p] = 0.0')
+                pyxcd.ded(lev=2)
+
+            pyxcd.w('for j in range(n_cps):')
+            pyxcd.ind()
+            pyxcd.w('if ppt_cp_n_vals_arr[j] == 0:')
+            pyxcd.ind()
+            pyxcd.w('continue')
+            pyxcd.ded()
+
+            if obj_3_flag:
+                pyxcd.w('cp_ppt_mean = 0')
+
             pyxcd.els()
 
-        if obj_1_flag:
-            pyxcd.w('for p in range(n_o_1_threshs):')
+            pyxcd.w('for i in range(n_time_steps):')
             pyxcd.ind()
-            pyxcd.w('stns_obj_1_vals_arr[m, p] = 0.0')
+            pyxcd.w('if sel_cps[i] != j:')
+            pyxcd.ind()
+            pyxcd.w('continue')
+            pyxcd.ded()
+
+            pyxcd.w('curr_ppt = in_ppt_arr[i, m]')
+            pyxcd.els()
+
+            if obj_1_flag:
+                pyxcd.w('for p in range(n_o_1_threshs):')
+                pyxcd.ind()
+                pyxcd.w('if curr_ppt < o_1_ppt_thresh_arr[p]:')
+                pyxcd.ind()
+                pyxcd.w('break')
+                pyxcd.ded()
+
+                pyxcd.w('ppt_cp_mean_pis_arr[m, j, p] = '
+                        'ppt_cp_mean_pis_arr[m, j, p] + 1')
+                pyxcd.ded()
+
+            if obj_3_flag:
+                pyxcd.w('cp_ppt_mean = cp_ppt_mean + curr_ppt')
+
+            pyxcd.ded()
+
+            if obj_1_flag:
+                pyxcd.w('for p in range(n_o_1_threshs):')
+                pyxcd.ind()
+                pyxcd.w('stns_obj_1_vals_arr[m, p] = stns_obj_1_vals_arr[m, p] + '
+                        'ppt_cp_n_vals_arr[j] * ((ppt_cp_mean_pis_arr[m, j, p] / '
+                        'ppt_cp_n_vals_arr[j]) - ppt_mean_pis_arr[m, p])**2')
+                pyxcd.ded()
+
+            if obj_3_flag:
+                pyxcd.w('ppt_cp_mean_arr[j, m] = cp_ppt_mean')
+                pyxcd.w('cp_ppt_mean = cp_ppt_mean / ppt_cp_n_vals_arr[j]')
+                pyxcd.els()
+
+                pyxcd.w('if ppt_mean_arr[m] > min_abs_ppt_thresh:')
+                pyxcd.ind()
+                pyxcd.w('_ = cp_ppt_mean / ppt_mean_arr[m]')
+                pyxcd.w('if _ <= 0:')
+                pyxcd.ind()
+                pyxcd.w('_ = 1e-100')
+                pyxcd.ded()
+                pyxcd.w('curr_ppt_diff = curr_ppt_diff + (ppt_cp_n_vals_arr[j] * '
+                        'abs(log(_)))')
+                pyxcd.ded(lev=2)
+                pyxcd.w('o_3 += (curr_ppt_diff / n_time_steps)')
+            else:
+                pyxcd.ded()
+
+            pyxcd.ded(lev=2)
+
+        if obj_2_flag or obj_5_flag:
+            pyxcd.ind()
+            pyxcd.w('if s < n_cats:')
+            pyxcd.ind()
+            pyxcd.w('q = s')
+
+            if obj_5_flag:
+                pyxcd.w('curr_cat_ppt_diff = 0')
+                pyxcd.els()
+
+            if obj_2_flag:
+                pyxcd.w('for r in range(n_o_2_threshs):')
+                pyxcd.ind()
+                pyxcd.w('cats_obj_2_vals_arr[q, r] = 0.0')
+                pyxcd.els()
+                pyxcd.w('for j in range(n_cps):')
+                pyxcd.ind()
+                pyxcd.w('cats_ppt_cp_mean_pis_arr[q, j, r] = 0.0')
+                pyxcd.ded(lev=2)
+
+            pyxcd.w('for j in range(n_cps):')
+            pyxcd.ind()
+            pyxcd.w('if ppt_cp_n_vals_arr[j] == 0:')
+            pyxcd.ind()
+            pyxcd.w('continue')
+            pyxcd.ded()
+
+            if obj_5_flag:
+                pyxcd.w('cp_cat_ppt_mean = 0')
+
+            pyxcd.els()
+
+            pyxcd.w('for i in range(n_time_steps):')
+            pyxcd.ind()
+            pyxcd.w('if sel_cps[i] != j:')
+            pyxcd.ind()
+            pyxcd.w('continue')
+            pyxcd.ded()
+
+            pyxcd.w('curr_cat_ppt = in_cats_ppt_arr[i, q]')
+            pyxcd.els()
+
+            if obj_2_flag:
+                pyxcd.w('for r in range(n_o_2_threshs):')
+                pyxcd.ind()
+                pyxcd.w('if curr_cat_ppt < o_2_ppt_thresh_arr[r]:')
+                pyxcd.ind()
+                pyxcd.w('break')
+                pyxcd.ded()
+
+                pyxcd.w(
+                    'cats_ppt_cp_mean_pis_arr[q, j, r] = cats_ppt_cp_mean_pis_arr[q, j, r] + 1')
+                pyxcd.ded()
+
+            if obj_5_flag:
+                pyxcd.w('cp_cat_ppt_mean = cp_cat_ppt_mean + curr_cat_ppt')
+
+            pyxcd.ded()
+
+            if obj_2_flag:
+                pyxcd.w('for r in range(n_o_2_threshs):')
+                pyxcd.ind()
+                pyxcd.w('cats_obj_2_vals_arr[q, r] = cats_obj_2_vals_arr[q, r] + '
+                        'ppt_cp_n_vals_arr[j] * ((cats_ppt_cp_mean_pis_arr[q, j, r] / '
+                        'ppt_cp_n_vals_arr[j]) - cats_ppt_mean_pis_arr[q, r])**2')
+                pyxcd.ded()
+
+            if obj_5_flag:
+                pyxcd.w('cats_ppt_cp_mean_arr[j, q] = cp_cat_ppt_mean')
+                pyxcd.w('cp_cat_ppt_mean = cp_cat_ppt_mean / ppt_cp_n_vals_arr[j]')
+                pyxcd.els()
+
+                pyxcd.w('if cats_ppt_mean_arr[q] > min_abs_ppt_thresh:')
+                pyxcd.ind()
+                pyxcd.w('_ = cp_cat_ppt_mean / cats_ppt_mean_arr[q]')
+                pyxcd.w('if _ <= 0:')
+                pyxcd.ind()
+                pyxcd.w('_ = 1e-100')
+                pyxcd.ded()
+                pyxcd.w(
+                    'curr_cat_ppt_diff = curr_cat_ppt_diff + (ppt_cp_n_vals_arr[j] * abs(log(_)))')
+                pyxcd.ded(lev=2)
+                pyxcd.w('o_5 += (curr_cat_ppt_diff / n_time_steps)')
+            else:
+                pyxcd.ded()
+
+            pyxcd.ded(lev=2)
+
+        if obj_4_flag:
+            pyxcd.ind()
+            pyxcd.w('if s < n_nebs:')
+            pyxcd.ind()
+            pyxcd.w('n = s')
+            pyxcd.w('for o in range(n_o_4_threshs):')
+            pyxcd.ind()
+            pyxcd.w('nebs_wet_obj_vals_arr[n, o] = 0.0')
             pyxcd.els()
             pyxcd.w('for j in range(n_cps):')
             pyxcd.ind()
-            pyxcd.w('ppt_cp_mean_pis_arr[m, j, p] = 0.0')
+            pyxcd.w('ppt_cp_mean_wet_arr[n, j, o] = 0')
             pyxcd.ded(lev=2)
 
-        pyxcd.w('for j in range(n_cps):')
-        pyxcd.ind()
-        pyxcd.w('if ppt_cp_n_vals_arr[j] == 0:')
-        pyxcd.ind()
-        pyxcd.w('continue')
-        pyxcd.ded()
-
-        if obj_3_flag:
-            pyxcd.w('cp_ppt_mean = 0')
-
-        pyxcd.els()
-
-        pyxcd.w('for i in range(n_time_steps):')
-        pyxcd.ind()
-        pyxcd.w('if sel_cps[i] != j:')
-        pyxcd.ind()
-        pyxcd.w('continue')
-        pyxcd.ded()
-
-        pyxcd.w('curr_ppt = in_ppt_arr[i, m]')
-        pyxcd.els()
-
-        if obj_1_flag:
-            pyxcd.w('for p in range(n_o_1_threshs):')
-            pyxcd.ind()
-            pyxcd.w('if curr_ppt < o_1_ppt_thresh_arr[p]:')
-            pyxcd.ind()
-            pyxcd.w('break')
-            pyxcd.ded()
-
-            pyxcd.w('ppt_cp_mean_pis_arr[m, j, p] = '
-                    'ppt_cp_mean_pis_arr[m, j, p] + 1')
-            pyxcd.ded()
-
-        if obj_3_flag:
-            pyxcd.w('cp_ppt_mean = cp_ppt_mean + curr_ppt')
-
-        pyxcd.ded()
-
-        if obj_1_flag:
-            pyxcd.w('for p in range(n_o_1_threshs):')
-            pyxcd.ind()
-            pyxcd.w('stns_obj_1_vals_arr[m, p] = stns_obj_1_vals_arr[m, p] + '
-                    'ppt_cp_n_vals_arr[j] * ((ppt_cp_mean_pis_arr[m, j, p] / '
-                    'ppt_cp_n_vals_arr[j]) - ppt_mean_pis_arr[m, p])**2')
-            pyxcd.ded()
-
-        if obj_3_flag:
-            pyxcd.w('ppt_cp_mean_arr[j, m] = cp_ppt_mean')
-            pyxcd.w('cp_ppt_mean = cp_ppt_mean / ppt_cp_n_vals_arr[j]')
-            pyxcd.els()
-
-            pyxcd.w('if ppt_mean_arr[m] > min_abs_ppt_thresh:')
-            pyxcd.ind()
-            pyxcd.w('_ = cp_ppt_mean / ppt_mean_arr[m]')
-            pyxcd.w('if _ <= 0:')
-            pyxcd.ind()
-            pyxcd.w('_ = 1e-100')
-            pyxcd.ded()
-            pyxcd.w('curr_ppt_diff = curr_ppt_diff + (ppt_cp_n_vals_arr[j] * '
-                    'abs(log(_)))')
-            pyxcd.ded(lev=2)
-            pyxcd.w('o_3 += (curr_ppt_diff / n_time_steps)')
-        else:
-            pyxcd.ded()
-
-        pyxcd.ded(lev=2)
-
-    if obj_2_flag or obj_5_flag:
-        pyxcd.ind()
-        pyxcd.w('if s < n_cats:')
-        pyxcd.ind()
-        pyxcd.w('q = s')
-
-        if obj_5_flag:
-            pyxcd.w('curr_cat_ppt_diff = 0')
-            pyxcd.els()
-
-        if obj_2_flag:
-            pyxcd.w('for r in range(n_o_2_threshs):')
-            pyxcd.ind()
-            pyxcd.w('cats_obj_2_vals_arr[q, r] = 0.0')
-            pyxcd.els()
             pyxcd.w('for j in range(n_cps):')
             pyxcd.ind()
-            pyxcd.w('cats_ppt_cp_mean_pis_arr[q, j, r] = 0.0')
-            pyxcd.ded(lev=2)
-
-        pyxcd.w('for j in range(n_cps):')
-        pyxcd.ind()
-        pyxcd.w('if ppt_cp_n_vals_arr[j] == 0:')
-        pyxcd.ind()
-        pyxcd.w('continue')
-        pyxcd.ded()
-
-        if obj_5_flag:
-            pyxcd.w('cp_cat_ppt_mean = 0')
-
-        pyxcd.els()
-
-        pyxcd.w('for i in range(n_time_steps):')
-        pyxcd.ind()
-        pyxcd.w('if sel_cps[i] != j:')
-        pyxcd.ind()
-        pyxcd.w('continue')
-        pyxcd.ded()
-
-        pyxcd.w('curr_cat_ppt = in_cats_ppt_arr[i, q]')
-        pyxcd.els()
-
-        if obj_2_flag:
-            pyxcd.w('for r in range(n_o_2_threshs):')
+            pyxcd.w('if ppt_cp_n_vals_arr[j] == 0:')
             pyxcd.ind()
-            pyxcd.w('if curr_cat_ppt < o_2_ppt_thresh_arr[r]:')
+            pyxcd.w('continue')
+            pyxcd.ded()
+
+            pyxcd.w('for i in range(n_time_steps):')
+            pyxcd.ind()
+            pyxcd.w('if sel_cps[i] != j:')
+            pyxcd.ind()
+            pyxcd.w('continue')
+            pyxcd.ded()
+
+            pyxcd.w('for o in range(n_o_4_threshs):')
+            pyxcd.ind()
+            pyxcd.w('if in_wet_arr_calib[i, n] < o_4_p_thresh_arr[o]:')
             pyxcd.ind()
             pyxcd.w('break')
             pyxcd.ded()
 
             pyxcd.w(
-                'cats_ppt_cp_mean_pis_arr[q, j, r] = cats_ppt_cp_mean_pis_arr[q, j, r] + 1')
-            pyxcd.ded()
-
-        if obj_5_flag:
-            pyxcd.w('cp_cat_ppt_mean = cp_cat_ppt_mean + curr_cat_ppt')
-
-        pyxcd.ded()
-
-        if obj_2_flag:
-            pyxcd.w('for r in range(n_o_2_threshs):')
-            pyxcd.ind()
-            pyxcd.w('cats_obj_2_vals_arr[q, r] = cats_obj_2_vals_arr[q, r] + '
-                    'ppt_cp_n_vals_arr[j] * ((cats_ppt_cp_mean_pis_arr[q, j, r] / '
-                    'ppt_cp_n_vals_arr[j]) - cats_ppt_mean_pis_arr[q, r])**2')
-            pyxcd.ded()
-
-        if obj_5_flag:
-            pyxcd.w('cats_ppt_cp_mean_arr[j, q] = cp_cat_ppt_mean')
-            pyxcd.w('cp_cat_ppt_mean = cp_cat_ppt_mean / ppt_cp_n_vals_arr[j]')
-            pyxcd.els()
-
-            pyxcd.w('if cats_ppt_mean_arr[q] > min_abs_ppt_thresh:')
-            pyxcd.ind()
-            pyxcd.w('_ = cp_cat_ppt_mean / cats_ppt_mean_arr[q]')
-            pyxcd.w('if _ <= 0:')
-            pyxcd.ind()
-            pyxcd.w('_ = 1e-100')
-            pyxcd.ded()
-            pyxcd.w(
-                'curr_cat_ppt_diff = curr_cat_ppt_diff + (ppt_cp_n_vals_arr[j] * abs(log(_)))')
+                'ppt_cp_mean_wet_arr[n, j, o] = ppt_cp_mean_wet_arr[n, j, o] + 1')
             pyxcd.ded(lev=2)
-            pyxcd.w('o_5 += (curr_cat_ppt_diff / n_time_steps)')
-        else:
-            pyxcd.ded()
 
-        pyxcd.ded(lev=2)
-
-    if obj_4_flag:
-        pyxcd.ind()
-        pyxcd.w('if s < n_nebs:')
-        pyxcd.ind()
-        pyxcd.w('n = s')
-        pyxcd.w('for o in range(n_o_4_threshs):')
-        pyxcd.ind()
-        pyxcd.w('nebs_wet_obj_vals_arr[n, o] = 0.0')
-        pyxcd.els()
-        pyxcd.w('for j in range(n_cps):')
-        pyxcd.ind()
-        pyxcd.w('ppt_cp_mean_wet_arr[n, j, o] = 0')
-        pyxcd.ded(lev=2)
-
-        pyxcd.w('for j in range(n_cps):')
-        pyxcd.ind()
-        pyxcd.w('if ppt_cp_n_vals_arr[j] == 0:')
-        pyxcd.ind()
-        pyxcd.w('continue')
-        pyxcd.ded()
-
-        pyxcd.w('for i in range(n_time_steps):')
-        pyxcd.ind()
-        pyxcd.w('if sel_cps[i] != j:')
-        pyxcd.ind()
-        pyxcd.w('continue')
-        pyxcd.ded()
-
-        pyxcd.w('for o in range(n_o_4_threshs):')
-        pyxcd.ind()
-        pyxcd.w('if in_wet_arr_calib[i, n] < o_4_p_thresh_arr[o]:')
-        pyxcd.ind()
-        pyxcd.w('break')
-        pyxcd.ded()
-
-        pyxcd.w(
-            'ppt_cp_mean_wet_arr[n, j, o] = ppt_cp_mean_wet_arr[n, j, o] + 1')
-        pyxcd.ded(lev=2)
-
-        pyxcd.w('for o in range(n_o_4_threshs):')
-        pyxcd.ind()
-        pyxcd.w('nebs_wet_obj_vals_arr[n, o] = nebs_wet_obj_vals_arr[n, o] + '
-                'ppt_cp_n_vals_arr[j] * ((ppt_cp_mean_wet_arr[n, j, o] / '
-                'ppt_cp_n_vals_arr[j]) - ppt_mean_wet_arr[n, o])**2')
-        pyxcd.ded(lev=4)
+            pyxcd.w('for o in range(n_o_4_threshs):')
+            pyxcd.ind()
+            pyxcd.w('nebs_wet_obj_vals_arr[n, o] = nebs_wet_obj_vals_arr[n, o] + '
+                    'ppt_cp_n_vals_arr[j] * ((ppt_cp_mean_wet_arr[n, j, o] / '
+                    'ppt_cp_n_vals_arr[j]) - ppt_mean_wet_arr[n, o])**2')
+            pyxcd.ded(lev=4)
 
     if obj_6_flag:
-        pyxcd.ind()
-        pyxcd.w('curr_ppt_wet_dof_diff = 0.0')
-        pyxcd.w('if s == 0:')
-        pyxcd.ind()
         pyxcd.w('for j in range(n_cps):')
         pyxcd.ind()
         pyxcd.w('mean_cp_wet_dof_arr[j] = 0.0')
-        pyxcd.ded()
-
-        pyxcd.w('for j in range(n_cps):')
-        pyxcd.ind()
         pyxcd.w('if ppt_cp_n_vals_arr[j] == 0:')
         pyxcd.ind()
         pyxcd.w('continue')
@@ -579,31 +583,22 @@ def write_obj_ftns_lines(params_dict):
         pyxcd.w('continue')
         pyxcd.ded()
 
-        pyxcd.w('mean_cp_wet_dof_arr[j] = mean_cp_wet_dof_arr[j] + '
-                'wet_dofs_arr[i]')
+        pyxcd.w('mean_cp_wet_dof_arr[j] += wet_dofs_arr[i]')
         pyxcd.ded()
 
-        pyxcd.w('curr_ppt_wet_dof_diff = curr_ppt_wet_dof_diff + '
+        pyxcd.w('curr_ppt_wet_dof_diff += '
                 'ppt_cp_n_vals_arr[j] * '
                 '((mean_cp_wet_dof_arr[j] / ppt_cp_n_vals_arr[j]) - '
                 'mean_wet_dof)**2')
 
-        pyxcd.ded(lev=2)
-        pyxcd.w('o_6 += (curr_ppt_wet_dof_diff / n_time_steps)')
         pyxcd.ded()
+        pyxcd.w('o_6 = (curr_ppt_wet_dof_diff / n_time_steps)')
+        pyxcd.els()
 
     if obj_7_flag:
-        pyxcd.ind()
-        pyxcd.w('curr_ppt_tri_wet_diff = 0.0')
-        pyxcd.w('if s == 0:')
-        pyxcd.ind()
         pyxcd.w('for j in range(n_cps):')
         pyxcd.ind()
         pyxcd.w('mean_cp_tri_wet_arr[j] = 0.0')
-        pyxcd.ded()
-
-        pyxcd.w('for j in range(n_cps):')
-        pyxcd.ind()
         pyxcd.w('if ppt_cp_n_vals_arr[j] == 0:')
         pyxcd.ind()
         pyxcd.w('continue')
@@ -616,17 +611,16 @@ def write_obj_ftns_lines(params_dict):
         pyxcd.w('continue')
         pyxcd.ded()
 
-        pyxcd.w('mean_cp_tri_wet_arr[j] = mean_cp_tri_wet_arr[j] + '
-                'tri_wet_arr[i]')
+        pyxcd.w('mean_cp_tri_wet_arr[j] += tri_wet_arr[i]')
         pyxcd.ded()
 
-        pyxcd.w('curr_ppt_tri_wet_diff = curr_ppt_tri_wet_diff + '
+        pyxcd.w('curr_ppt_tri_wet_diff += '
                 'ppt_cp_n_vals_arr[j] * ((mean_cp_tri_wet_arr[j] / '
                 'ppt_cp_n_vals_arr[j]) - mean_tri_wet) ** 2')
 
-        pyxcd.ded(lev=2)
-        pyxcd.w('o_7 += (curr_ppt_tri_wet_diff / n_time_steps)')
         pyxcd.ded()
+        pyxcd.w('o_7 = (curr_ppt_tri_wet_diff / n_time_steps)')
+        pyxcd.els()
 
     if obj_1_flag:
         pyxcd.w('for p in range(n_o_1_threshs):')
@@ -871,24 +865,30 @@ def write_obj_ftns_lines(params_dict):
 
     if obj_6_flag:
         pyxcd.w('DT_D o_6 = 0.0')
-        pyxcd.w('DT_D curr_ppt_wet_dof_diff')
+        pyxcd.w('DT_D curr_ppt_wet_dof_diff = 0.0')
         pyxcd.els()
 
     if obj_7_flag:
         pyxcd.w('DT_D o_7 = 0.0')
-        pyxcd.w('DT_D curr_ppt_tri_wet_diff')
+        pyxcd.w('DT_D curr_ppt_tri_wet_diff = 0.0')
         pyxcd.els()
 
     pyxcd.ded()
 
-    pyxcd.w('if n_max < n_cpus:')
-    pyxcd.ind()
-    pyxcd.w('num_threads = n_max')
-    pyxcd.ded()
-    pyxcd.w('else:')
-    pyxcd.ind()
-    pyxcd.w('num_threads = n_cpus')
-    pyxcd.ded()
+    if any([obj_1_flag,
+            obj_2_flag,
+            obj_3_flag,
+            obj_4_flag,
+            obj_5_flag]):
+
+        pyxcd.w('if n_max < n_cpus:')
+        pyxcd.ind()
+        pyxcd.w('num_threads = n_max')
+        pyxcd.ded()
+        pyxcd.w('else:')
+        pyxcd.ind()
+        pyxcd.w('num_threads = n_cpus')
+        pyxcd.ded()
 
     pyxcd.w('for j in range(n_cps):')
     pyxcd.ind()
@@ -908,297 +908,299 @@ def write_obj_ftns_lines(params_dict):
     pyxcd.w('ppt_cp_n_vals_arr[j] += 1')
     pyxcd.ded(lev=3)
 
-    pyxcd.w('for s in prange(n_max, schedule=\'dynamic\', nogil=True, '
-            'num_threads=num_threads):')
+    if any([obj_1_flag, 
+            obj_2_flag,
+            obj_3_flag,
+            obj_4_flag,
+            obj_5_flag]):
+        
+        pyxcd.w('for s in prange(n_max, schedule=\'dynamic\', nogil=True, '
+                'num_threads=num_threads):')
 
-    if obj_1_flag or obj_3_flag:
-        pyxcd.ind()
-        pyxcd.w('if s < n_stns:')
-        pyxcd.ind()
-        pyxcd.w('m = s')
-        if obj_1_flag:
-            pyxcd.w('for p in range(n_o_1_threshs):')
+        if obj_1_flag or obj_3_flag:
             pyxcd.ind()
-            pyxcd.w('stns_obj_1_vals_arr[m, p] = 0.0')
+            pyxcd.w('if s < n_stns:')
+            pyxcd.ind()
+            pyxcd.w('m = s')
+            if obj_1_flag:
+                pyxcd.w('for p in range(n_o_1_threshs):')
+                pyxcd.ind()
+                pyxcd.w('stns_obj_1_vals_arr[m, p] = 0.0')
+                pyxcd.ded()
+
+            if obj_3_flag:
+                pyxcd.w('curr_ppt_diff = 0.0')
+                pyxcd.els()
+
+            pyxcd.w('# remove the effect of the previous CP')
+            pyxcd.w('for j in range(n_cps):')
+            pyxcd.ind()
+
+            if obj_3_flag:
+                pyxcd.w('old_ppt_cp_mean = 0.0')
+                pyxcd.w('sel_ppt_cp_mean = 0.0')
+                pyxcd.els()
+
+            pyxcd.w('for i in range(n_time_steps):')
+            pyxcd.ind()
+            pyxcd.w('if not chnge_steps[i]:')
+            pyxcd.ind()
+            pyxcd.w('continue')
             pyxcd.ded()
 
-        if obj_3_flag:
-            pyxcd.w('curr_ppt_diff = 0.0')
+            pyxcd.w('curr_ppt = in_ppt_arr[i, m]')
             pyxcd.els()
 
-        pyxcd.w('# remove the effect of the previous CP')
-        pyxcd.w('for j in range(n_cps):')
-        pyxcd.ind()
-
-        if obj_3_flag:
-            pyxcd.w('old_ppt_cp_mean = 0.0')
-            pyxcd.w('sel_ppt_cp_mean = 0.0')
-            pyxcd.els()
-
-        pyxcd.w('for i in range(n_time_steps):')
-        pyxcd.ind()
-        pyxcd.w('if not chnge_steps[i]:')
-        pyxcd.ind()
-        pyxcd.w('continue')
-        pyxcd.ded()
-
-        pyxcd.w('curr_ppt = in_ppt_arr[i, m]')
-        pyxcd.els()
-
-        pyxcd.w('if old_sel_cps[i] == j:')
-        pyxcd.ind()
-
-        if obj_1_flag:
-            pyxcd.w('for p in range(n_o_1_threshs):')
+            pyxcd.w('if old_sel_cps[i] == j:')
             pyxcd.ind()
-            pyxcd.w('if curr_ppt < o_1_ppt_thresh_arr[p]:')
-            pyxcd.ind()
-            pyxcd.w('break')
-            pyxcd.ded()
-            pyxcd.w(
-                'ppt_cp_mean_pis_arr[m, j, p] = ppt_cp_mean_pis_arr[m, j, p] - 1')
+
+            if obj_1_flag:
+                pyxcd.w('for p in range(n_o_1_threshs):')
+                pyxcd.ind()
+                pyxcd.w('if curr_ppt < o_1_ppt_thresh_arr[p]:')
+                pyxcd.ind()
+                pyxcd.w('break')
+                pyxcd.ded()
+                pyxcd.w(
+                    'ppt_cp_mean_pis_arr[m, j, p] = ppt_cp_mean_pis_arr[m, j, p] - 1')
+                pyxcd.ded()
+
+            if obj_3_flag:
+                pyxcd.w('old_ppt_cp_mean = old_ppt_cp_mean + curr_ppt')
+
             pyxcd.ded()
 
-        if obj_3_flag:
-            pyxcd.w('old_ppt_cp_mean = old_ppt_cp_mean + curr_ppt')
-
-        pyxcd.ded()
-
-        pyxcd.w('if sel_cps[i] == j:')
-        pyxcd.ind()
-        if obj_1_flag:
-            pyxcd.w('for p in range(n_o_1_threshs):')
+            pyxcd.w('if sel_cps[i] == j:')
             pyxcd.ind()
-            pyxcd.w('if curr_ppt < o_1_ppt_thresh_arr[p]:')
-            pyxcd.ind()
-            pyxcd.w('break')
-            pyxcd.ded()
-            pyxcd.w(
-                'ppt_cp_mean_pis_arr[m, j, p] = ppt_cp_mean_pis_arr[m, j, p] + 1')
-            pyxcd.ded()
+            if obj_1_flag:
+                pyxcd.w('for p in range(n_o_1_threshs):')
+                pyxcd.ind()
+                pyxcd.w('if curr_ppt < o_1_ppt_thresh_arr[p]:')
+                pyxcd.ind()
+                pyxcd.w('break')
+                pyxcd.ded()
+                pyxcd.w(
+                    'ppt_cp_mean_pis_arr[m, j, p] = ppt_cp_mean_pis_arr[m, j, p] + 1')
+                pyxcd.ded()
 
-        if obj_3_flag:
-            pyxcd.w('sel_ppt_cp_mean = sel_ppt_cp_mean + curr_ppt')
+            if obj_3_flag:
+                pyxcd.w('sel_ppt_cp_mean = sel_ppt_cp_mean + curr_ppt')
 
-        pyxcd.ded(lev=2)
-
-        if obj_3_flag:
-            pyxcd.w(
-                'ppt_cp_mean_arr[j, m] = ppt_cp_mean_arr[j, m] - old_ppt_cp_mean + sel_ppt_cp_mean')
-
-        pyxcd.ded()
-
-        pyxcd.w('# incorporate the effect of the new CP')
-        pyxcd.w('for j in range(n_cps):')
-        pyxcd.ind()
-        pyxcd.w('if ppt_cp_n_vals_arr[j] == 0:')
-        pyxcd.ind()
-        pyxcd.w('continue')
-        pyxcd.ded()
-
-        if obj_1_flag:
-            pyxcd.w('for p in range(n_o_1_threshs):')
-            pyxcd.ind()
-            pyxcd.w('stns_obj_1_vals_arr[m, p] = stns_obj_1_vals_arr[m, p] + '
-                    'ppt_cp_n_vals_arr[j] * ((ppt_cp_mean_pis_arr[m, j, p] / '
-                    'ppt_cp_n_vals_arr[j]) - ppt_mean_pis_arr[m, p])**2')
-            pyxcd.ded()
-
-        if obj_3_flag:
-            pyxcd.w('if ppt_mean_arr[m] > min_abs_ppt_thresh:')
-            pyxcd.ind()
-            pyxcd.w(
-                '_ = (ppt_cp_mean_arr[j, m] / ppt_cp_n_vals_arr[j]) / ppt_mean_arr[m]')
-
-            pyxcd.w('if _ <= 0:')
-            pyxcd.ind()
-            pyxcd.w('_ = 1e-100')
-            pyxcd.ded()
-            pyxcd.w(
-                'curr_ppt_diff = curr_ppt_diff + (ppt_cp_n_vals_arr[j] * abs(log(_)))')
             pyxcd.ded(lev=2)
-            pyxcd.w('o_3 += (curr_ppt_diff / n_time_steps)')
-        else:
+
+            if obj_3_flag:
+                pyxcd.w(
+                    'ppt_cp_mean_arr[j, m] = ppt_cp_mean_arr[j, m] - old_ppt_cp_mean + sel_ppt_cp_mean')
+
             pyxcd.ded()
 
-        pyxcd.ded(lev=2)
-
-    if obj_2_flag or obj_5_flag:
-        pyxcd.ind()
-        pyxcd.w('if s < n_cats:')
-        pyxcd.ind()
-        pyxcd.w('q = s')
-#         pyxcd.w('for q in prange(n_cats, schedule=\'dynamic\'):')
-#         pyxcd.ind()
-        if obj_2_flag:
-            pyxcd.w('for r in range(n_o_2_threshs):')
+            pyxcd.w('# incorporate the effect of the new CP')
+            pyxcd.w('for j in range(n_cps):')
             pyxcd.ind()
-            pyxcd.w('cats_obj_2_vals_arr[q, r] = 0.0')
+            pyxcd.w('if ppt_cp_n_vals_arr[j] == 0:')
+            pyxcd.ind()
+            pyxcd.w('continue')
             pyxcd.ded()
 
-        if obj_5_flag:
-            pyxcd.w('curr_cat_ppt_diff = 0.0')
-            pyxcd.els()
+            if obj_1_flag:
+                pyxcd.w('for p in range(n_o_1_threshs):')
+                pyxcd.ind()
+                pyxcd.w('stns_obj_1_vals_arr[m, p] = stns_obj_1_vals_arr[m, p] + '
+                        'ppt_cp_n_vals_arr[j] * ((ppt_cp_mean_pis_arr[m, j, p] / '
+                        'ppt_cp_n_vals_arr[j]) - ppt_mean_pis_arr[m, p])**2')
+                pyxcd.ded()
 
-        pyxcd.w('# remove the effect of the previous CP')
-        pyxcd.w('for j in range(n_cps):')
-        pyxcd.ind()
+            if obj_3_flag:
+                pyxcd.w('if ppt_mean_arr[m] > min_abs_ppt_thresh:')
+                pyxcd.ind()
+                pyxcd.w(
+                    '_ = (ppt_cp_mean_arr[j, m] / ppt_cp_n_vals_arr[j]) / ppt_mean_arr[m]')
 
-        if obj_5_flag:
-            pyxcd.w('old_cat_ppt_cp_mean = 0.0')
-            pyxcd.w('sel_cat_ppt_cp_mean = 0.0')
-            pyxcd.els()
+                pyxcd.w('if _ <= 0:')
+                pyxcd.ind()
+                pyxcd.w('_ = 1e-100')
+                pyxcd.ded()
+                pyxcd.w(
+                    'curr_ppt_diff = curr_ppt_diff + (ppt_cp_n_vals_arr[j] * abs(log(_)))')
+                pyxcd.ded(lev=2)
+                pyxcd.w('o_3 += (curr_ppt_diff / n_time_steps)')
+            else:
+                pyxcd.ded()
 
-        pyxcd.w('for i in range(n_time_steps):')
-        pyxcd.ind()
-        pyxcd.w('if not chnge_steps[i]:')
-        pyxcd.ind()
-        pyxcd.w('continue')
-        pyxcd.ded()
-
-        pyxcd.w('curr_cat_ppt = in_cats_ppt_arr[i, q]')
-        pyxcd.els()
-
-        pyxcd.w('if old_sel_cps[i] == j:')
-        pyxcd.ind()
-
-        if obj_2_flag:
-            pyxcd.w('for r in range(n_o_2_threshs):')
-            pyxcd.ind()
-            pyxcd.w('if curr_cat_ppt < o_2_ppt_thresh_arr[r]:')
-            pyxcd.ind()
-            pyxcd.w('break')
-            pyxcd.ded()
-            pyxcd.w(
-                'cats_ppt_cp_mean_pis_arr[q, j, r] = cats_ppt_cp_mean_pis_arr[q, j, r] - 1')
-            pyxcd.ded()
-
-        if obj_5_flag:
-            pyxcd.w('old_cat_ppt_cp_mean = old_cat_ppt_cp_mean + curr_cat_ppt')
-
-        pyxcd.ded()
-
-        pyxcd.w('if sel_cps[i] == j:')
-        pyxcd.ind()
-        if obj_2_flag:
-            pyxcd.w('for r in range(n_o_2_threshs):')
-            pyxcd.ind()
-            pyxcd.w('if curr_cat_ppt < o_2_ppt_thresh_arr[r]:')
-            pyxcd.ind()
-            pyxcd.w('break')
-            pyxcd.ded()
-            pyxcd.w(
-                'cats_ppt_cp_mean_pis_arr[q, j, r] = cats_ppt_cp_mean_pis_arr[q, j, r] + 1')
-            pyxcd.ded()
-
-        if obj_5_flag:
-            pyxcd.w('sel_cat_ppt_cp_mean = sel_cat_ppt_cp_mean + curr_cat_ppt')
-
-        pyxcd.ded(lev=2)
-
-        if obj_5_flag:
-            pyxcd.w('cats_ppt_cp_mean_arr[j, q] = cats_ppt_cp_mean_arr[j, q] - '
-                    'old_cat_ppt_cp_mean + sel_cat_ppt_cp_mean')
-
-        pyxcd.ded()
-
-        pyxcd.w('# incorporate the effect of the new CP')
-        pyxcd.w('for j in range(n_cps):')
-        pyxcd.ind()
-        pyxcd.w('if ppt_cp_n_vals_arr[j] == 0:')
-        pyxcd.ind()
-        pyxcd.w('continue')
-        pyxcd.ded()
-
-        if obj_2_flag:
-            pyxcd.w('for r in range(n_o_2_threshs):')
-            pyxcd.ind()
-            pyxcd.w('cats_obj_2_vals_arr[q, r] = cats_obj_2_vals_arr[q, r] + '
-                    'ppt_cp_n_vals_arr[j] * ((cats_ppt_cp_mean_pis_arr[q, j, r] / '
-                    'ppt_cp_n_vals_arr[j]) - cats_ppt_mean_pis_arr[q, r])**2')
-            pyxcd.ded()
-
-        if obj_5_flag:
-            pyxcd.w('if cats_ppt_mean_arr[q] > min_abs_ppt_thresh:')
-            pyxcd.ind()
-            pyxcd.w(
-                '_ = (cats_ppt_cp_mean_arr[j, q] / ppt_cp_n_vals_arr[j]) / cats_ppt_mean_arr[q]')
-
-            pyxcd.w('if _ <= 0:')
-            pyxcd.ind()
-            pyxcd.w('_ = 1e-100')
-            pyxcd.ded()
-            pyxcd.w(
-                'curr_cat_ppt_diff = curr_cat_ppt_diff + (ppt_cp_n_vals_arr[j] * abs(log(_)))')
             pyxcd.ded(lev=2)
-            pyxcd.w('o_5 += (curr_cat_ppt_diff / n_time_steps)')
-        else:
+
+        if obj_2_flag or obj_5_flag:
+            pyxcd.ind()
+            pyxcd.w('if s < n_cats:')
+            pyxcd.ind()
+            pyxcd.w('q = s')
+    #         pyxcd.w('for q in prange(n_cats, schedule=\'dynamic\'):')
+    #         pyxcd.ind()
+            if obj_2_flag:
+                pyxcd.w('for r in range(n_o_2_threshs):')
+                pyxcd.ind()
+                pyxcd.w('cats_obj_2_vals_arr[q, r] = 0.0')
+                pyxcd.ded()
+
+            if obj_5_flag:
+                pyxcd.w('curr_cat_ppt_diff = 0.0')
+                pyxcd.els()
+
+            pyxcd.w('# remove the effect of the previous CP')
+            pyxcd.w('for j in range(n_cps):')
+            pyxcd.ind()
+
+            if obj_5_flag:
+                pyxcd.w('old_cat_ppt_cp_mean = 0.0')
+                pyxcd.w('sel_cat_ppt_cp_mean = 0.0')
+                pyxcd.els()
+
+            pyxcd.w('for i in range(n_time_steps):')
+            pyxcd.ind()
+            pyxcd.w('if not chnge_steps[i]:')
+            pyxcd.ind()
+            pyxcd.w('continue')
             pyxcd.ded()
 
-        pyxcd.ded(lev=2)
+            pyxcd.w('curr_cat_ppt = in_cats_ppt_arr[i, q]')
+            pyxcd.els()
 
-    if obj_4_flag:
-        pyxcd.ind()
-        pyxcd.w('if s < n_nebs:')
-        pyxcd.ind()
-        pyxcd.w('n = s')
-        pyxcd.w('for o in range(n_o_4_threshs):')
-        pyxcd.ind()
-        pyxcd.w('nebs_wet_obj_vals_arr[n, o] = 0.0')
-        pyxcd.ded()
+            pyxcd.w('if old_sel_cps[i] == j:')
+            pyxcd.ind()
 
-        pyxcd.w('for j in range(n_cps):')
-        pyxcd.ind()
-        pyxcd.w('for i in range(n_time_steps):')
-        pyxcd.ind()
-        pyxcd.w('if not chnge_steps[i]:')
-        pyxcd.ind()
-        pyxcd.w('continue')
-        pyxcd.ded()
+            if obj_2_flag:
+                pyxcd.w('for r in range(n_o_2_threshs):')
+                pyxcd.ind()
+                pyxcd.w('if curr_cat_ppt < o_2_ppt_thresh_arr[r]:')
+                pyxcd.ind()
+                pyxcd.w('break')
+                pyxcd.ded()
+                pyxcd.w(
+                    'cats_ppt_cp_mean_pis_arr[q, j, r] = cats_ppt_cp_mean_pis_arr[q, j, r] - 1')
+                pyxcd.ded()
 
-        pyxcd.w('if old_sel_cps[i] == j:')
-        pyxcd.ind()
-        pyxcd.w('for o in range(n_o_4_threshs):')
-        pyxcd.ind()
-        pyxcd.w('if in_wet_arr_calib[i, n] < o_4_p_thresh_arr[o]:')
-        pyxcd.ind()
-        pyxcd.w('break')
-        pyxcd.ded()
+            if obj_5_flag:
+                pyxcd.w('old_cat_ppt_cp_mean = old_cat_ppt_cp_mean + curr_cat_ppt')
 
-        pyxcd.w(
-            'ppt_cp_mean_wet_arr[n, j, o] = ppt_cp_mean_wet_arr[n, j, o] - 1')
-        pyxcd.ded(lev=2)
+            pyxcd.ded()
 
-        pyxcd.w('if sel_cps[i] == j:')
-        pyxcd.ind()
-        pyxcd.w('for o in range(n_o_4_threshs):')
-        pyxcd.ind()
-        pyxcd.w('if in_wet_arr_calib[i, n] < o_4_p_thresh_arr[o]:')
-        pyxcd.ind()
-        pyxcd.w('break')
-        pyxcd.ded()
+            pyxcd.w('if sel_cps[i] == j:')
+            pyxcd.ind()
+            if obj_2_flag:
+                pyxcd.w('for r in range(n_o_2_threshs):')
+                pyxcd.ind()
+                pyxcd.w('if curr_cat_ppt < o_2_ppt_thresh_arr[r]:')
+                pyxcd.ind()
+                pyxcd.w('break')
+                pyxcd.ded()
+                pyxcd.w(
+                    'cats_ppt_cp_mean_pis_arr[q, j, r] = cats_ppt_cp_mean_pis_arr[q, j, r] + 1')
+                pyxcd.ded()
 
-        pyxcd.w(
-            'ppt_cp_mean_wet_arr[n, j, o] = ppt_cp_mean_wet_arr[n, j, o] + 1')
-        pyxcd.ded(lev=3)
+            if obj_5_flag:
+                pyxcd.w('sel_cat_ppt_cp_mean = sel_cat_ppt_cp_mean + curr_cat_ppt')
 
-        pyxcd.w('if not ppt_cp_n_vals_arr[j]:')
-        pyxcd.ind()
-        pyxcd.w('continue')
-        pyxcd.ded()
+            pyxcd.ded(lev=2)
 
-        pyxcd.w('for o in range(n_o_4_threshs):')
-        pyxcd.ind()
-        pyxcd.w('nebs_wet_obj_vals_arr[n, o] = nebs_wet_obj_vals_arr[n, o] + '
-                'ppt_cp_n_vals_arr[j] * ((ppt_cp_mean_wet_arr[n, j, o] / '
-                'ppt_cp_n_vals_arr[j]) - ppt_mean_wet_arr[n, o])**2')
-        pyxcd.ded(lev=4)
+            if obj_5_flag:
+                pyxcd.w('cats_ppt_cp_mean_arr[j, q] = cats_ppt_cp_mean_arr[j, q] - '
+                        'old_cat_ppt_cp_mean + sel_cat_ppt_cp_mean')
+
+            pyxcd.ded()
+
+            pyxcd.w('# incorporate the effect of the new CP')
+            pyxcd.w('for j in range(n_cps):')
+            pyxcd.ind()
+            pyxcd.w('if ppt_cp_n_vals_arr[j] == 0:')
+            pyxcd.ind()
+            pyxcd.w('continue')
+            pyxcd.ded()
+
+            if obj_2_flag:
+                pyxcd.w('for r in range(n_o_2_threshs):')
+                pyxcd.ind()
+                pyxcd.w('cats_obj_2_vals_arr[q, r] = cats_obj_2_vals_arr[q, r] + '
+                        'ppt_cp_n_vals_arr[j] * ((cats_ppt_cp_mean_pis_arr[q, j, r] / '
+                        'ppt_cp_n_vals_arr[j]) - cats_ppt_mean_pis_arr[q, r])**2')
+                pyxcd.ded()
+
+            if obj_5_flag:
+                pyxcd.w('if cats_ppt_mean_arr[q] > min_abs_ppt_thresh:')
+                pyxcd.ind()
+                pyxcd.w(
+                    '_ = (cats_ppt_cp_mean_arr[j, q] / ppt_cp_n_vals_arr[j]) / cats_ppt_mean_arr[q]')
+
+                pyxcd.w('if _ <= 0:')
+                pyxcd.ind()
+                pyxcd.w('_ = 1e-100')
+                pyxcd.ded()
+                pyxcd.w(
+                    'curr_cat_ppt_diff = curr_cat_ppt_diff + (ppt_cp_n_vals_arr[j] * abs(log(_)))')
+                pyxcd.ded(lev=2)
+                pyxcd.w('o_5 += (curr_cat_ppt_diff / n_time_steps)')
+            else:
+                pyxcd.ded()
+
+            pyxcd.ded(lev=2)
+
+        if obj_4_flag:
+            pyxcd.ind()
+            pyxcd.w('if s < n_nebs:')
+            pyxcd.ind()
+            pyxcd.w('n = s')
+            pyxcd.w('for o in range(n_o_4_threshs):')
+            pyxcd.ind()
+            pyxcd.w('nebs_wet_obj_vals_arr[n, o] = 0.0')
+            pyxcd.ded()
+
+            pyxcd.w('for j in range(n_cps):')
+            pyxcd.ind()
+            pyxcd.w('for i in range(n_time_steps):')
+            pyxcd.ind()
+            pyxcd.w('if not chnge_steps[i]:')
+            pyxcd.ind()
+            pyxcd.w('continue')
+            pyxcd.ded()
+
+            pyxcd.w('if old_sel_cps[i] == j:')
+            pyxcd.ind()
+            pyxcd.w('for o in range(n_o_4_threshs):')
+            pyxcd.ind()
+            pyxcd.w('if in_wet_arr_calib[i, n] < o_4_p_thresh_arr[o]:')
+            pyxcd.ind()
+            pyxcd.w('break')
+            pyxcd.ded()
+
+            pyxcd.w(
+                'ppt_cp_mean_wet_arr[n, j, o] = ppt_cp_mean_wet_arr[n, j, o] - 1')
+            pyxcd.ded(lev=2)
+
+            pyxcd.w('if sel_cps[i] == j:')
+            pyxcd.ind()
+            pyxcd.w('for o in range(n_o_4_threshs):')
+            pyxcd.ind()
+            pyxcd.w('if in_wet_arr_calib[i, n] < o_4_p_thresh_arr[o]:')
+            pyxcd.ind()
+            pyxcd.w('break')
+            pyxcd.ded()
+
+            pyxcd.w(
+                'ppt_cp_mean_wet_arr[n, j, o] = ppt_cp_mean_wet_arr[n, j, o] + 1')
+            pyxcd.ded(lev=3)
+
+            pyxcd.w('if not ppt_cp_n_vals_arr[j]:')
+            pyxcd.ind()
+            pyxcd.w('continue')
+            pyxcd.ded()
+
+            pyxcd.w('for o in range(n_o_4_threshs):')
+            pyxcd.ind()
+            pyxcd.w('nebs_wet_obj_vals_arr[n, o] = nebs_wet_obj_vals_arr[n, o] + '
+                    'ppt_cp_n_vals_arr[j] * ((ppt_cp_mean_wet_arr[n, j, o] / '
+                    'ppt_cp_n_vals_arr[j]) - ppt_mean_wet_arr[n, o])**2')
+            pyxcd.ded(lev=4)
 
     if obj_6_flag:
-        pyxcd.ind()
-        pyxcd.w('curr_ppt_wet_dof_diff = 0.0')
-        pyxcd.w('if s == 0:')
-        pyxcd.ind()
         pyxcd.w('for j in range(n_cps):')
         pyxcd.ind()
         pyxcd.w('for i in range(n_time_steps):')
@@ -1210,14 +1212,12 @@ def write_obj_ftns_lines(params_dict):
 
         pyxcd.w('if old_sel_cps[i] == j:')
         pyxcd.ind()
-        pyxcd.w('mean_cp_wet_dof_arr[j] = mean_cp_wet_dof_arr[j] - '
-        'wet_dofs_arr[i]')
+        pyxcd.w('mean_cp_wet_dof_arr[j] -= wet_dofs_arr[i]')
         pyxcd.ded()
 
         pyxcd.w('if sel_cps[i] == j:')
         pyxcd.ind()
-        pyxcd.w('mean_cp_wet_dof_arr[j] = mean_cp_wet_dof_arr[j] + '
-        'wet_dofs_arr[i]')
+        pyxcd.w('mean_cp_wet_dof_arr[j] += wet_dofs_arr[i]')
         pyxcd.ded(lev=2)
 
         pyxcd.w('if not ppt_cp_n_vals_arr[j]:')
@@ -1225,20 +1225,15 @@ def write_obj_ftns_lines(params_dict):
         pyxcd.w('continue')
         pyxcd.ded()
 
-        pyxcd.w('curr_ppt_wet_dof_diff = curr_ppt_wet_dof_diff + '
+        pyxcd.w('curr_ppt_wet_dof_diff += '
                 'ppt_cp_n_vals_arr[j] * '
                 '((mean_cp_wet_dof_arr[j] / ppt_cp_n_vals_arr[j]) - '
                 'mean_wet_dof)**2')
-        pyxcd.ded(lev=2)
-        pyxcd.w('o_6 += (curr_ppt_wet_dof_diff / n_time_steps)')
         pyxcd.ded()
+        pyxcd.w('o_6 = (curr_ppt_wet_dof_diff / n_time_steps)')
+        pyxcd.els()
 
     if obj_7_flag:
-        pyxcd.ind()
-        pyxcd.w('curr_ppt_tri_wet_diff = 0.0')
-        pyxcd.w('if s == 0:')
-        pyxcd.ind()
-
         pyxcd.w('for j in range(n_cps):')
         pyxcd.ind()
         pyxcd.w('for i in range(n_time_steps):')
@@ -1250,12 +1245,12 @@ def write_obj_ftns_lines(params_dict):
 
         pyxcd.w('if old_sel_cps[i] == j:')
         pyxcd.ind()
-        pyxcd.w('mean_cp_tri_wet_arr[j] = mean_cp_tri_wet_arr[j] - tri_wet_arr[i]')
+        pyxcd.w('mean_cp_tri_wet_arr[j] -= tri_wet_arr[i]')
         pyxcd.ded()
 
         pyxcd.w('if sel_cps[i] == j:')
         pyxcd.ind()
-        pyxcd.w('mean_cp_tri_wet_arr[j] = mean_cp_tri_wet_arr[j] + tri_wet_arr[i]')
+        pyxcd.w('mean_cp_tri_wet_arr[j] += tri_wet_arr[i]')
         pyxcd.ded(lev=2)
 
         pyxcd.w('if not ppt_cp_n_vals_arr[j]:')
@@ -1263,11 +1258,13 @@ def write_obj_ftns_lines(params_dict):
         pyxcd.w('continue')
         pyxcd.ded()
 
-        pyxcd.w('curr_ppt_tri_wet_diff = curr_ppt_tri_wet_diff + ppt_cp_n_vals_arr[j] * ((mean_cp_tri_wet_arr[j] / ppt_cp_n_vals_arr[j]) - mean_tri_wet) ** 2')
-        pyxcd.ded(lev=2)
-
-        pyxcd.w('o_7 += (curr_ppt_tri_wet_diff / n_time_steps)')
+        pyxcd.w('curr_ppt_tri_wet_diff += '
+                'ppt_cp_n_vals_arr[j] * ((mean_cp_tri_wet_arr[j] / '
+                'ppt_cp_n_vals_arr[j]) - mean_tri_wet) ** 2')
         pyxcd.ded()
+
+        pyxcd.w('o_7 = (curr_ppt_tri_wet_diff / n_time_steps)')
+        pyxcd.els()
         
     if obj_1_flag:
         pyxcd.w('for p in range(n_o_1_threshs):')
