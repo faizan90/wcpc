@@ -578,6 +578,7 @@ def plot_iter_cp_pcntgs(n_cps,
 
         ax.set_xlabel('Iteration No. (-)')
         ax.set_ylabel('Relative CP frequency (-)')
+        ax.set_ylim(0.0, 1.0)
         ax.grid()
         ax.legend(loc=0)
         ax.set_title('CP classification - CP frequency evolution')
