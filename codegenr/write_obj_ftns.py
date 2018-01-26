@@ -595,10 +595,10 @@ def write_obj_ftns_lines(params_dict):
 
         if obj_8_flag:
             pyxcd.ind()
+            pyxcd.w('curr_lor_diff = 0')
             pyxcd.w('if s < n_lors:')
             pyxcd.ind()
             pyxcd.w('t = s')
-            pyxcd.w('curr_lor_diff = 0')
             pyxcd.els()
 
             pyxcd.w('for j in range(n_cps):')
@@ -628,12 +628,12 @@ def write_obj_ftns_lines(params_dict):
             pyxcd.w('cp_lor_mean = cp_lor_mean / ppt_cp_n_vals_arr[j]')
             pyxcd.els()
 
-            pyxcd.w('curr_lor_diff = curr_lor_diff + (ppt_cp_n_vals_arr[j] * '
-                    '(cp_lor_mean  - mean_lor_arr[t])**2)')
-            pyxcd.ded()
+            pyxcd.w('curr_lor_diff = curr_lor_diff + ppt_cp_n_vals_arr[j] * '
+                    'abs((cp_lor_mean / mean_lor_arr[t]) - 1)')
+            pyxcd.ded(lev=2)
 
             pyxcd.w('o_8 += (curr_lor_diff / n_time_steps)')
-            pyxcd.ded(lev=2)
+            pyxcd.ded()
 
     if obj_6_flag:
         pyxcd.w('for j in range(n_cps):')
@@ -1307,11 +1307,11 @@ def write_obj_ftns_lines(params_dict):
 
         if obj_8_flag:
             pyxcd.ind()
+            pyxcd.w('curr_lor_diff = 0.0')
             pyxcd.w('if s < n_lors:')
             pyxcd.ind()
             pyxcd.w('t = s')
 
-            pyxcd.w('curr_lor_diff = 0.0')
             pyxcd.els()
 
             pyxcd.w('# remove the effect of the previous CP')
@@ -1358,13 +1358,13 @@ def write_obj_ftns_lines(params_dict):
             pyxcd.w('cp_lor_mean = lor_cp_mean_arr[j, t] / ppt_cp_n_vals_arr[j]')
             pyxcd.els()
 
-            pyxcd.w('curr_lor_diff = curr_lor_diff + (ppt_cp_n_vals_arr[j] * '
-                    '(cp_lor_mean  - mean_lor_arr[t])**2)')
+            pyxcd.w('curr_lor_diff = curr_lor_diff + ppt_cp_n_vals_arr[j] * '
+                    'abs((cp_lor_mean / mean_lor_arr[t]) - 1)')
 
-            pyxcd.ded()
+            pyxcd.ded(lev=2)
 
             pyxcd.w('o_8 += (curr_lor_diff / n_time_steps)')
-            pyxcd.ded(lev=2)
+            pyxcd.ded()
 
     if obj_6_flag:
         pyxcd.w('for j in range(n_cps):')

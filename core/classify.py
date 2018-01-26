@@ -271,7 +271,7 @@ class CPClassiA(CPOPTBase):
                        alpha=0.75)
         ax.set_xlabel('Iteration No. (-)')
         ax.set_ylabel('Objective ftn. value (-)')
-        ax.set_ylim(0, self.best_obj_vals_arr[-1] * 1.05)
+        ax.set_ylim(-0.1, self.best_obj_vals_arr.max() * 1.05)
 #         ax.set_ylim(0, ax.get_ylim()[1])
 
         ax.grid()

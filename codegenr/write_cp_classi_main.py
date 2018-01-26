@@ -131,7 +131,7 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('# doubles')
     pyxcd.w('DT_D anneal_temp_ini, temp_red_alpha, curr_anneal_temp, p_l')
     pyxcd.w('DT_D best_obj_val, curr_obj_val, pre_obj_val, rand_p, boltz_p')
-    pyxcd.w('DT_D acc_rate, temp_inc, lo_freq_pen_wt, min_freq')
+    pyxcd.w('DT_D acc_rate, temp_inc, lo_freq_pen_wt, min_freq, min_descent = 0.9')
     pyxcd.els()
 
     pyxcd.w('# other variables')
@@ -476,6 +476,9 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('rand_i = n_pts - 1')
     pyxcd.w('rand_v = n_fuzz_nos')
     pyxcd.w('old_v_i_k = n_fuzz_nos')
+    pyxcd.els()
+
+    pyxcd.w('min_descent_opp = 2 - min_descent')
     pyxcd.els()
 
     pyxcd.w('# run_type == 1 means fresh start i.e. everything is reset '
@@ -1064,6 +1067,19 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('pre_obj_val = curr_obj_val')
     pyxcd.w('accept_iters += 1')
     pyxcd.ded()
+
+    pyxcd.w('elif (pre_obj_val <= 0) and (curr_obj_val < (pre_obj_val * min_descent_opp)):')
+    pyxcd.ind()
+    pyxcd.w('run_type = 3')
+    pyxcd.w('reject_iters += 1')
+    pyxcd.ded()
+
+    pyxcd.w('elif (pre_obj_val > 0) and (curr_obj_val < (pre_obj_val * min_descent)):')
+    pyxcd.ind()
+    pyxcd.w('run_type = 3')
+    pyxcd.w('reject_iters += 1')
+    pyxcd.ded()
+
     pyxcd.w('else:')
     pyxcd.ind()
     pyxcd.w('rand_p = rand_c()')
@@ -1073,6 +1089,7 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('pre_obj_val = curr_obj_val')
     pyxcd.w('rand_acc_iters += 1')
     pyxcd.ded()
+
     pyxcd.w('else:')
     pyxcd.ind()
     pyxcd.w('run_type = 3')
@@ -1094,13 +1111,6 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('acc_rate = round(100.0 * (accept_iters + rand_acc_iters) / '
             '(accept_iters + rand_acc_iters + reject_iters), 6)')
     pyxcd.els()
-
-#     pyxcd.w('if curr_m_iter >= max_m_iters:')
-#     pyxcd.ind()
-#     pyxcd.w('curr_m_iter = 0')
-#     pyxcd.w('curr_anneal_temp *= temp_red_alpha')
-#     pyxcd.w('#run_type = 1')
-#     pyxcd.els()
 
     pyxcd.w('if not curr_m_iter:')
     pyxcd.ind()
@@ -1133,7 +1143,7 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('print(\'curr_iters_wo_chng:\', curr_iters_wo_chng)')
     pyxcd.els()
 
-    pyxcd.w('print(\'cp_dof_arr min, max:\', cp_dof_arr.min(), cp_dof_arr.max())')
+    pyxcd.w('#print(\'cp_dof_arr min, max:\', cp_dof_arr.min(), cp_dof_arr.max())')
     pyxcd.els()
     pyxcd.w('print(\'rand_p, boltz_p:\', rand_p, boltz_p)')
 

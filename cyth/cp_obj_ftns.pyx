@@ -69,9 +69,9 @@ cdef DT_D obj_ftn_refresh(
             ppt_cp_n_vals_arr[j] += 1
 
     for s in prange(n_max, schedule='dynamic', nogil=True, num_threads=num_threads):
+        curr_lor_diff = 0
         if s < n_lors:
             t = s
-            curr_lor_diff = 0
 
             for j in range(n_cps):
                 if ppt_cp_n_vals_arr[j] == 0:
@@ -90,9 +90,9 @@ cdef DT_D obj_ftn_refresh(
                 lor_cp_mean_arr[j, t] = cp_lor_mean
                 cp_lor_mean = cp_lor_mean / ppt_cp_n_vals_arr[j]
 
-                curr_lor_diff = curr_lor_diff + (ppt_cp_n_vals_arr[j] * (cp_lor_mean  - mean_lor_arr[t])**2)
+                curr_lor_diff = curr_lor_diff + ppt_cp_n_vals_arr[j] * abs((cp_lor_mean / mean_lor_arr[t]) - 1)
 
-            o_8 += (curr_lor_diff / n_time_steps)
+        o_8 += (curr_lor_diff / n_time_steps)
 
     obj_val += (o_8 * obj_ftn_wts_arr[7])
 
@@ -149,9 +149,9 @@ cdef DT_D obj_ftn_update(
                 ppt_cp_n_vals_arr[j] += 1
 
     for s in prange(n_max, schedule='dynamic', nogil=True, num_threads=num_threads):
+        curr_lor_diff = 0.0
         if s < n_lors:
             t = s
-            curr_lor_diff = 0.0
 
             # remove the effect of the previous CP
             for j in range(n_cps):
@@ -179,9 +179,9 @@ cdef DT_D obj_ftn_update(
 
                 cp_lor_mean = lor_cp_mean_arr[j, t] / ppt_cp_n_vals_arr[j]
 
-                curr_lor_diff = curr_lor_diff + (ppt_cp_n_vals_arr[j] * (cp_lor_mean  - mean_lor_arr[t])**2)
+                curr_lor_diff = curr_lor_diff + ppt_cp_n_vals_arr[j] * abs((cp_lor_mean / mean_lor_arr[t]) - 1)
 
-            o_8 += (curr_lor_diff / n_time_steps)
+        o_8 += (curr_lor_diff / n_time_steps)
 
     obj_val += (o_8 * obj_ftn_wts_arr[7])
 
