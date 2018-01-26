@@ -553,7 +553,7 @@ def plot_iter_cp_pcntgs(n_cps,
         assert old_new_cp_map_arr.shape[1] == 2
         assert old_new_cp_map_arr.shape[0] == n_cps
     else:
-        old_new_cp_map_arr = np.array([range(n_cps), range(n_cps)])
+        old_new_cp_map_arr = np.repeat(range(n_cps), 2).reshape(-1, 2)
 
     out_fig_pre_path = out_fig_loc.parents[0]
     out_fig_name, out_ext = out_fig_loc.name.rsplit('.', 1)
@@ -561,7 +561,7 @@ def plot_iter_cp_pcntgs(n_cps,
     fig = plt.figure(figsize=fig_size)
     ax = fig.gca()
     
-    best_idx = np.where(curr_n_iters_arr == best_iter_idx)
+    best_idx = int(np.where(curr_n_iters_arr == best_iter_idx)[0][0])
 
     for i in range(n_cps):
         curr_cp_pcntge_arr = cp_pcntge_arr[:, old_new_cp_map_arr[i, 0]]

@@ -4,7 +4,7 @@
 # cython: cdivision=True
 # cython: language_level=3
 
-### obj_ftns:True;False;False;False;False;False;False
+### obj_ftns:False;False;False;False;False;False;False;True
 
 import numpy as np
 cimport numpy as np
@@ -56,7 +56,7 @@ cpdef classify_cps(dict args_dict):
         # doubles
         DT_D anneal_temp_ini, temp_red_alpha, curr_anneal_temp, p_l
         DT_D best_obj_val, curr_obj_val, pre_obj_val, rand_p, boltz_p
-        DT_D acc_rate, temp_inc
+        DT_D acc_rate, temp_inc, lo_freq_pen_wt, min_freq
 
         # other variables
         list curr_n_iters_list = []
@@ -64,6 +64,7 @@ cpdef classify_cps(dict args_dict):
         list best_obj_vals_list = []
         list acc_rate_list = []
         list cp_pcntge_list = []
+        list ants = [[], []]
 
         # 1D ulong arrays
         np.ndarray[DT_UL_NP_t, ndim=1, mode='c'] best_sel_cps
@@ -87,32 +88,21 @@ cpdef classify_cps(dict args_dict):
         np.ndarray[DT_D_NP_t, ndim=1, mode='c'] obj_ftn_wts_arr
         np.ndarray[DT_D_NP_t, ndim=1, mode='c'] ppt_cp_n_vals_arr
 
-        np.ndarray[DT_D_NP_t, ndim=2, mode='c'] in_ppt_arr
+        np.ndarray[DT_UL_NP_t, ndim=2, mode='c'] in_lorenz_arr
 
-        # ulongs for obj. ftns.
-        Py_ssize_t m
-        DT_UL n_stns
+        Py_ssize_t t
+        DT_UL n_lors
 
-        # doubles for obj. ftns.
-        DT_D min_abs_ppt_thresh
-
-        # ulongs obj. ftn. 1
-        Py_ssize_t p
-        DT_UL n_o_1_threshs
-
-        # arrays for obj. ftn. 1
-        np.ndarray[DT_D_NP_t, ndim=1, mode='c'] o_1_ppt_thresh_arr
-        np.ndarray[DT_D_NP_t, ndim=2, mode='c'] ppt_mean_pis_arr
-        np.ndarray[DT_D_NP_t, ndim=2, mode='c'] stns_obj_1_vals_arr
-        np.ndarray[DT_D_NP_t, ndim=3, mode='c'] ppt_cp_mean_pis_arr
+        # arrays for obj. ftn. 8
+        np.ndarray[DT_D_NP_t, ndim=1, mode='c'] mean_lor_arr
+        np.ndarray[DT_D_NP_t, ndim=2, mode='c'] lor_cp_mean_arr
 
     # read everythings from the given dict. Must do explicitly.
-    min_abs_ppt_thresh = args_dict['min_abs_ppt_thresh']
-    in_ppt_arr = args_dict['in_ppt_arr_calib']
-    n_stns = in_ppt_arr.shape[1]
-    n_max = max(n_max, n_stns)
-    o_1_ppt_thresh_arr = args_dict['o_1_ppt_thresh_arr']
-    n_o_1_threshs = o_1_ppt_thresh_arr.shape[0]
+    in_lorenz_arr = args_dict['in_lorenz_arr_calib']
+    n_lors = in_lorenz_arr.shape[1]
+    n_max = max(n_max, n_lors)
+    assert n_lors, 'n_lors cannot be zero!'
+
     obj_ftn_wts_arr = args_dict['obj_ftn_wts_arr']
     n_cps = args_dict['n_cps']
     no_cp_val = args_dict['no_cp_val']
@@ -130,6 +120,8 @@ cpdef classify_cps(dict args_dict):
     min_acc_rate = args_dict['min_acc_rate']
     max_acc_rate = args_dict['max_acc_rate']
     max_temp_adj_atmps = args_dict['max_temp_adj_atmps']
+    lo_freq_pen_wt = args_dict['lo_freq_pen_wt']
+    min_freq = args_dict['min_freq']
 
     if 'msgs' in args_dict:
         msgs = <DT_UL> args_dict[ 'msgs']
@@ -142,10 +134,6 @@ cpdef classify_cps(dict args_dict):
     if msgs:
         print('\n')
         print('Calibrating CPs...')
-        print('n_stns:', n_stns)
-        print('o_1_ppt_thresh_arr:', o_1_ppt_thresh_arr)
-        print('n_o_1_threshs:', n_o_1_threshs)
-        print('min_abs_ppt_thresh:', min_abs_ppt_thresh)
         print('n_cps:', n_cps)
         print('n_cpus:', n_cpus)
         print('no_cp_val:', no_cp_val)
@@ -163,7 +151,9 @@ cpdef classify_cps(dict args_dict):
         print('min_acc_rate:', min_acc_rate)
         print('max_acc_rate:', max_acc_rate)
         print('max_temp_adj_atmps:', max_temp_adj_atmps)
-        print('in_ppt_arr shape: (%d, %d)' % (in_ppt_arr.shape[0], in_ppt_arr.shape[1]))
+        print('lo_freq_pen_wt:', lo_freq_pen_wt)
+        print('min_freq:', min_freq)
+        print('n_max:', n_max)
 
     # initialize the required variables
     n_pts = slp_anom.shape[1]
@@ -247,16 +237,14 @@ cpdef classify_cps(dict args_dict):
     # initialize the obj. ftn. variables
     ppt_cp_n_vals_arr = np.full(n_cps, 0.0, dtype=DT_D_NP)
 
-    # initialize obj. ftn. 1 variables
-    ppt_mean_pis_arr = np.full((n_stns, n_o_1_threshs), 0.0, dtype=DT_D_NP)
-    ppt_cp_mean_pis_arr = np.full((n_stns, n_cps, n_o_1_threshs), 0.0, dtype=DT_D_NP)
-    stns_obj_1_vals_arr = np.full((n_stns, n_o_1_threshs), 0.0, dtype=DT_D_NP)
+    # initialize obj. ftn. 8 variables
+    mean_lor_arr = np.full(n_lors, 0.0, dtype=DT_D_NP)
+    lor_cp_mean_arr = np.full((n_cps, n_lors), 0.0, dtype=DT_D_NP)
 
-    # fill some arrays used for obj. 1 and 3 ftns.
-    for m in range(n_stns):
-        for p in range(n_o_1_threshs):
-            ppt_mean_pis_arr[m, p] = np.mean(in_ppt_arr[:, m] > o_1_ppt_thresh_arr[p])
-            assert (not isnan(ppt_mean_pis_arr[m, p]) and (ppt_mean_pis_arr[m, p] > 0))
+    # fill some arrays used for obj. 8 ftn.
+    for t in range(n_lors):
+        mean_lor_arr[t] = np.mean(in_lorenz_arr[:, t])
+        assert ((not isnan(mean_lor_arr[t])) and (mean_lor_arr[t]> 0))
 
     # start simulated annealing
     while ((curr_n_iter < max_n_iters) and (curr_iters_wo_chng < max_iters_wo_chng)) or (not temp_adjed):
@@ -368,17 +356,15 @@ cpdef classify_cps(dict args_dict):
         if run_type == 1:
             # start from the begining
             curr_obj_val = obj_ftn_refresh(
-                in_ppt_arr,
-                n_stns,
-                min_abs_ppt_thresh,
-                ppt_cp_mean_pis_arr,
-                ppt_mean_pis_arr,
-                o_1_ppt_thresh_arr,
-                stns_obj_1_vals_arr,
-                n_o_1_threshs,
+                in_lorenz_arr,
+                mean_lor_arr,
+                lor_cp_mean_arr,
+                n_lors,
                 ppt_cp_n_vals_arr,
                 obj_ftn_wts_arr,
                 sel_cps,
+                lo_freq_pen_wt,
+                min_freq,
                 n_cpus,
                 n_cps,
                 n_max,
@@ -390,19 +376,17 @@ cpdef classify_cps(dict args_dict):
         else:
             # only update at steps where the CP has changed
             curr_obj_val = obj_ftn_update(
-                in_ppt_arr,
-                n_stns,
-                min_abs_ppt_thresh,
-                ppt_cp_mean_pis_arr,
-                ppt_mean_pis_arr,
-                o_1_ppt_thresh_arr,
-                stns_obj_1_vals_arr,
-                n_o_1_threshs,
+                in_lorenz_arr,
+                mean_lor_arr,
+                lor_cp_mean_arr,
+                n_lors,
                 ppt_cp_n_vals_arr,
                 obj_ftn_wts_arr,
                 sel_cps,
                 old_sel_cps,
                 chnge_steps,
+                lo_freq_pen_wt,
+                min_freq,
                 n_cpus,
                 n_cps,
                 n_max,
@@ -503,25 +487,43 @@ cpdef classify_cps(dict args_dict):
         if (curr_n_iter == temp_adj_iters) and (not temp_adjed):
             print("\n\n#########Checking for acceptance rate#########")
             print('anneal_temp_ini:', anneal_temp_ini)
-#             if min_acc_rate <= acc_rate <= max_acc_rate:
-            if True:
+            if min_acc_rate <= acc_rate <= max_acc_rate:
                 print('acc_rate (%f%%) is acceptable!' % acc_rate)
                 temp_adjed = 1
 
             else:
-                if acc_rate < min_acc_rate:
-                    print('accp_rate (%0.2f%%) is too low!' % acc_rate)
-                    temp_inc = (1 + ((min_acc_rate) * 0.01))
-                    print('Increasing anneal_temp_ini by %0.2f%%...' % (100 * (temp_inc - 1)))
-                    anneal_temp_ini = anneal_temp_ini * temp_inc
-                    curr_anneal_temp = anneal_temp_ini
+                if ants[0] and ants[1]:
+                    #print(ants)
+                    if acc_rate < min_acc_rate:
+                        print('accp_rate (%0.2f%%) is too low!' % acc_rate)
+                        ants[0] = [acc_rate, anneal_temp_ini]
 
-                elif acc_rate > max_acc_rate:
-                    print('accp_rate (%0.2f%%) is too high!' % acc_rate)
-                    temp_inc = max(1e-6, (1 - ((acc_rate) * 0.01)))
-                    print('Reducing anneal_temp_ini to %0.2f%%...' %  (100 * (1 - temp_inc)))
-                    anneal_temp_ini = anneal_temp_ini * temp_inc
+                    elif acc_rate > max_acc_rate:
+                        print('accp_rate (%0.2f%%) is too high!' % acc_rate)
+                        ants[1] = [acc_rate, anneal_temp_ini]
+
+                    #print(anneal_temp_ini)
+                    anneal_temp_ini = 0.5 * ((ants[1][1] + ants[0][1]))
                     curr_anneal_temp = anneal_temp_ini
+                    #print(anneal_temp_ini)
+                    #print(ants)
+
+                else:
+                    if acc_rate < min_acc_rate:
+                        ants[0] = [acc_rate, anneal_temp_ini]
+                        print('accp_rate (%0.2f%%) is too low!' % acc_rate)
+                        temp_inc = (1 + ((min_acc_rate) * 0.01))
+                        print('Increasing anneal_temp_ini by %0.2f%%...' % (100 * (temp_inc - 1)))
+                        anneal_temp_ini = anneal_temp_ini * temp_inc
+                        curr_anneal_temp = anneal_temp_ini
+
+                    elif acc_rate > max_acc_rate:
+                        ants[1] = [acc_rate, anneal_temp_ini]
+                        print('accp_rate (%0.2f%%) is too high!' % acc_rate)
+                        temp_inc = max(1e-6, (1 - ((acc_rate) * 0.01)))
+                        print('Reducing anneal_temp_ini to %0.2f%%...' %  (100 * (1 - temp_inc)))
+                        anneal_temp_ini = anneal_temp_ini * temp_inc
+                        curr_anneal_temp = anneal_temp_ini
 
             if curr_temp_adj_iter < max_temp_adj_atmps:
                 run_type = 1
@@ -573,7 +575,6 @@ cpdef classify_cps(dict args_dict):
     out_dict['n_pts_calib'] = n_pts
     out_dict['n_fuzz_nos'] = n_fuzz_nos
     out_dict['n_max'] = n_max
-    out_dict['n_stns_calib'] = n_stns
     out_dict['n_time_steps_calib'] = n_time_steps
     out_dict['last_n_iter'] = curr_n_iter
     out_dict['last_m_iter'] = curr_m_iter

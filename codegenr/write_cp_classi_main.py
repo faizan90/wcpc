@@ -30,6 +30,7 @@ def write_cp_classi_main_lines(params_dict):
     obj_5_flag = params_dict['obj_5_flag']
     obj_6_flag = params_dict['obj_6_flag']
     obj_7_flag = params_dict['obj_7_flag']
+    obj_8_flag = params_dict['obj_8_flag']
 
     pyxcd = CodeGenr(tab=tab)
     pyxbldcd = CodeGenr(tab=tab)
@@ -50,7 +51,8 @@ def write_cp_classi_main_lines(params_dict):
                            obj_4_flag,
                            obj_5_flag,
                            obj_6_flag,
-                           obj_7_flag]))
+                           obj_7_flag,
+                           obj_8_flag]))
     pyxcd.w('### obj_ftns:' + _)
     pyxcd.els()
 
@@ -129,7 +131,7 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('# doubles')
     pyxcd.w('DT_D anneal_temp_ini, temp_red_alpha, curr_anneal_temp, p_l')
     pyxcd.w('DT_D best_obj_val, curr_obj_val, pre_obj_val, rand_p, boltz_p')
-    pyxcd.w('DT_D acc_rate, temp_inc')
+    pyxcd.w('DT_D acc_rate, temp_inc, lo_freq_pen_wt, min_freq')
     pyxcd.els()
 
     pyxcd.w('# other variables')
@@ -138,6 +140,7 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('list best_obj_vals_list = []')
     pyxcd.w('list acc_rate_list = []')
     pyxcd.w('list cp_pcntge_list = []')
+    pyxcd.w('list ants = [[], []]')
     pyxcd.els()
 
     pyxcd.w('# 1D ulong arrays')
@@ -175,6 +178,10 @@ def write_cp_classi_main_lines(params_dict):
         pyxcd.w('np.ndarray[DT_D_NP_t, ndim=2, mode=\'c\'] in_cats_ppt_arr')
     pyxcd.els()
 
+    if obj_8_flag:
+        pyxcd.w('np.ndarray[DT_UL_NP_t, ndim=2, mode=\'c\'] in_lorenz_arr')
+    pyxcd.els()
+
     if any([obj_1_flag, obj_3_flag, obj_4_flag, obj_2_flag, obj_5_flag]):
         pyxcd.w('# ulongs for obj. ftns.')
     if obj_1_flag or obj_3_flag:
@@ -184,6 +191,10 @@ def write_cp_classi_main_lines(params_dict):
     if obj_2_flag or obj_5_flag:
         pyxcd.w('Py_ssize_t q')
         pyxcd.w('DT_UL n_cats')
+
+    if obj_8_flag:
+        pyxcd.w('Py_ssize_t t')
+        pyxcd.w('DT_UL n_lors')
 
     pyxcd.els()
 
@@ -279,7 +290,13 @@ def write_cp_classi_main_lines(params_dict):
         pyxcd.w('np.ndarray[DT_D_NP_t, ndim=1, mode=\'c\'] mean_cp_tri_wet_arr')
         pyxcd.w('np.ndarray[DT_D_NP_t, ndim=1, mode=\'c\'] tri_wet_arr')
         pyxcd.els()
-        
+
+    if obj_8_flag:
+        pyxcd.w('# arrays for obj. ftn. 8')
+        pyxcd.w('np.ndarray[DT_D_NP_t, ndim=1, mode=\'c\'] mean_lor_arr')
+        pyxcd.w('np.ndarray[DT_D_NP_t, ndim=2, mode=\'c\'] lor_cp_mean_arr')
+        pyxcd.els()
+
     pyxcd.ded()
 
     pyxcd.w('# read everythings from the given dict. Must do explicitly.')
@@ -307,10 +324,10 @@ def write_cp_classi_main_lines(params_dict):
 
     if obj_4_flag or obj_6_flag or obj_7_flag:
         pyxcd.w('in_wet_arr_calib = args_dict[\'in_wet_arr_calib\']')
-        pyxcd.w('n_max = max(n_max, in_wet_arr_calib.shape[1])')
 
     if obj_4_flag:
         pyxcd.w('n_nebs = in_wet_arr_calib.shape[1]')
+        pyxcd.w('n_max = max(n_max, n_nebs)')
         pyxcd.w('assert n_nebs, \'n_nebs cannot be zero!\'')
 
     if obj_6_flag:
@@ -320,6 +337,13 @@ def write_cp_classi_main_lines(params_dict):
         pyxcd.w('o_4_p_thresh_arr = args_dict[\'o_4_p_thresh_arr\']')
         pyxcd.w('n_o_4_threshs = o_4_p_thresh_arr.shape[0]')
 
+    if obj_8_flag:
+        pyxcd.w('in_lorenz_arr = args_dict[\'in_lorenz_arr_calib\']')
+        pyxcd.w('n_lors = in_lorenz_arr.shape[1]')
+        pyxcd.w('n_max = max(n_max, n_lors)')
+        pyxcd.w('assert n_lors, \'n_lors cannot be zero!\'')
+
+    pyxcd.els()
     pyxcd.w('obj_ftn_wts_arr = args_dict[\'obj_ftn_wts_arr\']')
     pyxcd.w('n_cps = args_dict[\'n_cps\']')
     pyxcd.w('no_cp_val = args_dict[\'no_cp_val\']')
@@ -339,6 +363,8 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('max_acc_rate = args_dict[\'max_acc_rate\']')
     pyxcd.w('max_temp_adj_atmps = args_dict[\'max_temp_adj_atmps\']')
 
+    pyxcd.w('lo_freq_pen_wt = args_dict[\'lo_freq_pen_wt\']')
+    pyxcd.w('min_freq = args_dict[\'min_freq\']')
     pyxcd.els()
 
     pyxcd.w('if \'msgs\' in args_dict:')
@@ -401,6 +427,10 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('print(\'min_acc_rate:\', min_acc_rate)')
     pyxcd.w('print(\'max_acc_rate:\', max_acc_rate)')
     pyxcd.w('print(\'max_temp_adj_atmps:\', max_temp_adj_atmps)')
+
+    pyxcd.w('print(\'lo_freq_pen_wt:\', lo_freq_pen_wt)')
+    pyxcd.w('print(\'min_freq:\', min_freq)')
+    pyxcd.w('print(\'n_max:\', n_max)')
 
     if obj_1_flag or obj_3_flag:
         pyxcd.w('print(\'in_ppt_arr shape: (%d, %d)\' % '
@@ -586,6 +616,12 @@ def write_cp_classi_main_lines(params_dict):
 
         pyxcd.els()
 
+    if obj_8_flag:
+        pyxcd.w('# initialize obj. ftn. 8 variables')
+        pyxcd.w('mean_lor_arr = np.full(n_lors, 0.0, dtype=DT_D_NP)')
+        pyxcd.w('lor_cp_mean_arr = np.full((n_cps, n_lors), 0.0, dtype=DT_D_NP)')
+        pyxcd.els()
+
     if obj_1_flag or obj_3_flag:
         pyxcd.w('# fill some arrays used for obj. 1 and 3 ftns.')
         pyxcd.w('for m in range(n_stns):')
@@ -666,6 +702,16 @@ def write_cp_classi_main_lines(params_dict):
         pyxcd.w('mean_tri_wet = tri_wet_arr.mean()')
         pyxcd.w('assert ((not isnan(mean_tri_wet)) and (mean_tri_wet > 0))')
         pyxcd.els()
+
+    if obj_8_flag:
+        pyxcd.w('# fill some arrays used for obj. 8 ftn.')
+        pyxcd.w('for t in range(n_lors):')
+        pyxcd.ind()
+        pyxcd.w('mean_lor_arr[t] = np.mean(in_lorenz_arr[:, t])')
+        pyxcd.w(
+            'assert ((not isnan(mean_lor_arr[t])) and (mean_lor_arr[t] > 0))')
+
+        pyxcd.ded()
 
     pyxcd.w('# start simulated annealing')
     pyxcd.w('while ((curr_n_iter < max_n_iters) and '
@@ -863,9 +909,17 @@ def write_cp_classi_main_lines(params_dict):
         pyxcd.w('mean_cp_tri_wet_arr,')
         pyxcd.w('tri_wet_arr,')
 
+    if obj_8_flag:
+        pyxcd.w('in_lorenz_arr,')
+        pyxcd.w('mean_lor_arr,')
+        pyxcd.w('lor_cp_mean_arr,')
+        pyxcd.w('n_lors,')
+
     pyxcd.w('ppt_cp_n_vals_arr,')
     pyxcd.w('obj_ftn_wts_arr,')
     pyxcd.w('sel_cps,')
+    pyxcd.w('lo_freq_pen_wt,')
+    pyxcd.w('min_freq,')
     pyxcd.w('n_cpus,')
     pyxcd.w('n_cps,')
     pyxcd.w('n_max,')
@@ -936,11 +990,19 @@ def write_cp_classi_main_lines(params_dict):
         pyxcd.w('mean_cp_tri_wet_arr,')
         pyxcd.w('tri_wet_arr,')
 
+    if obj_8_flag:
+        pyxcd.w('in_lorenz_arr,')
+        pyxcd.w('mean_lor_arr,')
+        pyxcd.w('lor_cp_mean_arr,')
+        pyxcd.w('n_lors,')
+
     pyxcd.w('ppt_cp_n_vals_arr,')
     pyxcd.w('obj_ftn_wts_arr,')
     pyxcd.w('sel_cps,')
     pyxcd.w('old_sel_cps,')
     pyxcd.w('chnge_steps,')
+    pyxcd.w('lo_freq_pen_wt,')
+    pyxcd.w('min_freq,')
     pyxcd.w('n_cpus,')
     pyxcd.w('n_cps,')
     pyxcd.w('n_max,')
@@ -1106,22 +1168,53 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.ded()
     pyxcd.w('else:')
     pyxcd.ind()
+    pyxcd.w('if ants[0] and ants[1]:')
+    pyxcd.ind()
+    pyxcd.w('#print(ants)')
+    
     pyxcd.w('if acc_rate < min_acc_rate:')
     pyxcd.ind()
+    pyxcd.w('print(\'accp_rate (%0.2f%%) is too low!\' % acc_rate)')
+    pyxcd.w('ants[0] = [acc_rate, anneal_temp_ini]')
+    pyxcd.ded()
+    
+    pyxcd.w('elif acc_rate > max_acc_rate:')
+    pyxcd.ind()
+    pyxcd.w('print(\'accp_rate (%0.2f%%) is too high!\' % acc_rate)')
+    pyxcd.w('ants[1] = [acc_rate, anneal_temp_ini]')
+    pyxcd.ded()
+    
+    pyxcd.w('#print(anneal_temp_ini)')
+    pyxcd.w('anneal_temp_ini = 0.5 * ((ants[1][1] + ants[0][1]))')
+    
+    pyxcd.w('curr_anneal_temp = anneal_temp_ini')
+    pyxcd.w('#print(anneal_temp_ini)')
+    pyxcd.w('#print(ants)')
+    pyxcd.ded()
+    
+    pyxcd.w('else:')
+    pyxcd.ind()
+    pyxcd.w('if acc_rate < min_acc_rate:')
+    pyxcd.ind()
+    pyxcd.w('ants[0] = [acc_rate, anneal_temp_ini]')
+    
     pyxcd.w('print(\'accp_rate (%0.2f%%) is too low!\' % acc_rate)')
     pyxcd.w('temp_inc = (1 + ((min_acc_rate) * 0.01))')
     pyxcd.w('print(\'Increasing anneal_temp_ini by %0.2f%%...\' % (100 * (temp_inc - 1)))')
     pyxcd.w('anneal_temp_ini = anneal_temp_ini * temp_inc')
     pyxcd.w('curr_anneal_temp = anneal_temp_ini')
     pyxcd.ded()
+    
     pyxcd.w('elif acc_rate > max_acc_rate:')
     pyxcd.ind()
+    pyxcd.w('ants[1] = [acc_rate, anneal_temp_ini]')
+    
     pyxcd.w('print(\'accp_rate (%0.2f%%) is too high!\' % acc_rate)')
     pyxcd.w('temp_inc = max(1e-6, (1 - ((acc_rate) * 0.01)))')
     pyxcd.w('print(\'Reducing anneal_temp_ini to %0.2f%%...\' %  (100 * (1 - temp_inc)))')
     pyxcd.w('anneal_temp_ini = anneal_temp_ini * temp_inc')
     pyxcd.w('curr_anneal_temp = anneal_temp_ini')
-    pyxcd.ded(lev=2)
+    pyxcd.ded(lev=3)
 
     pyxcd.w('if curr_temp_adj_iter < max_temp_adj_atmps:')
     pyxcd.ind()

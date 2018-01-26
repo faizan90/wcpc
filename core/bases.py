@@ -12,7 +12,7 @@ Created on Dec 30, 2017
 import numpy as np
 
 from ..misc.checks import check_nans_finite
-from ..alg_dtypes import DT_D_NP
+from ..alg_dtypes import DT_D_NP, DT_UL_NP
 
 
 class CPDataBase:
@@ -25,6 +25,7 @@ class CPDataBase:
         self._stn_ppt_set_flag = False
         self._cat_ppt_set_flag = False
         self._neb_wett_set_flag = False
+        self._lorenz_set_flag = False
 
         self._cp_prms_set_flag = False
 
@@ -35,6 +36,7 @@ class CPDataBase:
         self.obj_5_flag = False
         self.obj_6_flag = False
         self.obj_7_flag = False
+        self.obj_8_flag = False
 
         self.cyth_nonecheck = False
         self.cyth_boundscheck = False
@@ -43,7 +45,7 @@ class CPDataBase:
         self.cyth_language_level = 3
         self.cyth_infer_types = None
 
-        self._n_obj_ftns = 7
+        self._n_obj_ftns = 8
         self.min_abs_ppt_thresh = 0.0
         return
 
@@ -86,6 +88,17 @@ class CPDataBase:
         self._neb_wett_set_flag = True
         return
 
+    def set_lorenz_arr(self, lorenz_arr):
+        assert isinstance(lorenz_arr, np.ndarray)
+        assert check_nans_finite(lorenz_arr)
+        assert len(lorenz_arr.shape) == 2
+        assert lorenz_arr.shape[0] > 0
+
+        self.lorenz_arr = np.array(lorenz_arr, dtype=DT_UL_NP, order='C')
+
+        self._lorenz_set_flag = True
+        return
+
     def _verify_cp_prms(self):
         assert isinstance(self.n_cps, int)
         assert isinstance(self.max_idx_ct, int)
@@ -101,6 +114,13 @@ class CPDataBase:
         assert check_nans_finite(self.fuzz_nos_arr)
         assert self.fuzz_nos_arr.shape[0] > 0
         assert self.fuzz_nos_arr.shape[1] == 3
+
+        assert isinstance(self.lo_freq_pen_wt, (int, float))
+        assert (self.lo_freq_pen_wt >= 0) and (self.lo_freq_pen_wt < np.inf)
+
+        assert isinstance(self.min_freq, float)
+        assert 0 <= self.min_freq < (1 / self.n_cps)
+
         return
 
     def set_cp_prms(self,
@@ -109,7 +129,9 @@ class CPDataBase:
                     no_cp_val,
                     miss_cp_val,
                     p_l,
-                    fuzz_nos_arr):
+                    fuzz_nos_arr,
+                    lo_freq_pen_wt,
+                    min_freq):
 
         self.n_cps = n_cps
         self.max_idx_ct = max_idx_ct
@@ -117,6 +139,8 @@ class CPDataBase:
         self.miss_cp_val = miss_cp_val
         self.p_l = p_l
         self.fuzz_nos_arr = fuzz_nos_arr
+        self.lo_freq_pen_wt = lo_freq_pen_wt
+        self.min_freq = min_freq
 
         self._verify_cp_prms()
 
@@ -137,6 +161,7 @@ class CPDataBase:
 
         assert isinstance(o_1_obj_wt, (int, float))
         assert check_nans_finite(o_1_obj_wt)
+        assert o_1_obj_wt > 0
 
         self.o_1_ppt_thresh_arr = np.array(o_1_ppt_thresh_arr,
                                            dtype=DT_D_NP,
@@ -166,6 +191,7 @@ class CPDataBase:
 
         assert isinstance(o_2_obj_wt, (int, float))
         assert check_nans_finite(o_2_obj_wt)
+        assert o_2_obj_wt > 0
 
         self.o_2_ppt_thresh_arr = np.array(o_2_ppt_thresh_arr,
                                            dtype=DT_D_NP,
@@ -189,6 +215,7 @@ class CPDataBase:
 
         assert isinstance(o_3_obj_wt, (int, float))
         assert check_nans_finite(o_3_obj_wt)
+        assert o_3_obj_wt > 0
 
         self.o_3_obj_wt = o_3_obj_wt
 
@@ -214,6 +241,7 @@ class CPDataBase:
 
         assert isinstance(o_4_obj_wt, (int, float))
         assert check_nans_finite(o_4_obj_wt)
+        assert o_4_obj_wt > 0
 
         self.o_4_wett_thresh_arr = np.array(o_4_wett_thresh_arr,
                                             dtype=DT_D_NP,
@@ -237,6 +265,7 @@ class CPDataBase:
 
         assert isinstance(o_5_obj_wt, (int, float))
         assert check_nans_finite(o_5_obj_wt)
+        assert o_5_obj_wt > 0
 
         self.o_5_obj_wt = o_5_obj_wt
 
@@ -256,6 +285,7 @@ class CPDataBase:
 
         assert isinstance(o_6_obj_wt, (int, float))
         assert check_nans_finite(o_6_obj_wt)
+        assert o_6_obj_wt > 0
         assert isinstance(min_wettness_thresh, float)
         assert 0 <= min_wettness_thresh < 1.0
 
@@ -278,6 +308,7 @@ class CPDataBase:
 
         assert isinstance(o_7_obj_wt, (int, float))
         assert check_nans_finite(o_7_obj_wt)
+        assert o_7_obj_wt > 0
 
         self.o_7_obj_wt = o_7_obj_wt
 
@@ -289,6 +320,26 @@ class CPDataBase:
         del self.o_7_obj_wt
 
         self.obj_7_flag = False
+        return
+
+    def set_obj_8_on(self, o_8_obj_wt):
+
+        assert self._lorenz_set_flag
+
+        assert isinstance(o_8_obj_wt, (int, float))
+        assert check_nans_finite(o_8_obj_wt)
+        assert o_8_obj_wt > 0
+
+        self.o_8_obj_wt = o_8_obj_wt
+
+        self.obj_8_flag = True
+        return
+
+    def set_obj_8_off(self):
+
+        del self.o_8_obj_wt
+
+        self.obj_8_flag = False
         return
 
     def set_cyth_flags(self,

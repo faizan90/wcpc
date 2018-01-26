@@ -92,7 +92,8 @@ class CPClassiA(CPOPTBase):
                     self.obj_4_flag,
                     self.obj_5_flag,
                     self.obj_6_flag,
-                    self.obj_7_flag))
+                    self.obj_7_flag,
+                    self.obj_8_flag))
 
         if self.obj_1_flag or self.obj_3_flag:
             assert self.vals_tot_anom.shape[0] == self.stn_ppt_arr.shape[0]
@@ -102,6 +103,9 @@ class CPClassiA(CPOPTBase):
 
         if self.obj_4_flag or self.obj_6_flag or self.obj_7_flag:
             assert self.vals_tot_anom.shape[0] == self.neb_wett_arr.shape[0]
+
+        if self.obj_8_flag:
+            assert self.vals_tot_anom.shape[0] == self.lorenz_arr.shape[0]
 
         self.obj_ftn_wts_arr = np.zeros(self._n_obj_ftns,
                                         dtype=DT_D_NP,
@@ -130,6 +134,9 @@ class CPClassiA(CPOPTBase):
             self.obj_ftn_wts_arr[6] = self.o_7_obj_wt
             assert self.neb_wett_arr.shape[1] == 3, 'For three nebs right now!'
 
+        if self.obj_8_flag:
+            self.obj_ftn_wts_arr[7] = self.o_8_obj_wt
+
         return
 
     def _gen_classi_cyth_mods(self, force_compile=False):
@@ -143,6 +150,7 @@ class CPClassiA(CPOPTBase):
                                    self.obj_5_flag,
                                    self.obj_6_flag,
                                    self.obj_7_flag,
+                                   self.obj_8_flag,
                                    self.cyth_nonecheck,
                                    self.cyth_boundscheck,
                                    self.cyth_wraparound,
@@ -152,6 +160,7 @@ class CPClassiA(CPOPTBase):
                                    force_compile,
                                    cyth_dir)
 
+#         raise Exception
         importlib.invalidate_caches()
 
         return importlib.import_module('..cyth.classi_alg',
@@ -169,6 +178,8 @@ class CPClassiA(CPOPTBase):
         self._verify_input()
 
         classify_cps_ftn = self._gen_classi_cyth_mods(force_compile)
+
+#         raise Exception
 
         calib_dict = {}
 
@@ -194,6 +205,7 @@ class CPClassiA(CPOPTBase):
         calib_dict['in_ppt_arr_calib'] = self.stn_ppt_arr
         calib_dict['in_cats_ppt_arr_calib'] = self.cat_ppt_arr
         calib_dict['in_wet_arr_calib'] = self.neb_wett_arr
+        calib_dict['in_lorenz_arr_calib'] = self.lorenz_arr
         calib_dict['anneal_temp_ini'] = self.ini_anneal_temp
         calib_dict['temp_red_alpha'] = self.tem_alpha
         calib_dict['max_m_iters'] = self.tem_chng_iters
@@ -209,12 +221,15 @@ class CPClassiA(CPOPTBase):
         calib_dict['max_acc_rate'] = self.max_acc_rate
         calib_dict['max_temp_adj_atmps'] = self.max_temp_adj_atmps
         
+        calib_dict['lo_freq_pen_wt'] = self.lo_freq_pen_wt
+        calib_dict['min_freq'] = self.min_freq
+
         _strt = timeit.default_timer()
         self.calib_dict = classify_cps_ftn(calib_dict)
         _stop = timeit.default_timer()
 
         if self.msgs:
-            print('Took %0.f seconds to calibrate' % (_stop - _strt))
+            print('Took %0.1f seconds to calibrate' % (_stop - _strt))
 
         self.cp_rules = self.calib_dict['best_cp_rules']
 
@@ -256,6 +271,9 @@ class CPClassiA(CPOPTBase):
                        alpha=0.75)
         ax.set_xlabel('Iteration No. (-)')
         ax.set_ylabel('Objective ftn. value (-)')
+        ax.set_ylim(0, self.best_obj_vals_arr[-1] * 1.05)
+#         ax.set_ylim(0, ax.get_ylim()[1])
+
         ax.grid()
 
         ax_twin = ax.twinx()

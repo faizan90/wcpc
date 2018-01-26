@@ -44,8 +44,6 @@ class QualBases:
         assert check_nans_finite(sel_cps_arr)
         assert len(sel_cps_arr.shape) == 1
 
-        assert np.unique(sel_cps_arr).shape[0] >= n_cps
-
         self.sel_cps_arr = np.array(sel_cps_arr, dtype=DT_UL_NP, order='C')
         self.n_cps = n_cps
 

@@ -67,12 +67,11 @@ class WettnessIndex(QualBases):
 
         if self.msgs:
             print('\n\nSorted wettness sequence:')
-            print('Old CP, New CP, Old wettness, New wettness')
+            print('Old CP, New CP, Wettness')
             for i in range(self.n_cps):
-                print('%6s, %6s, %12f, %12f' % (sorted_idxs[i],
-                                                i,
-                                                self.mean_cp_wett_arr[i],
-                                                self.mean_cp_wett_sorted_arr[i]))
+                print('%6s, %6s, %12f' % (sorted_idxs[i],
+                                          i,
+                                          self.mean_cp_wett_sorted_arr[i]))
             print('\n\n')
 
         self._cps_reordered_flag = True

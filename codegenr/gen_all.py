@@ -23,6 +23,7 @@ def create_classi_cython_files(obj_1_flag=False,
                                obj_5_flag=False,
                                obj_6_flag=False,
                                obj_7_flag=False,
+                               obj_8_flag=False,
                                nonecheck=True,
                                boundscheck=True,
                                wraparound=True,
@@ -38,7 +39,8 @@ def create_classi_cython_files(obj_1_flag=False,
                 obj_4_flag,
                 obj_5_flag,
                 obj_6_flag,
-                obj_7_flag])
+                obj_7_flag,
+                obj_8_flag])
     assert out_dir
 
     tab = '    '
@@ -60,6 +62,7 @@ def create_classi_cython_files(obj_1_flag=False,
     params_dict['obj_5_flag'] = obj_5_flag
     params_dict['obj_6_flag'] = obj_6_flag
     params_dict['obj_7_flag'] = obj_7_flag
+    params_dict['obj_8_flag'] = obj_8_flag
     
     out_dir = Path(out_dir)
     
@@ -80,7 +83,8 @@ def create_classi_cython_files(obj_1_flag=False,
                           obj_4_flag,
                           obj_5_flag,
                           obj_6_flag,
-                          obj_7_flag]
+                          obj_7_flag,
+                          obj_8_flag]
         
         with open(path_to_main_pyx, 'r') as pyx_hdl:
             for line in pyx_hdl:
