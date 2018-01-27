@@ -1035,6 +1035,9 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('assert not isnan(curr_obj_val), \'curr_obj_val is NaN!(%s)\' % curr_n_iter')
     pyxcd.els()
 
+    pyxcd.w('#print(curr_m_iter, curr_n_iter, run_type, curr_obj_val, pre_obj_val)')
+    pyxcd.els()
+
     pyxcd.w('# a maximizing function')
     pyxcd.w('if (curr_obj_val > best_obj_val) and (run_type == 2):')
     pyxcd.ind()
@@ -1068,17 +1071,17 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('accept_iters += 1')
     pyxcd.ded()
 
-    pyxcd.w('elif (pre_obj_val <= 0) and (curr_obj_val < (pre_obj_val * min_descent_opp)):')
-    pyxcd.ind()
-    pyxcd.w('run_type = 3')
-    pyxcd.w('reject_iters += 1')
-    pyxcd.ded()
-
-    pyxcd.w('elif (pre_obj_val > 0) and (curr_obj_val < (pre_obj_val * min_descent)):')
-    pyxcd.ind()
-    pyxcd.w('run_type = 3')
-    pyxcd.w('reject_iters += 1')
-    pyxcd.ded()
+#     pyxcd.w('elif (pre_obj_val <= 0) and (curr_obj_val < (pre_obj_val * min_descent_opp)):')
+#     pyxcd.ind()
+#     pyxcd.w('run_type = 3')
+#     pyxcd.w('reject_iters += 1')
+#     pyxcd.ded()
+#
+#     pyxcd.w('elif (pre_obj_val > 0) and (curr_obj_val < (pre_obj_val * min_descent)):')
+#     pyxcd.ind()
+#     pyxcd.w('run_type = 3')
+#     pyxcd.w('reject_iters += 1')
+#     pyxcd.ded()
 
     pyxcd.w('else:')
     pyxcd.ind()
@@ -1224,7 +1227,7 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('print(\'Reducing anneal_temp_ini to %0.2f%%...\' %  (100 * (1 - temp_inc)))')
     pyxcd.w('anneal_temp_ini = anneal_temp_ini * temp_inc')
     pyxcd.w('curr_anneal_temp = anneal_temp_ini')
-    pyxcd.ded(lev=3)
+    pyxcd.ded(lev=2)
 
     pyxcd.w('if curr_temp_adj_iter < max_temp_adj_atmps:')
     pyxcd.ind()
@@ -1270,7 +1273,7 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('print(\'#######Could not converge to an acceptable annealing temperature in %d tries!#########\')')
     pyxcd.w('print(\'Terminating optimization....\')')
     pyxcd.w('raise Exception')
-    pyxcd.ded(lev=2)
+    pyxcd.ded(lev=3)
 
     pyxcd.w('curr_obj_vals_list.append(curr_obj_val)')
     pyxcd.w('best_obj_vals_list.append(best_obj_val)')
@@ -1281,26 +1284,6 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('curr_m_iter += 1')
     pyxcd.w('curr_n_iter += 1')
     pyxcd.ded()
-
-#     pyxcd.w('calc_membs_dof_cps(')
-#     pyxcd.ind()
-#     pyxcd.w('cp_rules,')
-#     pyxcd.w('mu_i_k_arr,')
-#     pyxcd.w('cp_dof_arr,')
-#     pyxcd.w('slp_anom,')
-#     pyxcd.w('fuzz_nos_arr,')
-#     pyxcd.w('dofs_arr,')
-#     pyxcd.w('sel_cps,')
-#     pyxcd.w('old_sel_cps,')
-#     pyxcd.w('chnge_steps,')
-#     pyxcd.w('no_cp_val,')
-#     pyxcd.w('p_l,')
-#     pyxcd.w('n_cpus,')
-#     pyxcd.w('n_time_steps,')
-#     pyxcd.w('n_pts,')
-#     pyxcd.w('n_cps,')
-#     pyxcd.w('n_fuzz_nos)')
-#     pyxcd.ded()
 
     pyxcd.w('out_dict = {}')
 
