@@ -254,7 +254,7 @@ cpdef classify_cps(dict args_dict):
             curr_m_iter = 0
             curr_anneal_temp *= temp_red_alpha
             run_type = 1
-            
+
         mod_cp_rules(
             cp_rules,
             cp_rules_idx_ctr,
@@ -398,7 +398,7 @@ cpdef classify_cps(dict args_dict):
         if run_type == 3:
             if curr_m_iter == 1:
                 run_type = 1
- 
+
             else:
                 run_type = 2
 
@@ -408,7 +408,7 @@ cpdef classify_cps(dict args_dict):
             continue
 
         assert not isnan(curr_obj_val), 'curr_obj_val is NaN!(%s)' % curr_n_iter
-        
+
         #print(curr_m_iter, curr_n_iter, run_type, curr_obj_val, pre_obj_val)
 
         # a maximizing function
@@ -432,14 +432,6 @@ cpdef classify_cps(dict args_dict):
         if curr_obj_val >= pre_obj_val:
             pre_obj_val = curr_obj_val
             accept_iters += 1
-
-#         elif (pre_obj_val <= 0) and (curr_obj_val < (pre_obj_val * min_descent_opp)):
-#             run_type = 3
-#             reject_iters += 1
-# 
-#         elif (pre_obj_val > 0) and (curr_obj_val < (pre_obj_val * min_descent)):
-#             run_type = 3
-#             reject_iters += 1
 
         else:
             rand_p = rand_c()
