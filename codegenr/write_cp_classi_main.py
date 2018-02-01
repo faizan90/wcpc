@@ -198,11 +198,9 @@ def write_cp_classi_main_lines(params_dict):
 
     pyxcd.els()
 
-    if any([obj_1_flag, obj_3_flag, obj_4_flag, obj_2_flag, obj_5_flag]):
-        pyxcd.w('# doubles for obj. ftns.')
-    if any([obj_1_flag, obj_3_flag, obj_2_flag, obj_5_flag]):
-        pyxcd.w('DT_D min_abs_ppt_thresh')
-    pyxcd.els()
+#     if any([obj_1_flag, obj_3_flag, obj_4_flag, obj_2_flag, obj_5_flag]):
+#         pyxcd.w('# doubles for obj. ftns.')
+#     pyxcd.els()
 
     if obj_1_flag:
         pyxcd.w('# ulongs obj. ftn. 1')
@@ -300,9 +298,6 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.ded()
 
     pyxcd.w('# read everythings from the given dict. Must do explicitly.')
-
-    if any([obj_1_flag, obj_3_flag, obj_2_flag, obj_5_flag]):
-        pyxcd.w('min_abs_ppt_thresh = args_dict[\'min_abs_ppt_thresh\']')
 
     if obj_1_flag or obj_3_flag:
         pyxcd.w('in_ppt_arr = args_dict[\'in_ppt_arr_calib\']')
@@ -404,9 +399,6 @@ def write_cp_classi_main_lines(params_dict):
     if obj_4_flag:
         pyxcd.w('print(\'o_4_p_thresh_arr:\', o_4_p_thresh_arr)')
         pyxcd.w('print(\'n_o_4_threshs:\', n_o_4_threshs)')
-
-    if any([obj_1_flag, obj_3_flag, obj_2_flag, obj_5_flag]):
-        pyxcd.w('print(\'min_abs_ppt_thresh:\', min_abs_ppt_thresh)')
 
     pyxcd.w('print(\'n_cps:\', n_cps)')
     pyxcd.w('print(\'n_cpus:\', n_cpus)')
@@ -868,9 +860,6 @@ def write_cp_classi_main_lines(params_dict):
         pyxcd.w('in_cats_ppt_arr,')
         pyxcd.w('n_cats,')
 
-    if any([obj_1_flag, obj_3_flag, obj_2_flag, obj_5_flag]):
-        pyxcd.w('min_abs_ppt_thresh,')
-
     if obj_1_flag:
         pyxcd.w('ppt_cp_mean_pis_arr,')
         pyxcd.w('ppt_mean_pis_arr,')
@@ -948,9 +937,6 @@ def write_cp_classi_main_lines(params_dict):
     if obj_2_flag or obj_5_flag:
         pyxcd.w('in_cats_ppt_arr,')
         pyxcd.w('n_cats,')
-
-    if any([obj_1_flag, obj_3_flag, obj_2_flag, obj_5_flag]):
-        pyxcd.w('min_abs_ppt_thresh,')
 
     if obj_1_flag:
         pyxcd.w('ppt_cp_mean_pis_arr,')

@@ -29,14 +29,10 @@ warm_up()
 
 
 cdef DT_D obj_ftn_refresh(
-    const DT_D_NP_t[:, :] in_ppt_arr,
-    const DT_UL n_stns,
-    const DT_D min_abs_ppt_thresh,
-    DT_D_NP_t[:, :, :] ppt_cp_mean_pis_arr,
-    DT_D_NP_t[:, :] ppt_mean_pis_arr,
-    DT_D_NP_t[:] o_1_ppt_thresh_arr,
-    DT_D_NP_t[:, :] stns_obj_1_vals_arr,
-    const DT_UL n_o_1_threshs,
+    const DT_D_NP_t[:, :] in_cats_ppt_arr,
+    const DT_UL n_cats,
+    DT_D_NP_t[:, :] cats_ppt_cp_mean_arr,
+    const DT_D_NP_t[:] cats_ppt_mean_arr,
     DT_D_NP_t[:] ppt_cp_n_vals_arr,
     const DT_D_NP_t[:] obj_ftn_wts_arr,
     const DT_UL_NP_t[:] sel_cps,
@@ -54,12 +50,12 @@ cdef DT_D obj_ftn_refresh(
         DT_UL num_threads
         DT_D _, obj_val = 0.0, obj_val_copy
 
-        Py_ssize_t m
-        DT_D curr_ppt
+        Py_ssize_t q
+        DT_D curr_cat_ppt
 
-        Py_ssize_t p
-        DT_D o_1 = 0.0
-        DT_D curr_ppt_pi_diff
+        DT_D o_5 = 0.0
+        DT_D cp_cat_ppt_mean
+        DT_D curr_cat_ppt_diff
 
     if n_max < n_cpus:
         num_threads = n_max
@@ -76,41 +72,31 @@ cdef DT_D obj_ftn_refresh(
             ppt_cp_n_vals_arr[j] += 1
 
     for s in prange(n_max, schedule='dynamic', nogil=True, num_threads=num_threads):
-        if s < n_stns:
-            m = s
-            for p in range(n_o_1_threshs):
-                stns_obj_1_vals_arr[m, p] = 0.0
-
-                for j in range(n_cps):
-                    ppt_cp_mean_pis_arr[m, j, p] = 0.0
-
+        curr_cat_ppt_diff = 0
+        if s < n_cats:
+            q = s
             for j in range(n_cps):
                 if ppt_cp_n_vals_arr[j] == 0:
                     continue
+
+                cp_cat_ppt_mean = 0
 
                 for i in range(n_time_steps):
                     if sel_cps[i] != j:
                         continue
 
-                    curr_ppt = in_ppt_arr[i, m]
+                    curr_cat_ppt = in_cats_ppt_arr[i, q]
 
-                    for p in range(n_o_1_threshs):
-                        if curr_ppt < o_1_ppt_thresh_arr[p]:
-                            break
+                    cp_cat_ppt_mean = cp_cat_ppt_mean + curr_cat_ppt
 
-                        ppt_cp_mean_pis_arr[m, j, p] = ppt_cp_mean_pis_arr[m, j, p] + 1
+                cats_ppt_cp_mean_arr[j, q] = cp_cat_ppt_mean
+                cp_cat_ppt_mean = cp_cat_ppt_mean / ppt_cp_n_vals_arr[j]
 
-                for p in range(n_o_1_threshs):
-                    stns_obj_1_vals_arr[m, p] = stns_obj_1_vals_arr[m, p] + ppt_cp_n_vals_arr[j] * ((ppt_cp_mean_pis_arr[m, j, p] / ppt_cp_n_vals_arr[j]) - ppt_mean_pis_arr[m, p])**2
+                curr_cat_ppt_diff = curr_cat_ppt_diff + (ppt_cp_n_vals_arr[j] * abs((cp_cat_ppt_mean / cats_ppt_mean_arr[q]) - 1))
 
-    for p in range(n_o_1_threshs):
-        curr_ppt_pi_diff = 0.0
-        for m in range(n_stns):
-            curr_ppt_pi_diff += stns_obj_1_vals_arr[m, p]
+        o_5 += (curr_cat_ppt_diff / n_time_steps)
 
-        o_1 += (curr_ppt_pi_diff / n_time_steps)**0.5
-
-    obj_val += (o_1 * obj_ftn_wts_arr[0])
+    obj_val += (o_5 * obj_ftn_wts_arr[4])
 
     obj_val_copy = obj_val
     for j in range(n_cps):
@@ -121,14 +107,10 @@ cdef DT_D obj_ftn_refresh(
     return obj_val
 
 cdef DT_D obj_ftn_update(
-    const DT_D_NP_t[:, :] in_ppt_arr,
-    const DT_UL n_stns,
-    const DT_D min_abs_ppt_thresh,
-    DT_D_NP_t[:, :, :] ppt_cp_mean_pis_arr,
-    DT_D_NP_t[:, :] ppt_mean_pis_arr,
-    DT_D_NP_t[:] o_1_ppt_thresh_arr,
-    DT_D_NP_t[:, :] stns_obj_1_vals_arr,
-    const DT_UL n_o_1_threshs,
+    const DT_D_NP_t[:, :] in_cats_ppt_arr,
+    const DT_UL n_cats,
+    DT_D_NP_t[:, :] cats_ppt_cp_mean_arr,
+    const DT_D_NP_t[:] cats_ppt_mean_arr,
     DT_D_NP_t[:] ppt_cp_n_vals_arr,
     const DT_D_NP_t[:] obj_ftn_wts_arr,
     const DT_UL_NP_t[:] sel_cps,
@@ -146,12 +128,14 @@ cdef DT_D obj_ftn_update(
         Py_ssize_t i, j, s
         DT_UL num_threads
         DT_D _, obj_val = 0.0, obj_val_copy
-        Py_ssize_t m
-        DT_D curr_ppt
+        Py_ssize_t q
+        DT_D curr_cat_ppt
 
-        Py_ssize_t p
-        DT_D o_1 = 0.0
-        DT_D curr_ppt_pi_diff
+        DT_D o_5 = 0.0
+        DT_D curr_cat_ppt_diff
+        DT_D cp_cat_ppt_mean
+        DT_D old_cat_ppt_cp_mean
+        DT_D sel_cat_ppt_cp_mean
 
     if n_max < n_cpus:
         num_threads = n_max
@@ -171,49 +155,40 @@ cdef DT_D obj_ftn_update(
                 ppt_cp_n_vals_arr[j] += 1
 
     for s in prange(n_max, schedule='dynamic', nogil=True, num_threads=num_threads):
-        if s < n_stns:
-            m = s
-            for p in range(n_o_1_threshs):
-                stns_obj_1_vals_arr[m, p] = 0.0
-
+        curr_cat_ppt_diff = 0
+        if s < n_cats:
+            q = s
             # remove the effect of the previous CP
             for j in range(n_cps):
+                old_cat_ppt_cp_mean = 0.0
+                sel_cat_ppt_cp_mean = 0.0
+
                 for i in range(n_time_steps):
                     if not chnge_steps[i]:
                         continue
 
-                    curr_ppt = in_ppt_arr[i, m]
+                    curr_cat_ppt = in_cats_ppt_arr[i, q]
 
                     if old_sel_cps[i] == j:
-                        for p in range(n_o_1_threshs):
-                            if curr_ppt < o_1_ppt_thresh_arr[p]:
-                                break
-
-                            ppt_cp_mean_pis_arr[m, j, p] = ppt_cp_mean_pis_arr[m, j, p] - 1
+                        old_cat_ppt_cp_mean = old_cat_ppt_cp_mean + curr_cat_ppt
 
                     if sel_cps[i] == j:
-                        for p in range(n_o_1_threshs):
-                            if curr_ppt < o_1_ppt_thresh_arr[p]:
-                                break
+                        sel_cat_ppt_cp_mean = sel_cat_ppt_cp_mean + curr_cat_ppt
 
-                            ppt_cp_mean_pis_arr[m, j, p] = ppt_cp_mean_pis_arr[m, j, p] + 1
+                cats_ppt_cp_mean_arr[j, q] = cats_ppt_cp_mean_arr[j, q] - old_cat_ppt_cp_mean + sel_cat_ppt_cp_mean
 
             # incorporate the effect of the new CP
             for j in range(n_cps):
                 if ppt_cp_n_vals_arr[j] == 0:
                     continue
 
-                for p in range(n_o_1_threshs):
-                    stns_obj_1_vals_arr[m, p] = stns_obj_1_vals_arr[m, p] + ppt_cp_n_vals_arr[j] * ((ppt_cp_mean_pis_arr[m, j, p] / ppt_cp_n_vals_arr[j]) - ppt_mean_pis_arr[m, p])**2
+                cp_cat_ppt_mean = cats_ppt_cp_mean_arr[j, q] / ppt_cp_n_vals_arr[j]
+                _ = cp_cat_ppt_mean / cats_ppt_mean_arr[q]
+                curr_cat_ppt_diff = curr_cat_ppt_diff + (ppt_cp_n_vals_arr[j] * abs(_ - 1))
 
-    for p in range(n_o_1_threshs):
-        curr_ppt_pi_diff = 0.0
-        for m in range(n_stns):
-            curr_ppt_pi_diff += stns_obj_1_vals_arr[m, p]
+        o_5 += (curr_cat_ppt_diff / n_time_steps)
 
-        o_1 += (curr_ppt_pi_diff / n_time_steps)**0.5
-
-    obj_val += (o_1 * obj_ftn_wts_arr[0])
+    obj_val += (o_5 * obj_ftn_wts_arr[4])
 
     obj_val_copy = obj_val
     for j in range(n_cps):
