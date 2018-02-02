@@ -143,7 +143,7 @@ def write_gen_mod_cp_rules_lines(params_dict):
     pyxcd.ded()
 
     pyxcd.w(
-        'for j in prange(n_cps, schedule=\'dynamic\', nogil=True, num_threads=n_cpus):')
+        'for j in prange(n_cps, schedule=\'static\', nogil=True, num_threads=n_cpus):')
     pyxcd.ind()
     pyxcd.w('for k in range(n_pts):')
     pyxcd.ind()
@@ -160,23 +160,25 @@ def write_gen_mod_cp_rules_lines(params_dict):
     pyxcd.w('curr_idxs_ctr = 0')
     pyxcd.w('while (curr_idxs_ctr < curr_idxs_ct):')
     pyxcd.ind()
-    pyxcd.w('rand_i = <DT_UL> (rand_c() * n_pts)')
-    pyxcd.w('while (cp_rules[j, rand_i] < n_fuzz_nos):')
+    pyxcd.w('curr_iter_ctr = curr_iter_ctr + 1')
+
+    pyxcd.w('if curr_iter_ctr > max_iters:')
     pyxcd.ind()
+    pyxcd.w(r'printf("\n\n\n\n########Too many iterations in gen_cp_rules!'
+            r'########\n\n\n\n")')
+    pyxcd.w('break')
+    pyxcd.ded()
+
     pyxcd.w('rand_i = <DT_UL> (rand_c() * n_pts)')
+    pyxcd.w('if cp_rules[j, rand_i] != n_fuzz_nos:')
+    pyxcd.ind()
+    pyxcd.w('continue')
     pyxcd.ded()
 
     pyxcd.w('cp_rules[j, rand_i] = l')
     pyxcd.w('curr_idxs_ctr = curr_idxs_ctr + 1')
+    pyxcd.ded(lev=3)
 
-    pyxcd.w('curr_iter_ctr = curr_iter_ctr + 1')
-    pyxcd.els()
-    pyxcd.w('if curr_iter_ctr > max_iters:')
-    pyxcd.ind()
-    pyxcd.w(
-        r'printf("\n\n\n\n########Too many iterations in gen_cp_rules!########\n\n\n\n")')
-    pyxcd.w('break')
-    pyxcd.ded(lev=4)
     pyxcd.w('return')
     pyxcd.ded()
 
@@ -246,9 +248,11 @@ def write_gen_mod_cp_rules_lines(params_dict):
 
     pyxcd.els()
     pyxcd.w('dont_stop = 0  # just in case')
-    pyxcd.w('return')
+#     pyxcd.w('return')
     pyxcd.ded()
 
+    pyxcd.w('else:')
+    pyxcd.ind()
     pyxcd.w('while (dont_stop):')
     pyxcd.ind()
     pyxcd.w('curr_iter_ct += 1')
@@ -307,6 +311,7 @@ def write_gen_mod_cp_rules_lines(params_dict):
     pyxcd.w('rand_i[0] = rand_i_')
     pyxcd.w('rand_v[0] = rand_v_')
     pyxcd.w('old_v_i_k[0] = old_v_i_k_')
+    pyxcd.ded()
     pyxcd.w('return')
     pyxcd.ded()
 

@@ -63,15 +63,15 @@ cdef DT_D obj_ftn_refresh(
     else:
         num_threads = n_cpus
 
-    for j in range(n_cps):
-        ppt_cp_n_vals_arr[j] = 0
-        for i in range(n_time_steps):
-            if sel_cps[i] != j:
-                continue
+#     for j in range(n_cps):
+#         ppt_cp_n_vals_arr[j] = 0
+#         for i in range(n_time_steps):
+#             if sel_cps[i] != j:
+#                 continue
+#    
+#             ppt_cp_n_vals_arr[j] += 1
 
-            ppt_cp_n_vals_arr[j] += 1
-
-    for s in prange(n_max, schedule='dynamic', nogil=True, num_threads=num_threads):
+    for s in prange(n_max, schedule='static', nogil=True, num_threads=num_threads):
         curr_cat_ppt_diff = 0
         if s < n_cats:
             q = s
@@ -91,7 +91,7 @@ cdef DT_D obj_ftn_refresh(
 
                 cats_ppt_cp_mean_arr[j, q] = cp_cat_ppt_mean
                 cp_cat_ppt_mean = cp_cat_ppt_mean / ppt_cp_n_vals_arr[j]
-
+                
                 curr_cat_ppt_diff = curr_cat_ppt_diff + (ppt_cp_n_vals_arr[j] * abs((cp_cat_ppt_mean / cats_ppt_mean_arr[q]) - 1))
 
         o_5 += (curr_cat_ppt_diff / n_time_steps)
@@ -102,7 +102,7 @@ cdef DT_D obj_ftn_refresh(
     for j in range(n_cps):
         _ = (ppt_cp_n_vals_arr[j] / n_time_steps)
         if _ < min_freq:
-            obj_val -= ((0.001 * rand_c()) + (lo_freq_pen_wt * (min_freq - _) * obj_val_copy))
+            obj_val -= ((lo_freq_pen_wt * (min_freq - _) * obj_val_copy))
 
     return obj_val
 
@@ -143,16 +143,16 @@ cdef DT_D obj_ftn_update(
     else:
         num_threads = n_cpus
 
-    for j in range(n_cps):
-        for i in range(n_time_steps):
-            if not chnge_steps[i]:
-                continue
-
-            if old_sel_cps[i] == j:
-                ppt_cp_n_vals_arr[j] -= 1
-
-            if sel_cps[i] == j:
-                ppt_cp_n_vals_arr[j] += 1
+#     for j in range(n_cps):
+#         for i in range(n_time_steps):
+#             if not chnge_steps[i]:
+#                 continue
+#   
+#             if old_sel_cps[i] == j:
+#                 ppt_cp_n_vals_arr[j] -= 1
+#   
+#             if sel_cps[i] == j:
+#                 ppt_cp_n_vals_arr[j] += 1
 
     for s in prange(n_max, schedule='dynamic', nogil=True, num_threads=num_threads):
         curr_cat_ppt_diff = 0
@@ -164,8 +164,8 @@ cdef DT_D obj_ftn_update(
                 sel_cat_ppt_cp_mean = 0.0
 
                 for i in range(n_time_steps):
-                    if not chnge_steps[i]:
-                        continue
+#                     if not chnge_steps[i]:
+#                         continue
 
                     curr_cat_ppt = in_cats_ppt_arr[i, q]
 
@@ -194,6 +194,6 @@ cdef DT_D obj_ftn_update(
     for j in range(n_cps):
         _ = (ppt_cp_n_vals_arr[j] / n_time_steps)
         if _ < min_freq:
-            obj_val -= ((0.001 * rand_c()) + (lo_freq_pen_wt * (min_freq - _) * obj_val_copy))
+            obj_val -= ((lo_freq_pen_wt * (min_freq - _) * obj_val_copy))
 
     return obj_val

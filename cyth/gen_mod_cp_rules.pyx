@@ -49,7 +49,7 @@ cdef void gen_cp_rules(
         DT_UL rand_i, rand_v
         DT_UL max_iters = 1000000, curr_iter_ctr = 0
 
-    for j in prange(n_cps, schedule='dynamic', nogil=True, num_threads=n_cpus):
+    for j in prange(n_cps, schedule='static', nogil=True, num_threads=n_cpus):
         for k in range(n_pts):
             cp_rules[j, k] = n_fuzz_nos
 
@@ -60,17 +60,17 @@ cdef void gen_cp_rules(
 
             curr_idxs_ctr = 0
             while (curr_idxs_ctr < curr_idxs_ct):
-                rand_i = <DT_UL> (rand_c() * n_pts)
-                while (cp_rules[j, rand_i] < n_fuzz_nos):
-                    rand_i = <DT_UL> (rand_c() * n_pts)
-
-                cp_rules[j, rand_i] = l
-                curr_idxs_ctr = curr_idxs_ctr + 1
                 curr_iter_ctr = curr_iter_ctr + 1
-
                 if curr_iter_ctr > max_iters:
                     printf("\n\n\n\n########Too many iterations in gen_cp_rules!########\n\n\n\n")
                     break
+
+                rand_i = <DT_UL> (rand_c() * n_pts)
+                if cp_rules[j, rand_i] != n_fuzz_nos:
+                    continue
+
+                cp_rules[j, rand_i] = l
+                curr_idxs_ctr = curr_idxs_ctr + 1
 
     return
 
@@ -103,47 +103,48 @@ cdef void mod_cp_rules(
         cp_rules[rand_k[0], rand_i[0]] = old_v_i_k[0]
 
         dont_stop = 0  # just in case
-        return
 
-    while (dont_stop):
-        curr_iter_ct += 1
-        if curr_iter_ct > max_iters:
-            printf("\n\n\n\n########Too many iterations in mod_cp_rules!########\n\n\n\n")
-            break
+    else:
+        while (dont_stop):
+            curr_iter_ct += 1
+            if curr_iter_ct > max_iters:
+                printf("\n\n\n\n########Too many iterations in mod_cp_rules!########\n\n\n\n")
+                break
 
-        rand_k_ = <DT_UL> (rand_c() * n_cps)  # random CP out of n_cps
-        rand_i_ = <DT_UL> (rand_c() * n_pts)  # random point in n_pts
+            rand_k_ = <DT_UL> (rand_c() * n_cps)  # random CP out of n_cps
+            rand_i_ = <DT_UL> (rand_c() * n_pts)  # random point in n_pts
 
-        # random fuzzy rule index out of n_fuzz_nos + 1
-        # the extra index is for the points that are supposed to have no 
-        # effect on the objective function
-        rand_v_ = <DT_UL> (rand_c() * (n_fuzz_nos + 1))
-        while ((cp_rules[rand_k_, rand_i_] == rand_v_)):
+            # random fuzzy rule index out of n_fuzz_nos + 1
+            # the extra index is for the points that are supposed to have no 
+            # effect on the objective function
             rand_v_ = <DT_UL> (rand_c() * (n_fuzz_nos + 1))
+            while ((cp_rules[rand_k_, rand_i_] == rand_v_)):
+                rand_v_ = <DT_UL> (rand_c() * (n_fuzz_nos + 1))
 
-        old_v_i_k_ = cp_rules[rand_k_, rand_i_]
+            old_v_i_k_ = cp_rules[rand_k_, rand_i_]
 
-        if rand_v_ < n_fuzz_nos:
-            if cp_rules_idx_ctr[rand_k_, rand_v_] < max_idxs_ct:
-                cp_rules[rand_k_, rand_i_] = rand_v_
-                cp_rules_idx_ctr[rand_k_, rand_v_] += 1
+            if rand_v_ < n_fuzz_nos:
+                if cp_rules_idx_ctr[rand_k_, rand_v_] < max_idxs_ct:
+                    cp_rules[rand_k_, rand_i_] = rand_v_
+                    cp_rules_idx_ctr[rand_k_, rand_v_] += 1
 
-                if old_v_i_k_ < n_fuzz_nos:
-                    cp_rules_idx_ctr[rand_k_, old_v_i_k_] -= 1
+                    if old_v_i_k_ < n_fuzz_nos:
+                        cp_rules_idx_ctr[rand_k_, old_v_i_k_] -= 1
 
-                dont_stop = 0
+                    dont_stop = 0
+
+                else:
+                    continue
 
             else:
-                continue
+                cp_rules[rand_k_, rand_i_] = rand_v_
+                cp_rules_idx_ctr[rand_k_, old_v_i_k_] -= 1   
+                dont_stop = 0
 
-        else:
-            cp_rules[rand_k_, rand_i_] = rand_v_
-            cp_rules_idx_ctr[rand_k_, old_v_i_k_] -= 1   
-            dont_stop = 0
+        rand_k[0] = rand_k_
+        rand_i[0] = rand_i_
+        rand_v[0] = rand_v_
+        old_v_i_k[0] = old_v_i_k_
 
-    rand_k[0] = rand_k_
-    rand_i[0] = rand_i_
-    rand_v[0] = rand_v_
-    old_v_i_k[0] = old_v_i_k_
     return
 

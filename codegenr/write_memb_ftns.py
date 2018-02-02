@@ -218,7 +218,7 @@ def write_memb_ftns_lines(params_dict):
     pyxcd.w('best_dof_cp = j')
     pyxcd.ded(lev=2)
 
-    pyxcd.w('old_sel_cps[i] = sel_cps[i]')
+    pyxcd.w('old_sel_cps[i] = no_cp_val')
     pyxcd.w('sel_cps[i] = best_dof_cp')
 
     pyxcd.w('if sel_cps[i] != old_sel_cps[i]:')

@@ -367,7 +367,8 @@ def write_obj_ftns_lines(params_dict):
 
         if obj_1_flag or obj_3_flag:
             pyxcd.ind()
-            pyxcd.w('curr_ppt_diff = 0')
+            if obj_3_flag:
+                pyxcd.w('curr_ppt_diff = 0')
             pyxcd.w('if s < n_stns:')
             pyxcd.ind()
             pyxcd.w('m = s')
@@ -735,8 +736,12 @@ def write_obj_ftns_lines(params_dict):
     pyxcd.w('_ = (ppt_cp_n_vals_arr[j] / n_time_steps)')
     pyxcd.w('if _ < min_freq:')
     pyxcd.ind()
-    pyxcd.w('obj_val -= ((0.001 * rand_c()) + (lo_freq_pen_wt * '
+#     pyxcd.w('obj_val -= ((0.001 * rand_c()) + (lo_freq_pen_wt * '
+#             '(min_freq - _) * obj_val_copy))')
+
+    pyxcd.w('obj_val -= ((lo_freq_pen_wt * '
             '(min_freq - _) * obj_val_copy))')
+
     pyxcd.ded(lev=2)
 
     pyxcd.w('return obj_val')
@@ -1005,7 +1010,8 @@ def write_obj_ftns_lines(params_dict):
 
         if obj_1_flag or obj_3_flag:
             pyxcd.ind()
-            pyxcd.w('curr_ppt_diff = 0.0')
+            if obj_3_flag:
+                pyxcd.w('curr_ppt_diff = 0.0')
             pyxcd.w('if s < n_stns:')
             pyxcd.ind()
             pyxcd.w('m = s')
@@ -1464,8 +1470,12 @@ def write_obj_ftns_lines(params_dict):
     pyxcd.w('_ = (ppt_cp_n_vals_arr[j] / n_time_steps)')
     pyxcd.w('if _ < min_freq:')
     pyxcd.ind()
-    pyxcd.w('obj_val -= ((0.001 * rand_c()) + (lo_freq_pen_wt * '
+#     pyxcd.w('obj_val -= ((0.001 * rand_c()) + (lo_freq_pen_wt * '
+#             '(min_freq - _) * obj_val_copy))')
+
+    pyxcd.w('obj_val -= ((lo_freq_pen_wt * '
             '(min_freq - _) * obj_val_copy))')
+
     pyxcd.ded(lev=2)
 
     pyxcd.w('return obj_val')

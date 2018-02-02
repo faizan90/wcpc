@@ -290,7 +290,8 @@ class CPClassiA(CPOPTBase):
         labs = [pl.get_label() for pl in pls]
         ax.legend(pls, labs, loc=0)
 
-        ax.set_title('CP classification - objective function evolution')
+        ax.set_title(('CP classification - objective function evolution '
+                      '(max=%0.3f)') % self.best_obj_vals_arr[-1])
 
         plt.savefig(str(out_fig_loc), bbox_inches='tight')
         plt.close()

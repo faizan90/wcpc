@@ -740,22 +740,22 @@ def write_cp_classi_main_lines(params_dict):
 
     pyxcd.w('if run_type == 1:')
     pyxcd.ind()
-    pyxcd.w('for i in prange(n_time_steps, nogil=True, schedule=\'dynamic\', '
-            'num_threads=n_cpus):')
-    pyxcd.ind()
-    pyxcd.w('for j in range(n_cps):')
-    pyxcd.ind()
-    pyxcd.w('for k in range(n_pts):')
-    pyxcd.ind()
-    pyxcd.w('mu_i_k_arr[i, j, k] = 0.0')
-    pyxcd.ded()
-    pyxcd.w('dofs_arr[i, j] = 0.0')
-    pyxcd.ded()
-
-    pyxcd.w('sel_cps[i] = 0')
-    pyxcd.w('old_sel_cps[i] = no_cp_val')
-    pyxcd.w('chnge_steps[i] = 0')
-    pyxcd.ded()
+#     pyxcd.w('for i in prange(n_time_steps, nogil=True, schedule=\'dynamic\', '
+#             'num_threads=n_cpus):')
+#     pyxcd.ind()
+#     pyxcd.w('for j in range(n_cps):')
+#     pyxcd.ind()
+#     pyxcd.w('for k in range(n_pts):')
+#     pyxcd.ind()
+#     pyxcd.w('mu_i_k_arr[i, j, k] = 0.0')
+#     pyxcd.ded()
+#     pyxcd.w('dofs_arr[i, j] = 0.0')
+#     pyxcd.ded()
+#
+#     pyxcd.w('sel_cps[i] = 0')
+#     pyxcd.w('old_sel_cps[i] = no_cp_val')
+#     pyxcd.w('chnge_steps[i] = 0')
+#     pyxcd.ded()
 
     pyxcd.w('new_iters_ct += 1')
     pyxcd.ded()
@@ -999,16 +999,18 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w(')')
     pyxcd.ded(lev=2)
 
+    pyxcd.w('#print(curr_m_iter, curr_n_iter, run_type, curr_obj_val, pre_obj_val)')
+
     pyxcd.w('if run_type == 3:')
     pyxcd.ind()
-    pyxcd.w('if curr_m_iter == 1:')
-    pyxcd.ind()
-    pyxcd.w('run_type = 1')
-    pyxcd.ded()
-    pyxcd.w('else:')
-    pyxcd.ind()
+#     pyxcd.w('if curr_m_iter == 1:')
+#     pyxcd.ind()
+#     pyxcd.w('run_type = 1')
+#     pyxcd.ded()
+#     pyxcd.w('else:')
+#     pyxcd.ind()
     pyxcd.w('run_type = 2')
-    pyxcd.ded()
+#     pyxcd.ded()
 
     pyxcd.w('for i in range(n_time_steps):')
     pyxcd.ind()
@@ -1101,7 +1103,7 @@ def write_cp_classi_main_lines(params_dict):
             '(accept_iters + rand_acc_iters + reject_iters), 6)')
     pyxcd.els()
 
-    pyxcd.w('if not curr_m_iter:')
+    pyxcd.w('if (not curr_m_iter) and temp_adjed:')
     pyxcd.ind()
 
     pyxcd.w('if msgs:')
