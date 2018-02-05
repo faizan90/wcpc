@@ -77,6 +77,7 @@ cdef void gen_cp_rules(
 cdef void mod_cp_rules(
     DT_UL_NP_t[:, :] cp_rules,
     DT_UL_NP_t[:, :] cp_rules_idx_ctr,
+    DT_UL_NP_t[:, :] loc_mod_ctr,
     const DT_UL max_idxs_ct,
     const DT_UL n_cps,
     const DT_UL n_pts,
@@ -141,6 +142,7 @@ cdef void mod_cp_rules(
                 cp_rules_idx_ctr[rand_k_, old_v_i_k_] -= 1   
                 dont_stop = 0
 
+        loc_mod_ctr[rand_k_, rand_i_] += 1
         rand_k[0] = rand_k_
         rand_i[0] = rand_i_
         rand_v[0] = rand_v_

@@ -4,7 +4,7 @@
 # cython: cdivision=True
 # cython: language_level=3
 
-### obj_ftns:False;False;False;False;True;False;False;False
+### obj_ftns:False;True;False;False;False;False;False;False
 
 import numpy as np
 cimport numpy as np
@@ -56,7 +56,7 @@ cpdef classify_cps(dict args_dict):
         # doubles
         DT_D anneal_temp_ini, temp_red_alpha, curr_anneal_temp, p_l
         DT_D best_obj_val, curr_obj_val, pre_obj_val, rand_p, boltz_p
-        DT_D acc_rate, temp_inc, lo_freq_pen_wt, min_freq, min_descent = 0.9
+        DT_D acc_rate, temp_inc, lo_freq_pen_wt, min_freq
 
         # other variables
         list curr_n_iters_list = []
@@ -75,6 +75,7 @@ cpdef classify_cps(dict args_dict):
         np.ndarray[DT_UL_NP_t, ndim=2, mode='c'] cp_rules, best_cps
         np.ndarray[DT_UL_NP_t, ndim=2, mode='c'] cp_rules_idx_ctr
         np.ndarray[DT_UL_NP_t, ndim=2, mode='c'] best_cp_rules_idx_ctr
+        np.ndarray[DT_UL_NP_t, ndim=2, mode='c'] loc_mod_ctr
 
         # 2D double arrays
         np.ndarray[DT_D_NP_t, ndim=2, mode='c'] slp_anom, fuzz_nos_arr
@@ -86,7 +87,7 @@ cpdef classify_cps(dict args_dict):
 
         # arrays for all obj. ftns.
         np.ndarray[DT_D_NP_t, ndim=1, mode='c'] obj_ftn_wts_arr
-        np.ndarray[DT_D_NP_t, ndim=1, mode='c'] ppt_cp_n_vals_arr, pre_ppt_cp_n_vals_arr
+        np.ndarray[DT_D_NP_t, ndim=1, mode='c'] ppt_cp_n_vals_arr
 
         np.ndarray[DT_D_NP_t, ndim=2, mode='c'] in_cats_ppt_arr
 
@@ -94,14 +95,22 @@ cpdef classify_cps(dict args_dict):
         Py_ssize_t q
         DT_UL n_cats
 
-        # arrays for obj. ftn. 5
-        np.ndarray[DT_D_NP_t, ndim=1, mode='c'] cats_ppt_mean_arr
-        np.ndarray[DT_D_NP_t, ndim=2, mode='c'] cats_ppt_cp_mean_arr
+        # doubles obj. ftn. 2
+        Py_ssize_t r
+        DT_UL n_o_2_threshs
+
+        # arrays for obj. ftn. 2
+        np.ndarray[DT_D_NP_t, ndim=1, mode='c'] o_2_ppt_thresh_arr
+        np.ndarray[DT_D_NP_t, ndim=2, mode='c'] cats_ppt_mean_pis_arr
+        np.ndarray[DT_D_NP_t, ndim=2, mode='c'] cats_obj_2_vals_arr
+        np.ndarray[DT_D_NP_t, ndim=3, mode='c'] cats_ppt_cp_mean_pis_arr
 
     # read everythings from the given dict. Must do explicitly.
     in_cats_ppt_arr = args_dict['in_cats_ppt_arr_calib']
     n_cats = in_cats_ppt_arr.shape[1]
     n_max = max(n_max, n_cats)
+    o_2_ppt_thresh_arr = args_dict['o_2_ppt_thresh_arr']
+    n_o_2_threshs = o_2_ppt_thresh_arr.shape[0]
 
     obj_ftn_wts_arr = args_dict['obj_ftn_wts_arr']
     n_cps = args_dict['n_cps']
@@ -135,6 +144,8 @@ cpdef classify_cps(dict args_dict):
         print('\n')
         print('Calibrating CPs...')
         print('n_cats:', n_cats)
+        print('o_2_ppt_thresh_arr:', o_2_ppt_thresh_arr)
+        print('n_o_2_threshs:', n_o_2_threshs)
         print('n_cps:', n_cps)
         print('n_cpus:', n_cpus)
         print('no_cp_val:', no_cp_val)
@@ -187,8 +198,6 @@ cpdef classify_cps(dict args_dict):
     rand_v = n_fuzz_nos
     old_v_i_k = n_fuzz_nos
 
-    min_descent_opp = 2 - min_descent
-
     # run_type == 1 means fresh start i.e. everything is reset except
     # the cp_rules. This is done when curr_m_iter >= max_m_iter as well.
     # runtype == 2 means an update cycle i.e. values at the given CP and point
@@ -203,6 +212,7 @@ cpdef classify_cps(dict args_dict):
 
     cp_rules_idx_ctr = np.zeros(shape=(n_cps, n_fuzz_nos), dtype=DT_UL_NP)
     best_cp_rules_idx_ctr = cp_rules_idx_ctr.copy()
+    loc_mod_ctr = np.zeros((n_cps, n_pts), dtype=DT_UL_NP)
 
     gen_cp_rules(
         cp_rules,
@@ -212,7 +222,7 @@ cpdef classify_cps(dict args_dict):
         n_pts,
         n_fuzz_nos,
         n_cpus)
-    
+
     best_cps = cp_rules.copy()
     best_sel_cps = np.zeros(n_time_steps, dtype=DT_UL_NP)
 
@@ -241,28 +251,28 @@ cpdef classify_cps(dict args_dict):
     # initialize the obj. ftn. variables
     ppt_cp_n_vals_arr = np.full(n_cps, 0.0, dtype=DT_D_NP)
 
-    # initialize obj. ftn. 5 variables
-    cats_ppt_mean_arr = np.full(n_cats, 0.0, dtype=DT_D_NP)
-    cats_ppt_cp_mean_arr = np.full((n_cps, n_cats), 0.0, dtype=DT_D_NP)
+    # initialize obj. ftn. 2 variables
+    cats_ppt_mean_pis_arr = np.full((n_cats, n_o_2_threshs), 0.0, dtype=DT_D_NP)
+    cats_ppt_cp_mean_pis_arr = np.full((n_cats, n_cps, n_o_2_threshs), 0.0, dtype=DT_D_NP)
+    cats_obj_2_vals_arr = np.full((n_cats, n_o_2_threshs), 0.0, dtype=DT_D_NP)
 
     # fill some arrays used for obj. 2 and 5 ftns.
     for q in range(n_cats):
-        cats_ppt_mean_arr[q] = np.mean(in_cats_ppt_arr[:, q])
-        assert ((not isnan(cats_ppt_mean_arr[q])) and (cats_ppt_mean_arr[q]> 0))
+        for r in range(n_o_2_threshs):
+            cats_ppt_mean_pis_arr[q, r] = np.mean(in_cats_ppt_arr[:, r] > o_2_ppt_thresh_arr[r])
+            assert (not isnan(cats_ppt_mean_pis_arr[q, r]) and (cats_ppt_mean_pis_arr[q, r] > 0))
 
-#     temp_adjed = 1
     # start simulated annealing
     while ((curr_n_iter < max_n_iters) and (curr_iters_wo_chng < max_iters_wo_chng)) or (not temp_adjed):
         if (curr_m_iter >= max_m_iters) and (run_type == 2) and (temp_adjed):
             curr_m_iter = 0
             curr_anneal_temp *= temp_red_alpha
-#             run_type = 1
-            
-        #print(run_type, ((sel_cps - old_sel_cps) != 0).sum(), end=', ')
+            run_type = 1
 
         mod_cp_rules(
             cp_rules,
             cp_rules_idx_ctr,
+            loc_mod_ctr,
             max_idxs_ct,
             n_cps,
             n_pts,
@@ -283,7 +293,7 @@ cpdef classify_cps(dict args_dict):
             rollback_iters_ct += 1
 
         # fill/update the membership, DOF and selected CPs arrays
-        if (run_type == 1) or (curr_m_iter == 0):
+        if run_type == 1:
             calc_membs_dof_cps(
                 cp_rules,
                 mu_i_k_arr,
@@ -348,19 +358,17 @@ cpdef classify_cps(dict args_dict):
                 n_cps,
                 n_fuzz_nos)
 
-        for j in range(n_cps):
-            ppt_cp_n_vals_arr[j] = np.sum(sel_cps == j)
-            
-#         pre_ppt_cp_n_vals_arr = ppt_cp_n_vals_arr.copy()
         # calculate the objective function values
-        if (run_type == 1) or (curr_m_iter == 0):
+        if run_type == 1:
             # start from the begining
-            #print(curr_obj_val, end=', ')
             curr_obj_val = obj_ftn_refresh(
                 in_cats_ppt_arr,
                 n_cats,
-                cats_ppt_cp_mean_arr,
-                cats_ppt_mean_arr,
+                cats_ppt_cp_mean_pis_arr,
+                cats_ppt_mean_pis_arr,
+                o_2_ppt_thresh_arr,
+                cats_obj_2_vals_arr,
+                n_o_2_threshs,
                 ppt_cp_n_vals_arr,
                 obj_ftn_wts_arr,
                 sel_cps,
@@ -371,7 +379,7 @@ cpdef classify_cps(dict args_dict):
                 n_max,
                 n_time_steps,
                 )
-            
+
             run_type = 2
 
         else:
@@ -379,8 +387,11 @@ cpdef classify_cps(dict args_dict):
             curr_obj_val = obj_ftn_update(
                 in_cats_ppt_arr,
                 n_cats,
-                cats_ppt_cp_mean_arr,
-                cats_ppt_mean_arr,
+                cats_ppt_cp_mean_pis_arr,
+                cats_ppt_mean_pis_arr,
+                o_2_ppt_thresh_arr,
+                cats_obj_2_vals_arr,
+                n_o_2_threshs,
                 ppt_cp_n_vals_arr,
                 obj_ftn_wts_arr,
                 sel_cps,
@@ -394,22 +405,12 @@ cpdef classify_cps(dict args_dict):
                 n_time_steps,
                 )
 
-        print(curr_m_iter, curr_n_iter, run_type, curr_obj_val, pre_obj_val)
-#         print('\n')
-#         print(pre_ppt_cp_n_vals_arr - ppt_cp_n_vals_arr)
-#         uni_cps, cps_freqs = np.unique(sel_cps, return_counts=True)
-#         cp_rel_freqs = 100 * cps_freqs / float(n_time_steps)
-#         cp_rel_freqs = np.round(cp_rel_freqs, 2)
-# 
-#         print('%-25s' % 'Unique CPs:', ['%5d' % int(_) for _ in uni_cps])
-#         print('%-25s' % 'Relative Frequencies (%):', ['%5.2f' % float(_) for _ in cp_rel_freqs])
-        
+        #print(curr_m_iter, curr_n_iter, run_type, curr_obj_val, pre_obj_val)
         if run_type == 3:
             run_type = 2
-            
             for i in range(n_time_steps):
                 old_sel_cps[i] = sel_cps[i]
-                
+
             continue
 
         assert not isnan(curr_obj_val), 'curr_obj_val is NaN!(%s)' % curr_n_iter
@@ -417,7 +418,7 @@ cpdef classify_cps(dict args_dict):
         #print(curr_m_iter, curr_n_iter, run_type, curr_obj_val, pre_obj_val)
 
         # a maximizing function
-        if (curr_obj_val > best_obj_val) and (run_type != 3):
+        if (curr_obj_val > best_obj_val) and (run_type == 2):
             best_obj_val = curr_obj_val
             last_best_accept_n_iter = curr_n_iter
             for i in range(n_time_steps):
@@ -485,7 +486,6 @@ cpdef classify_cps(dict args_dict):
 
                 print('rand_p, boltz_p:', rand_p, boltz_p)
                 uni_cps, cps_freqs = np.unique(best_sel_cps, return_counts=True)
-                
                 cp_rel_freqs = 100 * cps_freqs / float(n_time_steps)
                 cp_rel_freqs = np.round(cp_rel_freqs, 2)
 
@@ -494,30 +494,30 @@ cpdef classify_cps(dict args_dict):
 
                 print('\nbest_cp_rules_idx_ctr:\n', best_cp_rules_idx_ctr.T)
 
-        if (curr_n_iter == temp_adj_iters) and (not temp_adjed):
+        if (curr_n_iter >= temp_adj_iters) and (not temp_adjed) and (run_type == 2):
             print("\n\n#########Checking for acceptance rate#########")
             print('anneal_temp_ini:', anneal_temp_ini)
             if min_acc_rate <= acc_rate <= max_acc_rate:
                 print('acc_rate (%f%%) is acceptable!' % acc_rate)
                 temp_adjed = 1
- 
+
             else:
                 if ants[0] and ants[1]:
                     #print(ants)
                     if acc_rate < min_acc_rate:
                         print('accp_rate (%0.2f%%) is too low!' % acc_rate)
                         ants[0] = [acc_rate, anneal_temp_ini]
- 
+
                     elif acc_rate > max_acc_rate:
                         print('accp_rate (%0.2f%%) is too high!' % acc_rate)
                         ants[1] = [acc_rate, anneal_temp_ini]
- 
+
                     #print(anneal_temp_ini)
                     anneal_temp_ini = 0.5 * ((ants[1][1] + ants[0][1]))
                     curr_anneal_temp = anneal_temp_ini
                     #print(anneal_temp_ini)
                     #print(ants)
- 
+
                 else:
                     if acc_rate < min_acc_rate:
                         ants[0] = [acc_rate, anneal_temp_ini]
@@ -526,7 +526,7 @@ cpdef classify_cps(dict args_dict):
                         print('Increasing anneal_temp_ini by %0.2f%%...' % (100 * (temp_inc - 1)))
                         anneal_temp_ini = anneal_temp_ini * temp_inc
                         curr_anneal_temp = anneal_temp_ini
- 
+
                     elif acc_rate > max_acc_rate:
                         ants[1] = [acc_rate, anneal_temp_ini]
                         print('accp_rate (%0.2f%%) is too high!' % acc_rate)
@@ -534,71 +534,14 @@ cpdef classify_cps(dict args_dict):
                         print('Reducing anneal_temp_ini to %0.2f%%...' %  (100 * (1 - temp_inc)))
                         anneal_temp_ini = anneal_temp_ini * temp_inc
                         curr_anneal_temp = anneal_temp_ini
- 
-                if msgs:
-                    print('\ncurr_m_iter:', curr_m_iter)
-                    print('curr_n_iter:', curr_n_iter)
-    
-                    print('curr_obj_val:', curr_obj_val)
-                    print('pre_obj_val:', pre_obj_val)
-                    print('best_obj_val:', best_obj_val)
-    
-                    print('best_accept_iters:', best_accept_iters)
-                    print('last_best_accept_n_iter:', last_best_accept_n_iter)
-                    print('accept_iters:', accept_iters)
-                    print('rand_acc_iters:', rand_acc_iters)
-                    print('reject_iters:', reject_iters)
-                    print('curr_anneal_temp:', curr_anneal_temp)
-    
-                    print('new_iters_ct:', new_iters_ct)
-                    print('update_iters_ct:', update_iters_ct)
-                    print('rollback_iters_ct:', rollback_iters_ct)
-    
-                    print('acceptance rate (%age):', acc_rate)
-                    print('curr_iters_wo_chng:', curr_iters_wo_chng)
-    
-                    #print('cp_dof_arr min, max:', cp_dof_arr.min(), cp_dof_arr.max())
-    
-                    print('rand_p, boltz_p:', rand_p, boltz_p)
-                    uni_cps, cps_freqs = np.unique(best_sel_cps, return_counts=True)
-                    cp_rel_freqs = 100 * cps_freqs / float(n_time_steps)
-                    cp_rel_freqs = np.round(cp_rel_freqs, 2)
-    
-                    print('%-25s' % 'Unique CPs:', ['%5d' % int(_) for _ in uni_cps])
-                    print('%-25s' % 'Relative Frequencies (%):', ['%5.2f' % float(_) for _ in cp_rel_freqs])
-    
-                    print('\nbest_cp_rules_idx_ctr:\n', best_cp_rules_idx_ctr.T)
-                    
+
                 if curr_temp_adj_iter < max_temp_adj_atmps:
                     run_type = 1
                     curr_n_iter = 0
                     curr_m_iter = 0
                     best_obj_val = -np.inf
-                    pre_obj_val = best_obj_val
-                    best_accept_iters = 0
-                    accept_iters = 0
-                    rand_acc_iters = 0
-                    reject_iters = 0
-                    new_iters_ct = 0
-                    update_iters_ct = 0
-                    rollback_iters_ct = 0
-                    rand_k = n_cps - 1
-                    rand_i = n_pts - 1
-                    rand_v = n_fuzz_nos
-                    old_v_i_k = n_fuzz_nos
-                    curr_iters_wo_chng = 0
-                    curr_temp_adj_iter += 1
-                    gen_cp_rules(
-                        cp_rules,
-                        cp_rules_idx_ctr,
-                        max_idxs_ct,
-                        n_cps,
-                        n_pts,
-                        n_fuzz_nos,
-                        n_cpus)
- 
                     continue
- 
+
                 else:
                     print('#######Could not converge to an acceptable annealing temperature in %d tries!#########')
                     print('Terminating optimization....')
@@ -611,6 +554,9 @@ cpdef classify_cps(dict args_dict):
         curr_n_iters_list.append(curr_n_iter)
         curr_m_iter += 1
         curr_n_iter += 1
+
+    for j in range(n_cps):
+        print(j, loc_mod_ctr[j, :], loc_mod_ctr[j, :].sum(), loc_mod_ctr[j, :].std())
 
     out_dict = {}
     for key in args_dict:

@@ -445,7 +445,8 @@ def write_obj_ftns_lines(params_dict):
 
         if obj_2_flag or obj_5_flag:
             pyxcd.ind()
-            pyxcd.w('curr_cat_ppt_diff = 0')
+            if obj_5_flag:
+                pyxcd.w('curr_cat_ppt_diff = 0')
             pyxcd.w('if s < n_cats:')
             pyxcd.ind()
             pyxcd.w('q = s')
@@ -1114,7 +1115,8 @@ def write_obj_ftns_lines(params_dict):
 
         if obj_2_flag or obj_5_flag:
             pyxcd.ind()
-            pyxcd.w('curr_cat_ppt_diff = 0')
+            if obj_5_flag:
+                pyxcd.w('curr_cat_ppt_diff = 0')
             pyxcd.w('if s < n_cats:')
             pyxcd.ind()
             pyxcd.w('q = s')

@@ -190,6 +190,7 @@ def write_gen_mod_cp_rules_lines(params_dict):
     pyxcd.ind()
     pyxcd.w('DT_UL_NP_t[:, :] cp_rules,')
     pyxcd.w('DT_UL_NP_t[:, :] cp_rules_idx_ctr,')
+    pyxcd.w('DT_UL_NP_t[:, :] loc_mod_ctr,')
     pyxcd.w('const DT_UL max_idxs_ct,')
     pyxcd.w('const DT_UL n_cps,')
     pyxcd.w('const DT_UL n_pts,')
@@ -206,6 +207,7 @@ def write_gen_mod_cp_rules_lines(params_dict):
     pxdcd.ind()
     pxdcd.w('DT_UL_NP_t[:, :] cp_rules,')
     pxdcd.w('DT_UL_NP_t[:, :] cp_rules_idx_ctr,')
+    pxdcd.w('DT_UL_NP_t[:, :] loc_mod_ctr,')
     pxdcd.w('const DT_UL max_idxs_ct,')
     pxdcd.w('const DT_UL n_cps,')
     pxdcd.w('const DT_UL n_pts,')
@@ -306,6 +308,8 @@ def write_gen_mod_cp_rules_lines(params_dict):
     pyxcd.w('cp_rules_idx_ctr[rand_k_, old_v_i_k_] -= 1   ')
     pyxcd.w('dont_stop = 0')
     pyxcd.ded(lev=2)
+
+    pyxcd.w('loc_mod_ctr[rand_k_, rand_i_] += 1')
 
     pyxcd.w('rand_k[0] = rand_k_')
     pyxcd.w('rand_i[0] = rand_i_')

@@ -32,6 +32,7 @@ cdef void gen_cp_rules(
 cdef void mod_cp_rules(
     DT_UL_NP_t[:, :] cp_rules,
     DT_UL_NP_t[:, :] cp_rules_idx_ctr,
+    DT_UL_NP_t[:, :] loc_mod_ctr,
     const DT_UL max_idxs_ct,
     const DT_UL n_cps,
     const DT_UL n_pts,

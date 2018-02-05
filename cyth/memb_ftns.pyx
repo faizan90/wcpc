@@ -51,7 +51,7 @@ cdef void calc_membs_dof_cps(
     # each CP and each point.
     # Select the CP with the greatest DOF for a given step.
     # Set everything to the previous step in case of a roll back.
-    for i in prange(n_time_steps, schedule='static', nogil=True, num_threads=n_cpus):
+    for i in prange(n_time_steps, schedule='dynamic', nogil=True, num_threads=n_cpus):
         for j in range(n_cps):
             for k in range(n_pts):
                 curr_fuzz_idx = cp_rules[j, k]
@@ -86,13 +86,13 @@ cdef void calc_membs_dof_cps(
             dofs_arr[i, j] = curr_dof
 
         best_dof_cp = no_cp_val
-        max_dof = 1e-9
+        max_dof = 1e-5
         for j in range(n_cps):
             if dofs_arr[i, j] > max_dof:
                 max_dof = dofs_arr[i, j]
                 best_dof_cp = j
 
-        old_sel_cps[i] = sel_cps[i]
+        old_sel_cps[i] = no_cp_val
         sel_cps[i] = best_dof_cp
         if sel_cps[i] != old_sel_cps[i]:
             chnge_steps[i] = 1
@@ -189,7 +189,7 @@ cdef void update_membs_dof_cps(
 
         dofs_arr[i, curr_cp] = curr_dof
         best_dof_cp = no_cp_val
-        max_dof = 1e-9
+        max_dof = 1e-5
         for j in range(n_cps):
             if dofs_arr[i, j] > max_dof:
                 max_dof = dofs_arr[i, j]

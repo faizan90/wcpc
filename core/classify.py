@@ -273,7 +273,6 @@ class CPClassiA(CPOPTBase):
         ax.set_ylabel('Objective ftn. value (-)')
         ax.set_ylim(max(-0.1, self.best_obj_vals_arr.min()),
                     self.best_obj_vals_arr.max() * 1.05)
-#         ax.set_ylim(0, ax.get_ylim()[1])
 
         ax.grid()
 
