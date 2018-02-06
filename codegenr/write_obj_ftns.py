@@ -362,7 +362,7 @@ def write_obj_ftns_lines(params_dict):
             obj_8_flag]):
         
         # the main loop
-        pyxcd.w('for s in prange(n_max, schedule=\'dynamic\', nogil=True, '
+        pyxcd.w('for s in prange(n_max, schedule=\'static\', nogil=True, '
                 'num_threads=num_threads):')
 
         if obj_1_flag or obj_3_flag:
@@ -1006,7 +1006,7 @@ def write_obj_ftns_lines(params_dict):
             obj_5_flag,
             obj_8_flag]):
         
-        pyxcd.w('for s in prange(n_max, schedule=\'dynamic\', nogil=True, '
+        pyxcd.w('for s in prange(n_max, schedule=\'static\', nogil=True, '
                 'num_threads=num_threads):')
 
         if obj_1_flag or obj_3_flag:
