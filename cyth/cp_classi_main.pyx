@@ -1,6 +1,6 @@
-# cython: nonecheck=False
-# cython: boundscheck=False
-# cython: wraparound=False
+# cython: nonecheck=True
+# cython: boundscheck=True
+# cython: wraparound=True
 # cython: cdivision=True
 # cython: language_level=3
 
@@ -393,8 +393,8 @@ cpdef classify_cps(dict args_dict):
                 o_4_p_thresh_arr,
                 ppt_cp_mean_wet_arr,
                 nebs_wet_obj_vals_arr,
-                n_nebs,
                 n_o_4_threshs,
+                n_nebs,
                 ppt_cp_n_vals_arr,
                 obj_ftn_wts_arr,
                 sel_cps,
@@ -408,7 +408,7 @@ cpdef classify_cps(dict args_dict):
                 n_time_steps,
                 )
 
-        #print(curr_m_iter, curr_n_iter, run_type, curr_obj_val, pre_obj_val)
+        #print(curr_m_iter, curr_n_iter, run_type, round(curr_obj_val, 2), round(pre_obj_val, 2))
         if run_type == 3:
             run_type = 2
             for i in range(n_time_steps):

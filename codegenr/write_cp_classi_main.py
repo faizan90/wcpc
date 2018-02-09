@@ -971,8 +971,8 @@ def write_cp_classi_main_lines(params_dict):
         pyxcd.w('o_4_p_thresh_arr,')
         pyxcd.w('ppt_cp_mean_wet_arr,')
         pyxcd.w('nebs_wet_obj_vals_arr,')
-        pyxcd.w('n_nebs,')
         pyxcd.w('n_o_4_threshs,')
+        pyxcd.w('n_nebs,')
 
     if obj_5_flag:
         pyxcd.w('cats_ppt_cp_mean_arr,')
@@ -1008,18 +1008,11 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w(')')
     pyxcd.ded(lev=2)
 
-    pyxcd.w('#print(curr_m_iter, curr_n_iter, run_type, curr_obj_val, pre_obj_val)')
+    pyxcd.w('#print(curr_m_iter, curr_n_iter, run_type, round(curr_obj_val, 2), round(pre_obj_val, 2))')
 
     pyxcd.w('if run_type == 3:')
     pyxcd.ind()
-#     pyxcd.w('if curr_m_iter == 1:')
-#     pyxcd.ind()
-#     pyxcd.w('run_type = 1')
-#     pyxcd.ded()
-#     pyxcd.w('else:')
-#     pyxcd.ind()
     pyxcd.w('run_type = 2')
-#     pyxcd.ded()
 
     pyxcd.w('for i in range(n_time_steps):')
     pyxcd.ind()
@@ -1032,7 +1025,7 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('assert not isnan(curr_obj_val), \'curr_obj_val is NaN!(%s)\' % curr_n_iter')
     pyxcd.els()
 
-    pyxcd.w('#print(curr_m_iter, curr_n_iter, run_type, curr_obj_val, pre_obj_val)')
+    pyxcd.w('#print(curr_m_iter, curr_n_iter, run_type, round(curr_obj_val, 2), round(pre_obj_val, 2))')
     pyxcd.els()
 
     pyxcd.w('# a maximizing function')
@@ -1094,8 +1087,6 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('curr_iters_wo_chng = 0')
     pyxcd.ded()
 
-    pyxcd.els()
-
     pyxcd.w('acc_rate = round(100.0 * (accept_iters + rand_acc_iters) / '
             '(accept_iters + rand_acc_iters + reject_iters), 6)')
     pyxcd.els()
@@ -1142,15 +1133,8 @@ def write_cp_classi_main_lines(params_dict):
 
     pyxcd.w('print(\'%-25s\' % \'Unique CPs:\', [\'%5d\' % int(_) for _ in uni_cps])')
     pyxcd.w('print(\'%-25s\' % \'Relative Frequencies (%):\', [\'%5.2f\' % float(_) for _ in cp_rel_freqs])')
-
-#     pyxcd.w(r"print('\n%-10s:%s' % ('Unique CPs', 'Relative Frequencies (%)'))")
-#     pyxcd.w('for x, y in zip(uni_cps, cp_rel_freqs):')
-#     pyxcd.ind()
-#     pyxcd.w(r"print('%10d:%-20.2f' % (x, y))")
-#     pyxcd.ded()
     pyxcd.els()
 
-    # pyxcd.w(r"print('\ncp_rules_idx_ctr:\n', cp_rules_idx_ctr)")
     pyxcd.w(r"print('\nbest_cp_rules_idx_ctr:\n', best_cp_rules_idx_ctr.T)")
     pyxcd.ded(lev=2)
 

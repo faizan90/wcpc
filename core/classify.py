@@ -193,6 +193,12 @@ class CPClassiA(CPOPTBase):
 
         if self.obj_4_flag:
             calib_dict['o_4_p_thresh_arr'] = self.o_4_wett_thresh_arr
+            assert self.neb_wett_arr.shape[1] == 2, (
+                'Implmented for two neibors only!')
+
+        if self.obj_7_flag:
+            assert self.neb_wett_arr.shape[1] == 3, (
+                'Implmented for three neibors only!')
 
         if self.temp_adj_iters == 'auto':
             self.temp_adj_iters = self.vals_tot_anom.shape[1] * 1500
