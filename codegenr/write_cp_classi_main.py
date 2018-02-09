@@ -402,7 +402,7 @@ def write_cp_classi_main_lines(params_dict):
         pyxcd.w('print(\'n_o_4_threshs:\', n_o_4_threshs)')
 
     if obj_4_flag or obj_6_flag or obj_7_flag:
-        pyxcd.w('print(\'in_wet_arr shape:\', in_wet_arr_calib.shape)')
+        pyxcd.w('print(\'in_wet_arr shape:\', (in_wet_arr_calib.shape[0], in_wet_arr_calib.shape[1]))')
 
     if obj_6_flag:
         pyxcd.w('print(\'min_wettness_thresh:\', min_wettness_thresh)')

@@ -4,7 +4,7 @@
 # cython: cdivision=True
 # cython: language_level=3
 
-### obj_ftns:False;False;False;False;False;False;False;True
+### obj_ftns:False;False;False;True;False;False;False;False
 
 import numpy as np
 cimport numpy as np
@@ -89,20 +89,31 @@ cpdef classify_cps(dict args_dict):
         np.ndarray[DT_D_NP_t, ndim=1, mode='c'] obj_ftn_wts_arr
         np.ndarray[DT_D_NP_t, ndim=1, mode='c'] ppt_cp_n_vals_arr
 
-        np.ndarray[DT_UL_NP_t, ndim=2, mode='c'] in_lorenz_arr
+        # ulongs for obj. ftns.
 
-        Py_ssize_t t
-        DT_UL n_lors
+        # ulongs obj. ftns. 4
+        DT_UL n_nebs
 
-        # arrays for obj. ftn. 8
-        np.ndarray[DT_D_NP_t, ndim=1, mode='c'] mean_lor_arr
-        np.ndarray[DT_D_NP_t, ndim=2, mode='c'] lor_cp_mean_arr
+        # arrays for obj. ftns. 4 and 6
+        np.ndarray[DT_D_NP_t, ndim=2, mode='c'] in_wet_arr_calib
+
+        # ulongs obj. ftn. 4
+        Py_ssize_t n, o
+        DT_UL n_o_4_threshs
+
+        # arrays for obj. ftn. 4
+        np.ndarray[DT_D_NP_t, ndim=1, mode='c'] o_4_p_thresh_arr
+        np.ndarray[DT_D_NP_t, ndim=2, mode='c'] ppt_mean_wet_arr
+        np.ndarray[DT_D_NP_t, ndim=2, mode='c'] nebs_wet_obj_vals_arr
+        np.ndarray[DT_UL_NP_t, ndim=3, mode='c'] ppt_cp_mean_wet_arr
 
     # read everythings from the given dict. Must do explicitly.
-    in_lorenz_arr = args_dict['in_lorenz_arr_calib']
-    n_lors = in_lorenz_arr.shape[1]
-    n_max = max(n_max, n_lors)
-    assert n_lors, 'n_lors cannot be zero!'
+    in_wet_arr_calib = args_dict['in_wet_arr_calib']
+    n_nebs = in_wet_arr_calib.shape[1]
+    n_max = max(n_max, n_nebs)
+    assert n_nebs, 'n_nebs cannot be zero!'
+    o_4_p_thresh_arr = args_dict['o_4_p_thresh_arr']
+    n_o_4_threshs = o_4_p_thresh_arr.shape[0]
 
     obj_ftn_wts_arr = args_dict['obj_ftn_wts_arr']
     n_cps = args_dict['n_cps']
@@ -135,6 +146,10 @@ cpdef classify_cps(dict args_dict):
     if msgs:
         print('\n')
         print('Calibrating CPs...')
+        print('n_nebs:', n_nebs)
+        print('o_4_p_thresh_arr:', o_4_p_thresh_arr)
+        print('n_o_4_threshs:', n_o_4_threshs)
+        print('in_wet_arr shape:', (in_wet_arr_calib.shape[0], in_wet_arr_calib.shape[1]))
         print('n_cps:', n_cps)
         print('n_cpus:', n_cpus)
         print('no_cp_val:', no_cp_val)
@@ -239,14 +254,16 @@ cpdef classify_cps(dict args_dict):
     # initialize the obj. ftn. variables
     ppt_cp_n_vals_arr = np.full(n_cps, 0.0, dtype=DT_D_NP)
 
-    # initialize obj. ftn. 8 variables
-    mean_lor_arr = np.full(n_lors, 0.0, dtype=DT_D_NP)
-    lor_cp_mean_arr = np.full((n_cps, n_lors), 0.0, dtype=DT_D_NP)
+    # initialize obj. ftn. 4 variables
+    ppt_mean_wet_arr = np.full((n_nebs, n_o_4_threshs), 0.0, dtype=DT_D_NP)
+    ppt_cp_mean_wet_arr = np.full((n_nebs, n_cps, n_o_4_threshs), 0.0, dtype=DT_UL_NP)
+    nebs_wet_obj_vals_arr = np.full((n_nebs, n_o_4_threshs), 0.0, dtype=DT_D_NP)
 
-    # fill some arrays used for obj. 8 ftn.
-    for t in range(n_lors):
-        mean_lor_arr[t] = np.mean(in_lorenz_arr[:, t])
-        assert ((not isnan(mean_lor_arr[t])) and (mean_lor_arr[t] > 0))
+    # fill some arrays used for obj. 4 ftns.
+    for n in range(n_nebs):
+        for o in range(n_o_4_threshs):
+            ppt_mean_wet_arr[n, o] = np.mean(in_wet_arr_calib[:, n] > o_4_p_thresh_arr[o])
+            assert (not isnan(ppt_mean_wet_arr[n, o]))
 
     # start simulated annealing
     while ((curr_n_iter < max_n_iters) and (curr_iters_wo_chng < max_iters_wo_chng)) or (not temp_adjed):
@@ -348,10 +365,13 @@ cpdef classify_cps(dict args_dict):
         if run_type == 1:
             # start from the begining
             curr_obj_val = obj_ftn_refresh(
-                in_lorenz_arr,
-                mean_lor_arr,
-                lor_cp_mean_arr,
-                n_lors,
+                in_wet_arr_calib,
+                ppt_mean_wet_arr,
+                o_4_p_thresh_arr,
+                ppt_cp_mean_wet_arr,
+                nebs_wet_obj_vals_arr,
+                n_o_4_threshs,
+                n_nebs,
                 ppt_cp_n_vals_arr,
                 obj_ftn_wts_arr,
                 sel_cps,
@@ -368,10 +388,13 @@ cpdef classify_cps(dict args_dict):
         else:
             # only update at steps where the CP has changed
             curr_obj_val = obj_ftn_update(
-                in_lorenz_arr,
-                mean_lor_arr,
-                lor_cp_mean_arr,
-                n_lors,
+                in_wet_arr_calib,
+                ppt_mean_wet_arr,
+                o_4_p_thresh_arr,
+                ppt_cp_mean_wet_arr,
+                nebs_wet_obj_vals_arr,
+                n_nebs,
+                n_o_4_threshs,
                 ppt_cp_n_vals_arr,
                 obj_ftn_wts_arr,
                 sel_cps,
