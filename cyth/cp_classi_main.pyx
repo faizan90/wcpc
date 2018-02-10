@@ -1,6 +1,6 @@
-# cython: nonecheck=True
-# cython: boundscheck=True
-# cython: wraparound=True
+# cython: nonecheck=False
+# cython: boundscheck=False
+# cython: wraparound=False
 # cython: cdivision=True
 # cython: language_level=3
 
@@ -418,7 +418,7 @@ cpdef classify_cps(dict args_dict):
 
         assert not isnan(curr_obj_val), 'curr_obj_val is NaN!(%s)' % curr_n_iter
 
-        #print(curr_m_iter, curr_n_iter, run_type, curr_obj_val, pre_obj_val)
+        #print(curr_m_iter, curr_n_iter, run_type, round(curr_obj_val, 2), round(pre_obj_val, 2))
 
         # a maximizing function
         if (curr_obj_val > best_obj_val) and (run_type == 2):
