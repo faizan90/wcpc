@@ -1,6 +1,6 @@
-# cython: nonecheck=True
-# cython: boundscheck=True
-# cython: wraparound=True
+# cython: nonecheck=False
+# cython: boundscheck=False
+# cython: wraparound=False
 # cython: cdivision=True
 # cython: language_level=3
 # cython: infer_types(None)
@@ -20,13 +20,10 @@ DT_UL_NP = np.uint64
 
 
 cdef DT_D obj_ftn_refresh(
-    const DT_D_NP_t[:, :] in_wet_arr_calib,
-    const DT_D_NP_t[:, :] ppt_mean_wet_arr,
-    const DT_D_NP_t[:] o_4_p_thresh_arr,
-    DT_UL_NP_t[:, :, :] ppt_cp_mean_wet_arr,
-    DT_D_NP_t[:, :] nebs_wet_obj_vals_arr,
-    const DT_UL n_o_4_threshs,
-    const DT_UL n_nebs,
+    const DT_D_NP_t[:, :] in_cats_ppt_arr,
+    const DT_UL n_cats,
+    DT_D_NP_t[:, :] cats_ppt_cp_mean_arr,
+    const DT_D_NP_t[:] cats_ppt_mean_arr,
     DT_D_NP_t[:] ppt_cp_n_vals_arr,
     const DT_D_NP_t[:] obj_ftn_wts_arr,
     const DT_UL_NP_t[:] sel_cps,
@@ -39,13 +36,10 @@ cdef DT_D obj_ftn_refresh(
     ) nogil
 
 cdef DT_D obj_ftn_update(
-    const DT_D_NP_t[:, :] in_wet_arr_calib,
-    const DT_D_NP_t[:, :] ppt_mean_wet_arr,
-    const DT_D_NP_t[:] o_4_p_thresh_arr,
-    DT_UL_NP_t[:, :, :] ppt_cp_mean_wet_arr,
-    DT_D_NP_t[:, :] nebs_wet_obj_vals_arr,
-    const DT_UL n_o_4_threshs,
-    const DT_UL n_nebs,
+    const DT_D_NP_t[:, :] in_cats_ppt_arr,
+    const DT_UL n_cats,
+    DT_D_NP_t[:, :] cats_ppt_cp_mean_arr,
+    const DT_D_NP_t[:] cats_ppt_mean_arr,
     DT_D_NP_t[:] ppt_cp_n_vals_arr,
     const DT_D_NP_t[:] obj_ftn_wts_arr,
     const DT_UL_NP_t[:] sel_cps,
