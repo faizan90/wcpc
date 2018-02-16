@@ -30,6 +30,8 @@ def write_obj_ftns_lines(params_dict):
     obj_6_flag = params_dict['obj_6_flag']
     obj_7_flag = params_dict['obj_7_flag']
     obj_8_flag = params_dict['obj_8_flag']
+    
+    op_mp_obj_ftn_flag = params_dict['op_mp_obj_ftn_flag']
 
     pyxcd = CodeGenr(tab=tab)
     pxdcd = CodeGenr(tab=tab)
@@ -59,7 +61,9 @@ def write_obj_ftns_lines(params_dict):
     #==========================================================================
     pyxcd.w('import numpy as np')
     pyxcd.w('cimport numpy as np')
-    pyxcd.w('from cython.parallel import prange')
+    
+    if op_mp_obj_ftn_flag:
+        pyxcd.w('from cython.parallel import prange')
     pyxcd.els()
 
     pxdcd.w('import numpy as np')
@@ -305,7 +309,12 @@ def write_obj_ftns_lines(params_dict):
     if obj_5_flag:
         pyxcd.w('DT_D o_5 = 0.0')
         pyxcd.w('DT_D cp_cat_ppt_mean')
-        pyxcd.w('DT_D curr_cat_ppt_diff')
+
+        if op_mp_obj_ftn_flag:
+            pyxcd.w('DT_D curr_cat_ppt_diff')
+        else:
+            pyxcd.w('DT_D curr_cat_ppt_diff = 0.0')
+
         pyxcd.els()
 
     if obj_6_flag:
@@ -361,13 +370,18 @@ def write_obj_ftns_lines(params_dict):
             obj_8_flag]):
         
         # the main loop
-        pyxcd.w('for s in prange(n_max, schedule=\'static\', nogil=True, '
-                'num_threads=num_threads):')
+        if op_mp_obj_ftn_flag:
+            pyxcd.w('for s in prange(n_max, schedule=\'static\', nogil=True, '
+                    'num_threads=num_threads):')
+        else:
+            pyxcd.w('for s in range(n_max):')
 
         if obj_1_flag or obj_3_flag:
             pyxcd.ind()
+
             if obj_3_flag:
-                pyxcd.w('curr_ppt_diff = 0')
+                pyxcd.w('curr_ppt_diff = 0.0')
+
             pyxcd.w('if s < n_stns:')
             pyxcd.ind()
             pyxcd.w('m = s')
@@ -390,7 +404,7 @@ def write_obj_ftns_lines(params_dict):
             pyxcd.ded()
 
             if obj_3_flag:
-                pyxcd.w('cp_ppt_mean = 0')
+                pyxcd.w('cp_ppt_mean = 0.0')
 
             pyxcd.els()
 
@@ -444,8 +458,8 @@ def write_obj_ftns_lines(params_dict):
 
         if obj_2_flag or obj_5_flag:
             pyxcd.ind()
-            if obj_5_flag:
-                pyxcd.w('curr_cat_ppt_diff = 0')
+            if obj_5_flag and op_mp_obj_ftn_flag:
+                pyxcd.w('curr_cat_ppt_diff = 0.0')
             pyxcd.w('if s < n_cats:')
             pyxcd.ind()
             pyxcd.w('q = s')
@@ -523,7 +537,7 @@ def write_obj_ftns_lines(params_dict):
 
         if obj_8_flag:
             pyxcd.ind()
-            pyxcd.w('curr_lor_diff = 0')
+            pyxcd.w('curr_lor_diff = 0.0')
             pyxcd.w('if s < n_lors:')
             pyxcd.ind()
             pyxcd.w('t = s')
@@ -937,7 +951,12 @@ def write_obj_ftns_lines(params_dict):
 
     if obj_5_flag:
         pyxcd.w('DT_D o_5 = 0.0')
-        pyxcd.w('DT_D curr_cat_ppt_diff')
+
+        if op_mp_obj_ftn_flag:
+            pyxcd.w('DT_D curr_cat_ppt_diff')
+        else:
+            pyxcd.w('DT_D curr_cat_ppt_diff = 0.0')
+
         pyxcd.w('DT_D cp_cat_ppt_mean')
         pyxcd.w('DT_D old_cat_ppt_cp_mean')
         pyxcd.w('DT_D sel_cat_ppt_cp_mean')
@@ -1002,8 +1021,11 @@ def write_obj_ftns_lines(params_dict):
             obj_5_flag,
             obj_8_flag]):
         
-        pyxcd.w('for s in prange(n_max, schedule=\'static\', nogil=True, '
-                'num_threads=num_threads):')
+        if op_mp_obj_ftn_flag:
+            pyxcd.w('for s in prange(n_max, schedule=\'static\', nogil=True, '
+                    'num_threads=num_threads):')
+        else:
+            pyxcd.w('for s in range(n_max):')
 
         if obj_1_flag or obj_3_flag:
             pyxcd.ind()
@@ -1111,8 +1133,10 @@ def write_obj_ftns_lines(params_dict):
 
         if obj_2_flag or obj_5_flag:
             pyxcd.ind()
-            if obj_5_flag:
-                pyxcd.w('curr_cat_ppt_diff = 0')
+
+            if obj_5_flag and op_mp_obj_ftn_flag:
+                pyxcd.w('curr_cat_ppt_diff = 0.0')
+
             pyxcd.w('if s < n_cats:')
             pyxcd.ind()
             pyxcd.w('q = s')

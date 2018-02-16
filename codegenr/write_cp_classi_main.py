@@ -32,6 +32,9 @@ def write_cp_classi_main_lines(params_dict):
     obj_7_flag = params_dict['obj_7_flag']
     obj_8_flag = params_dict['obj_8_flag']
 
+    op_mp_memb_flag = params_dict['op_mp_memb_flag']
+    op_mp_obj_ftn_flag = params_dict['op_mp_obj_ftn_flag']
+
     pyxcd = CodeGenr(tab=tab)
     pyxbldcd = CodeGenr(tab=tab)
 
@@ -54,6 +57,10 @@ def write_cp_classi_main_lines(params_dict):
                            obj_7_flag,
                            obj_8_flag]))
     pyxcd.w('### obj_ftns:' + _)
+    pyxcd.els()
+
+    pyxcd.w('### op_mp_memb_flag:' + str(op_mp_memb_flag))
+    pyxcd.w('### op_mp_obj_ftn_flag:' + str(op_mp_obj_ftn_flag))
     pyxcd.els()
 
     #==========================================================================

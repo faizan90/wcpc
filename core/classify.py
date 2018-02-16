@@ -11,6 +11,8 @@ from psutil import cpu_count
 import numpy as np
 import matplotlib.pyplot as plt
 
+plt.ioff()
+
 from .bases import CPOPTBase
 from ..alg_dtypes import DT_D_NP
 from ..misc.checks import check_nans_finite
@@ -137,6 +139,9 @@ class CPClassiA(CPOPTBase):
         if self.obj_8_flag:
             self.obj_ftn_wts_arr[7] = self.o_8_obj_wt
 
+        assert isinstance(self.op_mp_memb_flag, bool)
+        assert isinstance(self.op_mp_obj_ftn_flag, bool)
+
         return
 
     def _gen_classi_cyth_mods(self, force_compile=False):
@@ -158,7 +163,9 @@ class CPClassiA(CPOPTBase):
                                    self.cyth_infer_types,
                                    self.cyth_language_level,
                                    force_compile,
-                                   cyth_dir)
+                                   cyth_dir,
+                                   self.op_mp_memb_flag,
+                                   self.op_mp_obj_ftn_flag)
 
 #         raise Exception
         importlib.invalidate_caches()

@@ -8,6 +8,8 @@ from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 
+plt.ioff()
+
 from .bases import QualBases
 from ..alg_dtypes import DT_D_NP
 from ..misc.checks import check_nans_finite

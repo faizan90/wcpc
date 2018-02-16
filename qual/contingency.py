@@ -9,6 +9,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cmaps
 
+plt.ioff()
+
 from ..misc.checks import check_nans_finite
 from ..alg_dtypes import DT_D_NP, DT_UL_NP
 

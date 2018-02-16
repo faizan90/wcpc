@@ -10,6 +10,8 @@ import pandas as pd
 import xarray as xr
 import matplotlib.pyplot as plt
 
+plt.ioff()
+
 from ..misc.error_msgs import print_warning
 
 

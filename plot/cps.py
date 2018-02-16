@@ -10,6 +10,8 @@ import shapefile as shp
 import matplotlib.pyplot as plt
 from descartes import PolygonPatch
 
+plt.ioff()
+
 import pyximport
 pyximport.install()
 from krigings import OrdinaryKriging
@@ -36,7 +38,7 @@ class PlotCPs:
         self._other_prms_set_flag = False
         self._kriged_flag = False
         return
-    
+
     def set_epsgs(self,
                   anom_epsg,
                   bck_shp_epsg,
@@ -363,8 +365,8 @@ class PlotCPs:
                              self.krige_y_coords_mesh,
                              self.krige_z_coords_mesh[j],
                              levels=cont_levels,
-                             vmin=0,
-                             vmax=1.0,
+                             vmin=-1.0,
+                             vmax=+1.0,
                              linestyles='solid',
                              extend='both')
 

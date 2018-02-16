@@ -69,7 +69,7 @@ cdef DT_D obj_ftn_refresh(
             ppt_cp_n_vals_arr[j] += 1
 
     for s in prange(n_max, schedule='static', nogil=True, num_threads=num_threads):
-        curr_lor_diff = 0
+        curr_lor_diff = 0.0
         if s < n_lors:
             t = s
 

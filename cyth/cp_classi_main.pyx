@@ -6,6 +6,9 @@
 
 ### obj_ftns:False;False;False;False;False;False;False;True
 
+### op_mp_memb_flag:True
+### op_mp_obj_ftn_flag:True
+
 import numpy as np
 cimport numpy as np
 from cython.parallel import prange

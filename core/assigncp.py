@@ -38,6 +38,7 @@ class CPAssignA(CPOPTBase):
         assert self._anom_set_flag
         assert self._cp_prms_set_flag
         assert self._cp_rules_set_flag
+        assert isinstance(self.op_mp_memb_flag, bool)
         return
     
     def _gen_justi_cyth_mods(self, force_compile):
@@ -51,8 +52,10 @@ class CPAssignA(CPOPTBase):
                                   self.cyth_infer_types,
                                   self.cyth_language_level,
                                   force_compile,
-                                  cyth_dir)
+                                  cyth_dir,
+                                  self.op_mp_memb_flag)
 
+#         raise Exception
         importlib.invalidate_caches()
 
         return importlib.import_module('..cyth.justi_alg',
@@ -79,6 +82,7 @@ class CPAssignA(CPOPTBase):
 
         _assign_cps = self._gen_justi_cyth_mods(force_compile)
 
+#         raise Exception
         self.assign_dict = _assign_cps(assign_dict)
 
         self.sel_cps_arr = self.assign_dict['sel_cps']

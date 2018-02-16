@@ -23,6 +23,9 @@ def write_gen_mod_cp_rules_lines(params_dict):
     infer_types = params_dict['infer_types']
     out_dir = params_dict['out_dir']
 
+    op_mp_flag = any([params_dict['op_mp_memb_flag'],
+                      params_dict['op_mp_obj_ftn_flag']])
+
     pyxcd = CodeGenr(tab=tab)
     pxdcd = CodeGenr(tab=tab)
     pyxbldcd = CodeGenr(tab=tab)
@@ -51,7 +54,8 @@ def write_gen_mod_cp_rules_lines(params_dict):
     #==========================================================================
     pyxcd.w('import numpy as np')
     pyxcd.w('cimport numpy as np')
-    pyxcd.w('from cython.parallel import prange')
+    if op_mp_flag:
+        pyxcd.w('from cython.parallel import prange')
     pyxcd.els()
 
     pxdcd.w('import numpy as np')
@@ -142,8 +146,12 @@ def write_gen_mod_cp_rules_lines(params_dict):
     pyxcd.w('DT_UL max_iters = 1000000, curr_iter_ctr = 0')
     pyxcd.ded()
 
-    pyxcd.w(
-        'for j in prange(n_cps, schedule=\'static\', nogil=True, num_threads=n_cpus):')
+    if op_mp_flag:
+        pyxcd.w('for j in prange(n_cps, schedule=\'static\', '
+                'nogil=True, num_threads=n_cpus):')
+    else:
+        pyxcd.w('for j in range(n_cps):')
+
     pyxcd.ind()
     pyxcd.w('for k in range(n_pts):')
     pyxcd.ind()

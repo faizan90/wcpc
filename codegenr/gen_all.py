@@ -31,7 +31,9 @@ def create_classi_cython_files(obj_1_flag=False,
                                infer_types=None,
                                language_level=3,
                                force_compile=False,
-                               out_dir=''):
+                               out_dir='',
+                               op_mp_memb_flag=True,
+                               op_mp_obj_ftn_flag=True):
 
     assert any([obj_1_flag,
                 obj_2_flag,
@@ -63,6 +65,9 @@ def create_classi_cython_files(obj_1_flag=False,
     params_dict['obj_6_flag'] = obj_6_flag
     params_dict['obj_7_flag'] = obj_7_flag
     params_dict['obj_8_flag'] = obj_8_flag
+
+    params_dict['op_mp_memb_flag'] = op_mp_memb_flag
+    params_dict['op_mp_obj_ftn_flag'] = op_mp_obj_ftn_flag
     
     out_dir = Path(out_dir)
     
@@ -72,8 +77,8 @@ def create_classi_cython_files(obj_1_flag=False,
 
     compile_classi_main = False
     compile_gen_mod_cp_rules = False
-    compile_memb_ftns = False
-        
+    compile_memb_ftns = True
+
     if path_to_main_pyx.exists() and (not force_compile):
         mtch_str = ''
         compile_classi_main = True
@@ -87,25 +92,53 @@ def create_classi_cython_files(obj_1_flag=False,
                           obj_8_flag]
         
         with open(path_to_main_pyx, 'r') as pyx_hdl:
+            # obj flags
             for line in pyx_hdl:
                 if fnmatch(line, '### obj_ftns:*'):
                     mtch_str = line
                     break
 
-        if mtch_str:
-            _ = (mtch_str.split(':')[1]).strip().split(';')
-            old_flags_list = [True if x == 'True' else False for x in _]
-            
-            if new_flags_list == old_flags_list:
-                compile_classi_main = False
+            if mtch_str:
+                _ = (mtch_str.split(':')[1]).strip().split(';')
+                old_flags_list = [True if x == 'True' else False for x in _]
+
+                if new_flags_list == old_flags_list:
+                    compile_classi_main = False
+
+            if not compile_classi_main:
+                # open mp obj flag
+                for line in pyx_hdl:
+                    if fnmatch(line, '### op_mp_obj_ftn_flag:*'):
+                        mtch_str = line
+                        break
+
+                if mtch_str:
+                    _ = (mtch_str.split(':')[1]).strip()
+                    if _ != str(op_mp_obj_ftn_flag):
+                        compile_classi_main = True
+
     else:
         compile_classi_main = True
 
     if (not path_to_cp_rules_pyx.exists()) or force_compile:
         compile_gen_mod_cp_rules = True
 
-    if (not path_to_memb_ftns_pyx.exists()) or force_compile:
-        compile_memb_ftns = True
+    if force_compile  or (not path_to_memb_ftns_pyx.exists()):
+        pass
+    else:
+        if path_to_memb_ftns_pyx.exists():
+            # open mp membership flag
+            with open(path_to_memb_ftns_pyx, 'r') as pyx_hdl:
+                mtch_str = ''
+                for line in pyx_hdl:
+                    if fnmatch(line, '### op_mp_memb_flag:*'):
+                        mtch_str = line
+                        break
+
+                if mtch_str:
+                    _ = (mtch_str.split(':')[1]).strip()
+                    if _ == str(op_mp_memb_flag):
+                        compile_memb_ftns = False
 
     if compile_classi_main:
         write_cp_classi_main_lines(params_dict)
@@ -127,7 +160,8 @@ def create_justi_cython_files(nonecheck=True,
                               infer_types=None,
                               language_level=3,
                               force_compile=False,
-                              out_dir=''):
+                              out_dir='',
+                              op_mp_memb_flag=True):
 
     assert out_dir
 
@@ -145,14 +179,26 @@ def create_justi_cython_files(nonecheck=True,
     params_dict['language_level'] = language_level
     params_dict['infer_types'] = infer_types
     params_dict['out_dir'] = out_dir
+    params_dict['op_mp_memb_flag'] = op_mp_memb_flag
+    
+    compile_memb_ftns = True
 
-    if force_compile:
-        compile_memb_ftns = True
+    if force_compile  or (not path_to_memb_ftns_pyx.exists()):
+        pass
     else:
-        compile_memb_ftns = False
+        if path_to_memb_ftns_pyx.exists():
+            # open mp membership flag
+            with open(path_to_memb_ftns_pyx, 'r') as pyx_hdl:
+                mtch_str = ''
+                for line in pyx_hdl:
+                    if fnmatch(line, '### op_mp_memb_flag:*'):
+                        mtch_str = line
+                        break
 
-    if not path_to_memb_ftns_pyx.exists():
-        compile_memb_ftns = True
+                if mtch_str:
+                    _ = (mtch_str.split(':')[1]).strip()
+                    if _ == str(op_mp_memb_flag):
+                        compile_memb_ftns = False
 
     if compile_memb_ftns:
         write_memb_ftns_lines(params_dict)

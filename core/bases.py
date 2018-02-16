@@ -37,6 +37,7 @@ class CPDataBase:
         self.obj_6_flag = False
         self.obj_7_flag = False
         self.obj_8_flag = False
+        self._n_obj_ftns = 8
 
         self.cyth_nonecheck = False
         self.cyth_boundscheck = False
@@ -45,7 +46,9 @@ class CPDataBase:
         self.cyth_language_level = 3
         self.cyth_infer_types = None
 
-        self._n_obj_ftns = 8
+        self.op_mp_memb_flag = True
+        self.op_mp_obj_ftn_flag = True
+
         self.min_abs_ppt_thresh = 0.0
         return
 

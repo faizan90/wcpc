@@ -10,6 +10,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.offsetbox import AnchoredText
 
+plt.ioff()
+
 from ..misc.checks import check_nans_finite
 from ..alg_dtypes import DT_D_NP
 

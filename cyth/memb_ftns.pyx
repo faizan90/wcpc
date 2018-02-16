@@ -5,6 +5,7 @@
 # cython: language_level=3
 # cython: infer_types(None)
 
+### op_mp_memb_flag:True
 import numpy as np
 cimport numpy as np
 from cython.parallel import prange

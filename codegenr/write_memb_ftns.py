@@ -21,6 +21,7 @@ def write_memb_ftns_lines(params_dict):
     language_level = params_dict['language_level']
     infer_types = params_dict['infer_types']
     out_dir = params_dict['out_dir']
+    op_mp_flag = params_dict['op_mp_memb_flag']
 
     pyxcd = CodeGenr(tab=tab)
     pxdcd = CodeGenr(tab=tab)
@@ -45,12 +46,15 @@ def write_memb_ftns_lines(params_dict):
     pxdcd.w('# cython: infer_types(%s)' % str(infer_types))
     pxdcd.els()
 
+    pyxcd.w('### op_mp_memb_flag:' + str(op_mp_flag))
+
     #==========================================================================
     # add imports
     #==========================================================================
     pyxcd.w('import numpy as np')
     pyxcd.w('cimport numpy as np')
-    pyxcd.w('from cython.parallel import prange')
+    if op_mp_flag:
+        pyxcd.w('from cython.parallel import prange')
     pyxcd.els()
 
     pxdcd.w('import numpy as np')
@@ -151,7 +155,13 @@ def write_memb_ftns_lines(params_dict):
     pyxcd.w('# each CP and each point.')
     pyxcd.w('# Select the CP with the greatest DOF for a given step.')
     pyxcd.w('# Set everything to the previous step in case of a roll back.')
-    pyxcd.w('for i in prange(n_time_steps, schedule=\'dynamic\', nogil=True, num_threads=n_cpus):')
+
+    if op_mp_flag:
+        pyxcd.w('for i in prange(n_time_steps, schedule=\'dynamic\', '
+                'nogil=True, num_threads=n_cpus):')
+    else:
+        pyxcd.w('for i in range(n_time_steps):')
+
     pyxcd.ind()
     pyxcd.w('for j in range(n_cps):')
     pyxcd.ind()
@@ -321,7 +331,12 @@ def write_memb_ftns_lines(params_dict):
     pyxcd.w('pre_cond = 0')
     pyxcd.ded()
 
-    pyxcd.w('for i in prange(n_time_steps, schedule=\'static\', nogil=True, num_threads=n_cpus):')
+    if op_mp_flag:
+        pyxcd.w('for i in prange(n_time_steps, schedule=\'static\', '
+                'nogil=True, num_threads=n_cpus):')
+    else:
+        pyxcd.w('for i in range(n_time_steps):')
+
     pyxcd.ind()
     pyxcd.w('# remove old')
     pyxcd.w('if pre_cond:')
