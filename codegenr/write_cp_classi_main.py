@@ -408,7 +408,7 @@ def write_cp_classi_main_lines(params_dict):
         pyxcd.w('print(\'min_wettness_thresh:\', min_wettness_thresh)')
 
     if obj_8_flag:
-        pyxcd.w('print(\'in_lorenz_arr shape:\', in_lorenz_arr.shape)')
+        pyxcd.w('print(\'in_lorenz_arr shape:\', (in_lorenz_arr.shape[0], in_lorenz_arr.shape[1]))')
 
     pyxcd.w('print(\'n_cps:\', n_cps)')
     pyxcd.w('print(\'n_cpus:\', n_cpus)')

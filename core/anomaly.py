@@ -190,3 +190,35 @@ class Anomaly:
             _ = np.isnan(self.vals_tot_anom)
             self.vals_tot_anom[_] = self.anom_type_a_nan_rep
         return
+
+    def calc_anomaly_type_b(self, anom_type_b_nan_rep=None):
+        assert self._vars_read_flag
+
+        if anom_type_b_nan_rep is not None:
+            assert isinstance(anom_type_b_nan_rep, (int, float))
+
+        self.anom_type_b_nan_rep = anom_type_b_nan_rep
+
+        self.mean_arr = np.mean(self.vals_tot_rav, axis=0)
+        self.sigma_arr = np.std(self.vals_tot_rav, axis=0)
+
+        self.vals_tot_anom = ((self.vals_tot_rav - self.mean_arr) /
+                                  self.sigma_arr)
+
+        assert len(self.vals_tot_rav.shape) == len(self.vals_tot_anom.shape)
+
+        nan_ct = np.sum(np.isnan(self.vals_tot_anom))
+        _msg = '%d NaNs out of %d in anomaly of type B.' % (nan_ct,
+                                                            self.n_tot_vals)
+
+        if self.anom_type_b_nan_rep is None:
+            assert not nan_ct, _msg
+        elif nan_ct:
+            if self.msgs:
+                print_warning(('\nWarning in calc_anomaly_type_b: %s'
+                               ' Setting all to %s') %
+                               (_msg, str(self.anom_type_b_nan_rep)))
+
+            _ = np.isnan(self.vals_tot_anom)
+            self.vals_tot_anom[_] = self.anom_type_b_nan_rep
+        return
