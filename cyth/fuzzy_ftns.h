@@ -25,10 +25,12 @@ DT_D inline get_tri_mu(const DT_D *g,
         mu_g = (*g - *c) / (*b - *c);
         //printf("between b and c");
     }
+
     else if (*g >= *c) {
         mu_g = 0.0;
         //printf("greater than c");
     }
+
     else {
      	mu_g = NAN;
      	//printf("something else");

@@ -365,8 +365,8 @@ class PlotCPs:
                              self.krige_y_coords_mesh,
                              self.krige_z_coords_mesh[j],
                              levels=cont_levels,
-                             vmin=-1.0,
-                             vmax=+1.0,
+                             vmin=0.0,
+                             vmax=1.0,
                              linestyles='solid',
                              extend='both')
 

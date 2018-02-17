@@ -205,6 +205,14 @@ class Anomaly:
         self.vals_tot_anom = ((self.vals_tot_rav - self.mean_arr) /
                                   self.sigma_arr)
 
+        _anom_min = np.nanmin(self.vals_tot_anom, axis=1)
+        _anom_max = np.nanmax(self.vals_tot_anom, axis=1)
+
+        _1 = self.vals_tot_anom - _anom_min[:, None]
+        _2 = (_anom_max - _anom_min)[:, None]
+
+        self.vals_tot_anom = _1 / _2
+
         assert len(self.vals_tot_rav.shape) == len(self.vals_tot_anom.shape)
 
         nan_ct = np.sum(np.isnan(self.vals_tot_anom))
