@@ -230,3 +230,59 @@ class Anomaly:
             _ = np.isnan(self.vals_tot_anom)
             self.vals_tot_anom[_] = self.anom_type_b_nan_rep
         return
+
+    def calc_anomaly_type_c(self, anom_type_c_nan_rep=None):
+        assert self._vars_read_flag
+
+        if anom_type_c_nan_rep is not None:
+            assert isinstance(anom_type_c_nan_rep, (int, float))
+
+        self.anom_type_c_nan_rep = anom_type_c_nan_rep
+
+        n_days = 366
+
+        self.mean_arr = np.zeros((n_days, self.vals_tot_rav.shape[1]))
+        self.sigma_arr = self.mean_arr.copy()
+        self.vals_tot_anom = np.full_like(self.vals_tot_rav, np.nan)
+
+        for i in range(12):
+            for j in range(31):
+                idxs = self.times_tot.month == (i + 1)
+                idxs = idxs & (self.times_tot.day == (j + 1))
+                
+                if not idxs.sum():
+                    continue
+
+                curr_vals = self.vals_tot_rav[idxs]
+
+                self.mean_arr[i] = np.mean(curr_vals, axis=0)
+                self.sigma_arr[i] = np.std(curr_vals, axis=0)
+
+                curr_anoms = (curr_vals - self.mean_arr[i]) / self.sigma_arr[i]
+                self.vals_tot_anom[idxs] = curr_anoms
+
+#         _anom_min = np.nanmin(self.vals_tot_anom, axis=1)
+#         _anom_max = np.nanmax(self.vals_tot_anom, axis=1)
+#
+#         _1 = self.vals_tot_anom - _anom_min[:, None]
+#         _2 = (_anom_max - _anom_min)[:, None]
+#
+#         self.vals_tot_anom = _1 / _2
+#
+#         assert len(self.vals_tot_rav.shape) == len(self.vals_tot_anom.shape)
+
+        nan_ct = np.sum(np.isnan(self.vals_tot_anom))
+        _msg = '%d NaNs out of %d in anomaly of type B.' % (nan_ct,
+                                                            self.n_tot_vals)
+
+        if self.anom_type_c_nan_rep is None:
+            assert not nan_ct, _msg
+        elif nan_ct:
+            if self.msgs:
+                print_warning(('\nWarning in calc_anomaly_type_b: %s'
+                               ' Setting all to %s') %
+                               (_msg, str(self.anom_type_c_nan_rep)))
+
+            _ = np.isnan(self.vals_tot_anom)
+            self.vals_tot_anom[_] = self.anom_type_c_nan_rep
+        return
