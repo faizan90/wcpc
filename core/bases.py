@@ -175,9 +175,11 @@ class CPDataBase:
         return
 
     def set_obj_1_off(self):
+        if hasattr(self, 'o_1_ppt_thresh_arr'):
+            del self.o_1_ppt_thresh_arr
 
-        del self.o_1_ppt_thresh_arr
-        del self.o_1_obj_wt
+        if hasattr(self, 'o_1_obj_wt'):
+            del self.o_1_obj_wt
 
         self.obj_1_flag = False
         return
@@ -205,9 +207,11 @@ class CPDataBase:
         return
 
     def set_obj_2_off(self):
+        if hasattr(self, 'o_2_ppt_thresh_arr'):
+            del self.o_2_ppt_thresh_arr
 
-        del self.o_2_ppt_thresh_arr
-        del self.o_2_obj_wt
+        if hasattr(self, 'o_2_obj_wt'):
+            del self.o_2_obj_wt
 
         self.obj_2_flag = False
         return
@@ -226,8 +230,8 @@ class CPDataBase:
         return
 
     def set_obj_3_off(self):
-
-        del self.o_3_obj_wt
+        if hasattr(self, 'o_3_obj_wt'):
+            del self.o_3_obj_wt
 
         self.obj_3_flag = False
         return
@@ -255,9 +259,11 @@ class CPDataBase:
         return
 
     def set_obj_4_off(self):
+        if hasattr(self, 'o_4_wett_thresh_arr'):
+            del self.o_4_wett_thresh_arr
 
-        del self.o_4_wett_thresh_arr
-        del self.o_4_obj_wt
+        if hasattr(self, 'o_4_obj_wt'):
+            del self.o_4_obj_wt
 
         self.obj_4_flag = False
         return
@@ -276,8 +282,8 @@ class CPDataBase:
         return
 
     def set_obj_5_off(self):
-
-        del self.o_5_obj_wt
+        if hasattr(self, 'o_5_obj_wt'):
+            del self.o_5_obj_wt
 
         self.obj_5_flag = False
         return
@@ -299,8 +305,8 @@ class CPDataBase:
         return
 
     def set_obj_6_off(self):
-
-        del self.o_6_obj_wt
+        if hasattr(self, 'o_6_obj_wt'):
+            del self.o_6_obj_wt
 
         self.obj_6_flag = False
         return
@@ -319,8 +325,8 @@ class CPDataBase:
         return
 
     def set_obj_7_off(self):
-
-        del self.o_7_obj_wt
+        if hasattr(self, 'o_7_obj_wt'):
+            del self.o_7_obj_wt
 
         self.obj_7_flag = False
         return
@@ -339,8 +345,8 @@ class CPDataBase:
         return
 
     def set_obj_8_off(self):
-
-        del self.o_8_obj_wt
+        if hasattr(self, 'o_8_obj_wt'):
+            del self.o_8_obj_wt
 
         self.obj_8_flag = False
         return

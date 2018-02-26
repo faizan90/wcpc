@@ -215,10 +215,22 @@ class CPClassiA(CPOPTBase):
         calib_dict['p_l'] = self.p_l
         calib_dict['fuzz_nos_arr'] = self.fuzz_nos_arr
         calib_dict['slp_anom_calib'] = self.vals_tot_anom
-        calib_dict['in_ppt_arr_calib'] = self.stn_ppt_arr
-        calib_dict['in_cats_ppt_arr_calib'] = self.cat_ppt_arr
-        calib_dict['in_wet_arr_calib'] = self.neb_wett_arr
-        calib_dict['in_lorenz_arr_calib'] = self.lorenz_arr
+
+        if self.obj_1_flag or self.obj_3_flag:
+            calib_dict['in_ppt_arr_calib'] = self.stn_ppt_arr
+
+        if self.obj_2_flag or self.obj_5_flag:
+            calib_dict['in_cats_ppt_arr_calib'] = self.cat_ppt_arr
+
+        if self.obj_4_flag or self.obj_6_flag or self.obj_7_flag:
+            calib_dict['in_wet_arr_calib'] = self.neb_wett_arr
+
+        if self.obj_6_flag:
+            calib_dict['min_wettness_thresh'] = self.min_wettness_thresh
+
+        if self.obj_8_flag:
+            calib_dict['in_lorenz_arr_calib'] = self.lorenz_arr
+
         calib_dict['anneal_temp_ini'] = self.ini_anneal_temp
         calib_dict['temp_red_alpha'] = self.tem_alpha
         calib_dict['max_m_iters'] = self.tem_chng_iters

@@ -5,6 +5,10 @@
 # cython: language_level=3
 # cython: infer_types(None)
 
+### obj_ftns:False;False;False;False;False;False;False;True
+
+### op_mp_obj_ftn_flag:True
+
 import numpy as np
 cimport numpy as np
 from cython.parallel import prange

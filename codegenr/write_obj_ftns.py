@@ -48,6 +48,20 @@ def write_obj_ftns_lines(params_dict):
     pyxcd.w('# cython: infer_types(%s)' % str(infer_types))
     pyxcd.els()
 
+    _ = ';'.join(map(str, [obj_1_flag,
+                           obj_2_flag,
+                           obj_3_flag,
+                           obj_4_flag,
+                           obj_5_flag,
+                           obj_6_flag,
+                           obj_7_flag,
+                           obj_8_flag]))
+    pyxcd.w('### obj_ftns:' + _)
+    pyxcd.els()
+
+    pyxcd.w('### op_mp_obj_ftn_flag:' + str(op_mp_obj_ftn_flag))
+    pyxcd.els()
+
     pxdcd.w('# cython: nonecheck=%s' % str(nonecheck))
     pxdcd.w('# cython: boundscheck=%s' % boundscheck)
     pxdcd.w('# cython: wraparound=%s' % str(wraparound))

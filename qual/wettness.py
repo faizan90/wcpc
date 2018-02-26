@@ -82,6 +82,7 @@ class WettnessIndex(QualBases):
     def plot_wettness(self,
                       label,
                       out_fig_path,
+                      obj_val=None,
                       fig_size=(15, 10)):
 
         assert self._wettness_cmptd_flag or self._cps_reordered_flag
@@ -97,6 +98,9 @@ class WettnessIndex(QualBases):
         out_fig_path = Path(out_fig_path)
         assert out_fig_path.parents[0].exists()
 
+        if obj_val is not None:
+            assert isinstance(obj_val, float)
+
         assert isinstance(fig_size, (tuple, list))
         assert len(fig_size) == 2
         assert fig_size[0] > 0
@@ -111,7 +115,13 @@ class WettnessIndex(QualBases):
 
         plt.xticks(range(self.n_cps), range(self.n_cps))
 
-        plt.title('Wettness index for the classification: %s' % label)
+        title = ''
+        title += 'Wettness index for the classification: %s' % label
+
+        if obj_val is not None:
+            title += '\n(obj_val: %0.2f)' % obj_val
+
+        plt.title(title)
 
         plt.xlabel('CP')
         plt.ylabel('Wettness Index')
