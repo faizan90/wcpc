@@ -239,27 +239,23 @@ class Anomaly:
 
         self.anom_type_c_nan_rep = anom_type_c_nan_rep
 
-        n_days = 366
-
-        self.mean_arr = np.zeros((n_days, self.vals_tot_rav.shape[1]))
-        self.sigma_arr = self.mean_arr.copy()
         self.vals_tot_anom = np.full_like(self.vals_tot_rav, np.nan)
 
         for i in range(12):
+            m_idxs = self.times_tot.month == (i + 1)
             for j in range(31):
-                idxs = self.times_tot.month == (i + 1)
-                idxs = idxs & (self.times_tot.day == (j + 1))
+                d_idxs = m_idxs & (self.times_tot.day == (j + 1))
                 
-                if not idxs.sum():
+                if not d_idxs.sum():
                     continue
 
-                curr_vals = self.vals_tot_rav[idxs]
+                curr_vals = self.vals_tot_rav[d_idxs]
 
-                self.mean_arr[i] = np.mean(curr_vals, axis=0)
-                self.sigma_arr[i] = np.std(curr_vals, axis=0)
+                mean_arr = np.mean(curr_vals, axis=0)
+                sigma_arr = np.std(curr_vals, axis=0)
 
-                curr_anoms = (curr_vals - self.mean_arr[i]) / self.sigma_arr[i]
-                self.vals_tot_anom[idxs] = curr_anoms
+                curr_anoms = (curr_vals - mean_arr) / sigma_arr
+                self.vals_tot_anom[d_idxs] = curr_anoms
 
         _anom_min = np.nanmin(self.vals_tot_anom, axis=1)
         _anom_max = np.nanmax(self.vals_tot_anom, axis=1)
