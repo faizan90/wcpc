@@ -261,15 +261,15 @@ class Anomaly:
                 curr_anoms = (curr_vals - self.mean_arr[i]) / self.sigma_arr[i]
                 self.vals_tot_anom[idxs] = curr_anoms
 
-#         _anom_min = np.nanmin(self.vals_tot_anom, axis=1)
-#         _anom_max = np.nanmax(self.vals_tot_anom, axis=1)
-#
-#         _1 = self.vals_tot_anom - _anom_min[:, None]
-#         _2 = (_anom_max - _anom_min)[:, None]
-#
-#         self.vals_tot_anom = _1 / _2
-#
-#         assert len(self.vals_tot_rav.shape) == len(self.vals_tot_anom.shape)
+        _anom_min = np.nanmin(self.vals_tot_anom, axis=1)
+        _anom_max = np.nanmax(self.vals_tot_anom, axis=1)
+
+        _1 = self.vals_tot_anom - _anom_min[:, None]
+        _2 = (_anom_max - _anom_min)[:, None]
+
+        self.vals_tot_anom = _1 / _2
+
+        assert len(self.vals_tot_rav.shape) == len(self.vals_tot_anom.shape)
 
         nan_ct = np.sum(np.isnan(self.vals_tot_anom))
         _msg = '%d NaNs out of %d in anomaly of type B.' % (nan_ct,

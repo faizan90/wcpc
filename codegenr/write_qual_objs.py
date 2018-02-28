@@ -471,7 +471,7 @@ def write_qual_obj_lines(params_dict):
         if obj_2_flag:
             pyxcd.w('for r in range(n_o_2_threshs):')
             pyxcd.ind()
-            pyxcd.w('cats_ppt_mean_pis_arr[q, r] = np.mean(in_cats_ppt_arr[:, r] > '
+            pyxcd.w('cats_ppt_mean_pis_arr[q, r] = np.mean(in_cats_ppt_arr[:, q] > '
                     'o_2_ppt_thresh_arr[r])')
             pyxcd.w('assert (not isnan(cats_ppt_mean_pis_arr[q, r]) and '
                     '(cats_ppt_mean_pis_arr[q, r] > 0))')
