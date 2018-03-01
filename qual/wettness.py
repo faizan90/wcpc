@@ -131,3 +131,80 @@ class WettnessIndex(QualBases):
         plt.savefig(str(out_fig_path), bbox_inches='tight')
         plt.close()
         return
+
+    @staticmethod
+    def plot_wettness_list(wett_arrs_list,
+                           n_cps,
+                           labels_list,
+                           out_fig_path,
+                           obj_val_list=None,
+                           fig_size=(15, 10),
+                           msgs=True):
+
+        assert isinstance(wett_arrs_list, list)
+        assert wett_arrs_list
+        n_wett_arrs = len(wett_arrs_list)
+        assert all([isinstance(wett_arrs_list[i], np.ndarray)
+                    for i in range(n_wett_arrs)])
+        assert all([len(wett_arrs_list[i].shape) == 1
+                    for i in range(n_wett_arrs)])
+
+        assert isinstance(n_cps, int)
+        assert n_cps > 0
+        assert all([wett_arrs_list[i].shape[0] == n_cps
+                    for i in range(n_wett_arrs)])
+
+        assert isinstance(labels_list, list)
+        assert labels_list
+        n_labs = len(labels_list)
+        assert n_labs == n_wett_arrs
+        assert all([isinstance(labels_list[i], str) for i in range(n_labs)])
+
+        assert isinstance(out_fig_path, (str, Path))
+
+        out_fig_path = Path(out_fig_path)
+        assert out_fig_path.parents[0].exists()
+
+        if obj_val_list is not None:
+            assert isinstance(obj_val_list, list)
+            assert obj_val_list
+            n_obj_vals = len(obj_val_list)
+            assert n_obj_vals == n_wett_arrs
+            assert all([isinstance(obj_val_list[i], float) for i in range(n_obj_vals)])
+
+        assert isinstance(fig_size, (tuple, list))
+        assert len(fig_size) == 2
+        assert fig_size[0] > 0
+        assert fig_size[1] > 0
+
+        if msgs:
+            print('Plotting Wettness index...')
+
+        plt.figure(figsize=fig_size)
+
+        rwidth = 0.8
+        for i in range(n_wett_arrs):
+            plt.bar(range(n_cps),
+                    wett_arrs_list[i],
+                    width=rwidth,
+                    alpha=0.3,
+                    label=(labels_list[i] +
+                           (' (obj_val: %0.2f)' % obj_val_list[i])))
+            rwidth -= 0.15
+
+        plt.xticks(range(n_cps), range(n_cps))
+
+        title = ''
+        title += 'Wettness index for CP classifications'
+
+        plt.title(title)
+
+        plt.xlabel('CP')
+        plt.ylabel('Wettness Index')
+        plt.legend(loc=0)
+
+        plt.grid()
+
+        plt.savefig(str(out_fig_path), bbox_inches='tight')
+        plt.close()
+        return
