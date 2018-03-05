@@ -115,7 +115,8 @@ def write_qual_obj_lines(params_dict):
     pyxcd.ind()
     pyxcd.w('# ulongs')
     pyxcd.w('Py_ssize_t i, j, k, l')
-    pyxcd.w('DT_UL n_cps, n_time_steps, n_cpus, msgs, n_max = 0')
+    pyxcd.w('DT_UL n_cps, n_time_steps, n_cpus, msgs, n_max = 0, n_gens = 1')
+    pyxcd.w('DT_UL mult_obj_vals_flag')
     pyxcd.els()
 
     pyxcd.w('# doubles')
@@ -124,10 +125,12 @@ def write_qual_obj_lines(params_dict):
 
     pyxcd.w('# 1D ulong arrays')
     pyxcd.w('np.ndarray[DT_UL_NP_t, ndim=1, mode=\'c\'] sel_cps')
+    pyxcd.w('np.ndarray[DT_UL_NP_t, ndim=2, mode=\'c\'] mult_sel_cps')
     pyxcd.els()
 
     pyxcd.w('# arrays for all obj. ftns.')
     pyxcd.w('np.ndarray[DT_D_NP_t, ndim=1, mode=\'c\'] obj_ftn_wts_arr')
+    pyxcd.w('np.ndarray[DT_D_NP_t, ndim=1, mode=\'c\'] obj_vals_arr')
     pyxcd.w('np.ndarray[DT_D_NP_t, ndim=1, mode=\'c\'] ppt_cp_n_vals_arr')
     pyxcd.els()
 
@@ -301,7 +304,21 @@ def write_qual_obj_lines(params_dict):
 
     pyxcd.els()
     pyxcd.w('obj_ftn_wts_arr = args_dict[\'obj_ftn_wts_arr\']')
+
+
+    pyxcd.w('if \'mult_obj_vals_flag\' in args_dict:')
+    pyxcd.ind()
+    pyxcd.w('mult_sel_cps = args_dict[\'mult_sel_cps\']')
+    pyxcd.w('mult_obj_vals_flag = <DT_UL> args_dict[\'mult_obj_vals_flag\']')
+    pyxcd.w('n_gens = mult_sel_cps.shape[0]')
+    pyxcd.ded()
+    pyxcd.w('else:')
+    pyxcd.ind()
     pyxcd.w('sel_cps = args_dict[\'sel_cps\']')
+    pyxcd.w('mult_obj_vals_flag = 0')
+    pyxcd.ded()
+
+
     pyxcd.w('n_cps = args_dict[\'n_cps\']')
     pyxcd.w('n_cpus = args_dict[\'n_cpus\']')
     pyxcd.w('lo_freq_pen_wt = args_dict[\'lo_freq_pen_wt\']')
@@ -317,7 +334,7 @@ def write_qual_obj_lines(params_dict):
     pyxcd.w('msgs = 0')
     pyxcd.ded()
 
-    pyxcd.w('assert n_cps >= 2, \'n_cps cannot be less than 2!\'')
+    pyxcd.w('assert n_cps >= 1, \'n_cps cannot be less than 1!\'')
     pyxcd.els()
 
     pyxcd.w('if msgs:')
@@ -361,6 +378,8 @@ def write_qual_obj_lines(params_dict):
     pyxcd.w('print(\'lo_freq_pen_wt:\', lo_freq_pen_wt)')
     pyxcd.w('print(\'min_freq:\', min_freq)')
     pyxcd.w('print(\'n_max:\', n_max)')
+    pyxcd.w('print(\'mult_obj_vals_flag:\', mult_obj_vals_flag)')
+    pyxcd.w('print(\'n_gens:\', n_gens)')
 
     if obj_1_flag or obj_3_flag:
         pyxcd.w('print(\'in_ppt_arr shape: (%d, %d)\' % '
@@ -374,6 +393,7 @@ def write_qual_obj_lines(params_dict):
 
     pyxcd.w('# initialize the required variables')
     pyxcd.w('ppt_cp_n_vals_arr = np.full(n_cps, 0.0, dtype=DT_D_NP)')
+    pyxcd.w('obj_vals_arr = np.full(n_gens, 0.0, dtype=DT_D_NP)')
     pyxcd.els()
 
     if obj_1_flag:
@@ -534,6 +554,85 @@ def write_qual_obj_lines(params_dict):
         pyxcd.ded()
 
     pyxcd.w('# calc obj ftn value')
+    pyxcd.w('if mult_obj_vals_flag:')
+    pyxcd.ind()
+    pyxcd.w('for i in range(n_gens):')
+    pyxcd.ind()
+    pyxcd.w('curr_obj_val = obj_ftn_refresh(')
+    pyxcd.ind()
+
+    if obj_1_flag or obj_3_flag:
+        pyxcd.w('in_ppt_arr,')
+        pyxcd.w('n_stns,')
+
+    if obj_2_flag or obj_5_flag:
+        pyxcd.w('in_cats_ppt_arr,')
+        pyxcd.w('n_cats,')
+
+    if obj_1_flag:
+        pyxcd.w('ppt_cp_mean_pis_arr,')
+        pyxcd.w('ppt_mean_pis_arr,')
+        pyxcd.w('o_1_ppt_thresh_arr,')
+        pyxcd.w('stns_obj_1_vals_arr,')
+        pyxcd.w('n_o_1_threshs,')
+
+    if obj_2_flag:
+        pyxcd.w('cats_ppt_cp_mean_pis_arr,')
+        pyxcd.w('cats_ppt_mean_pis_arr,')
+        pyxcd.w('o_2_ppt_thresh_arr,')
+        pyxcd.w('cats_obj_2_vals_arr,')
+        pyxcd.w('n_o_2_threshs,')
+
+    if obj_3_flag:
+        pyxcd.w('ppt_cp_mean_arr,')
+        pyxcd.w('ppt_mean_arr,')
+
+    if obj_4_flag:
+        pyxcd.w('in_wet_arr_calib,')
+        pyxcd.w('ppt_mean_wet_arr,')
+        pyxcd.w('o_4_p_thresh_arr,')
+        pyxcd.w('ppt_cp_mean_wet_arr,')
+        pyxcd.w('nebs_wet_obj_vals_arr,')
+        pyxcd.w('n_o_4_threshs,')
+        pyxcd.w('n_nebs,')
+
+    if obj_5_flag:
+        pyxcd.w('cats_ppt_cp_mean_arr,')
+        pyxcd.w('cats_ppt_mean_arr,')
+
+    if obj_6_flag:
+        pyxcd.w('mean_wet_dof,')
+        pyxcd.w('mean_cp_wet_dof_arr,')
+        pyxcd.w('wet_dofs_arr,')
+
+    if obj_7_flag:
+        pyxcd.w('mean_tri_wet,')
+        pyxcd.w('mean_cp_tri_wet_arr,')
+        pyxcd.w('tri_wet_arr,')
+
+    if obj_8_flag:
+        pyxcd.w('in_lorenz_arr,')
+        pyxcd.w('mean_lor_arr,')
+        pyxcd.w('lor_cp_mean_arr,')
+        pyxcd.w('n_lors,')
+
+    pyxcd.w('ppt_cp_n_vals_arr,')
+    pyxcd.w('obj_ftn_wts_arr,')
+    pyxcd.w('mult_sel_cps[i],')
+    pyxcd.w('lo_freq_pen_wt,')
+    pyxcd.w('min_freq,')
+    pyxcd.w('n_cpus,')
+    pyxcd.w('n_cps,')
+    pyxcd.w('n_max,')
+    pyxcd.w('n_time_steps,')
+    pyxcd.w(')')
+    pyxcd.ded()
+    pyxcd.w('obj_vals_arr[i] = curr_obj_val')
+    pyxcd.ded(lev=2)
+
+    pyxcd.w('else:')
+    pyxcd.ind()
+
     pyxcd.w('curr_obj_val = obj_ftn_refresh(')
     pyxcd.ind()
 
@@ -602,7 +701,7 @@ def write_qual_obj_lines(params_dict):
     pyxcd.w('n_max,')
     pyxcd.w('n_time_steps,')
     pyxcd.w(')')
-    pyxcd.ded()
+    pyxcd.ded(lev=2)
 
     pyxcd.w('out_dict = {}')
 
@@ -614,6 +713,11 @@ def write_qual_obj_lines(params_dict):
     pyxcd.w('out_dict[\'n_max\'] = n_max')
     pyxcd.w('out_dict[\'n_time_steps_calib\'] = n_time_steps')
     pyxcd.w('out_dict[\'curr_obj_val\'] = curr_obj_val')
+    
+    pyxcd.w('if mult_obj_vals_flag:')
+    pyxcd.ind()
+    pyxcd.w('out_dict[\'obj_vals_arr\'] = obj_vals_arr')
+    pyxcd.ded()
 
     pyxcd.w('return out_dict')
     pyxcd.ded()

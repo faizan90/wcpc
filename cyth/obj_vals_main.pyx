@@ -1,6 +1,6 @@
-# cython: nonecheck=False
-# cython: boundscheck=False
-# cython: wraparound=False
+# cython: nonecheck=True
+# cython: boundscheck=True
+# cython: wraparound=True
 # cython: cdivision=True
 # cython: language_level=3
 
@@ -43,16 +43,19 @@ cpdef get_obj_val(dict args_dict):
     cdef:
         # ulongs
         Py_ssize_t i, j, k, l
-        DT_UL n_cps, n_time_steps, n_cpus, msgs, n_max = 0
+        DT_UL n_cps, n_time_steps, n_cpus, msgs, n_max = 0, n_gens = 1
+        DT_UL mult_obj_vals_flag
 
         # doubles
         DT_D curr_obj_val, lo_freq_pen_wt, min_freq
 
         # 1D ulong arrays
         np.ndarray[DT_UL_NP_t, ndim=1, mode='c'] sel_cps
+        np.ndarray[DT_UL_NP_t, ndim=2, mode='c'] mult_sel_cps
 
         # arrays for all obj. ftns.
         np.ndarray[DT_D_NP_t, ndim=1, mode='c'] obj_ftn_wts_arr
+        np.ndarray[DT_D_NP_t, ndim=1, mode='c'] obj_vals_arr
         np.ndarray[DT_D_NP_t, ndim=1, mode='c'] ppt_cp_n_vals_arr
 
         np.ndarray[DT_D_NP_t, ndim=2, mode='c'] in_cats_ppt_arr
@@ -80,7 +83,15 @@ cpdef get_obj_val(dict args_dict):
     n_o_2_threshs = o_2_ppt_thresh_arr.shape[0]
 
     obj_ftn_wts_arr = args_dict['obj_ftn_wts_arr']
-    sel_cps = args_dict['sel_cps']
+    if 'mult_obj_vals_flag' in args_dict:
+        mult_sel_cps = args_dict['mult_sel_cps']
+        mult_obj_vals_flag = <DT_UL> args_dict['mult_obj_vals_flag']
+        n_gens = mult_sel_cps.shape[0]
+
+    else:
+        sel_cps = args_dict['sel_cps']
+        mult_obj_vals_flag = 0
+
     n_cps = args_dict['n_cps']
     n_cpus = args_dict['n_cpus']
     lo_freq_pen_wt = args_dict['lo_freq_pen_wt']
@@ -92,7 +103,7 @@ cpdef get_obj_val(dict args_dict):
     else:
         msgs = 0
 
-    assert n_cps >= 2, 'n_cps cannot be less than 2!'
+    assert n_cps >= 1, 'n_cps cannot be less than 1!'
 
     if msgs:
         print('\n')
@@ -106,10 +117,15 @@ cpdef get_obj_val(dict args_dict):
         print('lo_freq_pen_wt:', lo_freq_pen_wt)
         print('min_freq:', min_freq)
         print('n_max:', n_max)
+        print('mult_obj_vals_flag:', mult_obj_vals_flag)
+        print('n_gens:', n_gens)
         print('in_cats_ppt_arr shape: (%d, %d)' % (in_cats_ppt_arr.shape[0], in_cats_ppt_arr.shape[1]))
-
+        if mult_obj_vals_flag:
+            print(mult_sel_cps.shape[0], mult_sel_cps.shape[1])
+        
     # initialize the required variables
-    ppt_cp_n_vals_arr = np.full(n_cps, 0.0, dtype=DT_D_NP)
+    ppt_cp_n_vals_arr = np.zeros(n_cps, dtype=DT_D_NP)
+    obj_vals_arr = np.zeros(n_gens, dtype=DT_D_NP)
 
     # initialize obj. ftn. 2 variables
     cats_ppt_mean_pis_arr = np.full((n_cats, n_o_2_threshs), 0.0, dtype=DT_D_NP)
@@ -120,36 +136,57 @@ cpdef get_obj_val(dict args_dict):
     for q in range(n_cats):
         for r in range(n_o_2_threshs):
             cats_ppt_mean_pis_arr[q, r] = np.mean(in_cats_ppt_arr[:, q] > o_2_ppt_thresh_arr[r])
-            
-            assert (not isnan(cats_ppt_mean_pis_arr[q, r]) and (cats_ppt_mean_pis_arr[q, r] > 0)), (
-                (q, r, cats_ppt_mean_pis_arr[q, r], o_2_ppt_thresh_arr[r], np.sum(in_cats_ppt_arr[:, q] > o_2_ppt_thresh_arr[r]), in_cats_ppt_arr[:, q].max()))
+            assert (not isnan(cats_ppt_mean_pis_arr[q, r]) and (cats_ppt_mean_pis_arr[q, r] > 0))
 
     # calc obj ftn value
-    curr_obj_val = obj_ftn_refresh(
-        in_cats_ppt_arr,
-        n_cats,
-        cats_ppt_cp_mean_pis_arr,
-        cats_ppt_mean_pis_arr,
-        o_2_ppt_thresh_arr,
-        cats_obj_2_vals_arr,
-        n_o_2_threshs,
-        ppt_cp_n_vals_arr,
-        obj_ftn_wts_arr,
-        sel_cps,
-        lo_freq_pen_wt,
-        min_freq,
-        n_cpus,
-        n_cps,
-        n_max,
-        n_time_steps,
-        )
+    if mult_obj_vals_flag:
+        for i in range(n_gens):
+            curr_obj_val = obj_ftn_refresh(
+                in_cats_ppt_arr,
+                n_cats,
+                cats_ppt_cp_mean_pis_arr,
+                cats_ppt_mean_pis_arr,
+                o_2_ppt_thresh_arr,
+                cats_obj_2_vals_arr,
+                n_o_2_threshs,
+                ppt_cp_n_vals_arr,
+                obj_ftn_wts_arr,
+                mult_sel_cps[i],
+                lo_freq_pen_wt,
+                min_freq,
+                n_cpus,
+                n_cps,
+                n_max,
+                n_time_steps,
+                )
+ 
+            obj_vals_arr[i] = curr_obj_val
 
-    out_dict = {}
-    for key in args_dict:
-        out_dict[key] = args_dict[key]
+    else:
+        curr_obj_val = obj_ftn_refresh(
+            in_cats_ppt_arr,
+            n_cats,
+            cats_ppt_cp_mean_pis_arr,
+            cats_ppt_mean_pis_arr,
+            o_2_ppt_thresh_arr,
+            cats_obj_2_vals_arr,
+            n_o_2_threshs,
+            ppt_cp_n_vals_arr,
+            obj_ftn_wts_arr,
+            sel_cps,
+            lo_freq_pen_wt,
+            min_freq,
+            n_cpus,
+            n_cps,
+            n_max,
+            n_time_steps,
+            )
 
-    out_dict['n_max'] = n_max
-    out_dict['n_time_steps_calib'] = n_time_steps
-    out_dict['curr_obj_val'] = curr_obj_val
-    return out_dict
+    args_dict['n_max'] = n_max
+    args_dict['n_time_steps_calib'] = n_time_steps
+    args_dict['curr_obj_val'] = curr_obj_val
+    if mult_obj_vals_flag:
+        args_dict['obj_vals_arr'] = obj_vals_arr
+
+    return args_dict
 

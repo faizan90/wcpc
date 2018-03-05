@@ -11,6 +11,7 @@ from .qual.thresh import ThreshPPT
 from .qual.wettness import WettnessIndex
 from .qual.contingency import ContingencyTablePlot
 from .qual.objvals import ObjVals
+from .qual.randcps import RandCPsGen, RandCPsPerfComp
 
 from .plot.cpfreq import CPHistPlot
 from .plot.cps import PlotCPs, plot_iter_cp_pcntgs

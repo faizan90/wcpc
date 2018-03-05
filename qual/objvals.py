@@ -20,7 +20,7 @@ from ..codegenr.gen_all import create_obj_cython_files
 
 class ObjVals(CPDataBase):
     def __init__(self, msgs=True):
-        super(ObjVals, self).__init__(msgs=msgs)
+        super().__init__(msgs=msgs)
 
         self._cps_set_flag = False
 

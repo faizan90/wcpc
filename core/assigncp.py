@@ -19,7 +19,7 @@ from ..codegenr.gen_all import create_justi_cython_files
 class CPAssignA(CPOPTBase):
 
     def __init__(self, msgs=True):
-        super(CPAssignA, self).__init__(msgs=msgs)
+        super().__init__(msgs=msgs)
 
         self._cp_rules_set_flag = False
         return
@@ -87,12 +87,12 @@ class CPAssignA(CPOPTBase):
 
         self.sel_cps_arr = self.assign_dict['sel_cps']
 
-        uni_cps, cps_freqs = np.unique(self.sel_cps_arr, return_counts=True)
-        cp_rel_freqs = 100 * cps_freqs / float(self.sel_cps_arr.shape[0])
-        cp_rel_freqs = np.round(cp_rel_freqs, 2)
-
-        print('\n%-10s:%s' % ('Unique CPs', 'Relative Frequencies (%)'))
-        for x, y in zip(uni_cps, cp_rel_freqs):
-            print('%10d:%-20.2f' % (x, y))
+        if self.msgs:
+            uni_cps, cps_freqs = np.unique(self.sel_cps_arr, return_counts=True)
+            cp_rel_freqs = 100 * cps_freqs / float(self.sel_cps_arr.shape[0])
+            cp_rel_freqs = np.round(cp_rel_freqs, 2)
+            print('\n%-10s:%s' % ('Unique CPs', 'Relative Frequencies (%)'))
+            for x, y in zip(uni_cps, cp_rel_freqs):
+                print('%10d:%-20.2f' % (x, y))
 
         return

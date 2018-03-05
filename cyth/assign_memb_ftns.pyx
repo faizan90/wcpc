@@ -21,9 +21,10 @@ from .memb_ftns cimport calc_membs_dof_cps
 
 cpdef dict _assign_cps(dict args_dict):
     cdef:
+        Py_ssize_t i  
         # ulongs
         DT_UL n_cps, n_pts, n_time_steps, n_fuzz_nos
-        DT_UL no_cp_val, n_cpus
+        DT_UL no_cp_val, n_cpus, mult_cps_assign_flag, n_gens
 
         # doubles for obj. ftns.
         DT_D p_l
@@ -34,6 +35,7 @@ cpdef dict _assign_cps(dict args_dict):
 
         # 2D ulong arrays
         np.ndarray[DT_UL_NP_t, ndim=2, mode='c'] cp_rules
+        np.ndarray[DT_UL_NP_t, ndim=3, mode='c'] mult_cp_rules
 
         # 2D double arrays
         np.ndarray[DT_D_NP_t, ndim=2, mode='c'] anom, fuzz_nos_arr
@@ -46,12 +48,24 @@ cpdef dict _assign_cps(dict args_dict):
     no_cp_val = args_dict['no_cp_val']
     p_l = args_dict['p_l']
     fuzz_nos_arr = args_dict['fuzz_nos_arr']
-    cp_rules = args_dict['cp_rules']
+    
+    if 'mult_cps_assign_flag' in args_dict:
+        mult_cps_assign_flag = <DT_UL> args_dict['mult_cps_assign_flag']
+    else:
+        mult_cps_assign_flag = 0
+    
+    if mult_cps_assign_flag:
+        mult_cp_rules = args_dict['mult_cp_rules']
+        n_gens = mult_cp_rules.shape[0]
+        n_cps = mult_cp_rules.shape[1]
+    else:
+        cp_rules = args_dict['cp_rules']
+        n_cps = cp_rules.shape[0]
+            
     n_cpus = args_dict['n_cpus']
     n_fuzz_nos = fuzz_nos_arr.shape[0]
     anom = args_dict['anom']
     
-    n_cps = cp_rules.shape[0]
     n_pts = anom.shape[1]
     n_time_steps = anom.shape[0]
 
@@ -59,35 +73,59 @@ cpdef dict _assign_cps(dict args_dict):
     cp_dof_arr = np.zeros(shape=(n_time_steps, n_cps, n_fuzz_nos), 
                           dtype=DT_D_NP)
 
-    sel_cps = np.full(n_time_steps, 0, dtype=DT_UL_NP)
+    if mult_cps_assign_flag:
+        mult_sel_cps = np.full((n_gens, n_time_steps), 
+                               0, 
+                               dtype=DT_UL_NP)
+    else:
+        sel_cps = np.full(n_time_steps, 0, dtype=DT_UL_NP)
+
     old_sel_cps = np.full(n_time_steps, no_cp_val, dtype=DT_UL_NP)
 
     chnge_steps = np.zeros(n_time_steps, dtype=DT_UL_NP)
     dofs_arr = np.zeros((n_time_steps, n_cps), dtype=DT_D_NP)
 
-    calc_membs_dof_cps(
-        cp_rules,
-        mu_i_k_arr,
-        cp_dof_arr,
-        anom,
-        fuzz_nos_arr,
-        dofs_arr,
-        sel_cps,
-        old_sel_cps,
-        chnge_steps,
-        no_cp_val,
-        p_l,
-        n_cpus,
-        n_time_steps,
-        n_pts,
-        n_cps,
-        n_fuzz_nos)
-    
-    assert np.all(np.isfinite(mu_i_k_arr))
-    assert np.all(np.isfinite(cp_dof_arr))
-    assert np.all(np.isfinite(dofs_arr))
+    if mult_cps_assign_flag:
+        for i in range(n_gens):
+            calc_membs_dof_cps(
+                mult_cp_rules[i, :],
+                mu_i_k_arr,
+                cp_dof_arr,
+                anom,
+                fuzz_nos_arr,
+                dofs_arr,
+                mult_sel_cps[i, :],
+                old_sel_cps,
+                chnge_steps,
+                no_cp_val,
+                p_l,
+                n_cpus,
+                n_time_steps,
+                n_pts,
+                n_cps,
+                n_fuzz_nos)
+    else:
+        calc_membs_dof_cps(
+            cp_rules,
+            mu_i_k_arr,
+            cp_dof_arr,
+            anom,
+            fuzz_nos_arr,
+            dofs_arr,
+            sel_cps,
+            old_sel_cps,
+            chnge_steps,
+            no_cp_val,
+            p_l,
+            n_cpus,
+            n_time_steps,
+            n_pts,
+            n_cps,
+            n_fuzz_nos)
     
     ret_dict = {}
-    ret_dict['sel_cps'] = sel_cps
-    ret_dict['dofs_arr'] = dofs_arr   
+    if mult_cps_assign_flag:
+        ret_dict['mult_sel_cps'] = mult_sel_cps
+    else:
+        ret_dict['sel_cps'] = sel_cps
     return ret_dict

@@ -371,7 +371,7 @@ class CPDataBase:
 class CPOPTBase(CPDataBase):
 
     def __init__(self, msgs=True):
-        super(CPOPTBase, self).__init__(msgs=msgs)
+        super().__init__(msgs=msgs)
 
         self._anom_set_flag = False
         return

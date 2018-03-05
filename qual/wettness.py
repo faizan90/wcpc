@@ -65,7 +65,7 @@ class WettnessIndex(QualBases):
         self.old_new_cp_map_arr = np.zeros((self.n_cps, 2), dtype=np.int64)
 
         for i in range(self.n_cps):
-            self.old_new_cp_map_arr[i, :] = sorted_idxs[i], i
+            self.old_new_cp_map_arr[i, :] = (sorted_idxs[i], i)
 
         if self.msgs:
             print('\n\nSorted wettness sequence:')
@@ -171,6 +171,8 @@ class WettnessIndex(QualBases):
             n_obj_vals = len(obj_val_list)
             assert n_obj_vals == n_wett_arrs
             assert all([isinstance(obj_val_list[i], float) for i in range(n_obj_vals)])
+        else:
+            obj_val_list = [0.0] * n_labs
 
         assert isinstance(fig_size, (tuple, list))
         assert len(fig_size) == 2

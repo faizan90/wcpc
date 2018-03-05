@@ -208,23 +208,23 @@ def create_justi_cython_files(nonecheck=True,
 
 
 def create_obj_cython_files(obj_1_flag=False,
-                           obj_2_flag=False,
-                           obj_3_flag=False,
-                           obj_4_flag=False,
-                           obj_5_flag=False,
-                           obj_6_flag=False,
-                           obj_7_flag=False,
-                           obj_8_flag=False,
-                           nonecheck=True,
-                           boundscheck=True,
-                           wraparound=True,
-                           cdivision=True,
-                           infer_types=None,
-                           language_level=3,
-                           force_compile=False,
-                           out_dir='',
-                           op_mp_memb_flag=True,
-                           op_mp_obj_ftn_flag=True):
+                            obj_2_flag=False,
+                            obj_3_flag=False,
+                            obj_4_flag=False,
+                            obj_5_flag=False,
+                            obj_6_flag=False,
+                            obj_7_flag=False,
+                            obj_8_flag=False,
+                            nonecheck=True,
+                            boundscheck=True,
+                            wraparound=True,
+                            cdivision=True,
+                            infer_types=None,
+                            language_level=3,
+                            force_compile=False,
+                            out_dir='',
+                            op_mp_memb_flag=True,
+                            op_mp_obj_ftn_flag=True):
 
     assert any([obj_1_flag,
                 obj_2_flag,
@@ -347,4 +347,41 @@ def create_obj_cython_files(obj_1_flag=False,
     if compile_classi_main:
         write_qual_obj_lines(params_dict)
         write_obj_ftns_lines(params_dict)
+    return
+
+
+def gen_mod_cp_rules_cyth_files(nonecheck=True,
+                                boundscheck=True,
+                                wraparound=True,
+                                cdivision=True,
+                                infer_types=None,
+                                language_level=3,
+                                force_compile=False,
+                                out_dir=''):
+ 
+    assert out_dir
+
+    tab = '    '
+
+    params_dict = {}
+    params_dict['tab'] = tab
+    params_dict['nonecheck'] = nonecheck
+    params_dict['boundscheck'] = boundscheck
+    params_dict['wraparound'] = wraparound
+    params_dict['cdivision'] = cdivision
+    params_dict['language_level'] = language_level
+    params_dict['infer_types'] = infer_types
+    params_dict['out_dir'] = out_dir
+    
+    out_dir = Path(out_dir)
+    path_to_gen_mod_cp_rules_pyx = out_dir / 'gen_mod_cp_rules.pyx'
+    
+    if (not path_to_gen_mod_cp_rules_pyx.exists()) or force_compile:
+        compile_gen_mod_cp_rules_ftns = True
+    else:
+        compile_gen_mod_cp_rules_ftns = False
+    
+    if compile_gen_mod_cp_rules_ftns:
+        write_gen_mod_cp_rules_lines(params_dict)
+
     return
