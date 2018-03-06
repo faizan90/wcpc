@@ -97,47 +97,48 @@ class CPClassiA(CPOPTBase):
                     self.obj_7_flag,
                     self.obj_8_flag))
 
-        if self.obj_1_flag or self.obj_3_flag:
-            assert self.vals_tot_anom.shape[0] == self.stn_ppt_arr.shape[0]
-
-        if self.obj_2_flag or self.obj_5_flag:
-            assert self.vals_tot_anom.shape[0] == self.cat_ppt_arr.shape[0]
-
-        if self.obj_4_flag or self.obj_6_flag or self.obj_7_flag:
-            assert self.vals_tot_anom.shape[0] == self.neb_wett_arr.shape[0]
-
-        if self.obj_8_flag:
-            assert self.vals_tot_anom.shape[0] == self.lorenz_arr.shape[0]
-
         self.obj_ftn_wts_arr = np.zeros(self._n_obj_ftns,
                                         dtype=DT_D_NP,
                                         order='C')
 
+        in_lens_list = [self.vals_tot_anom.shape[0]]
         if self.obj_1_flag:
             self.obj_ftn_wts_arr[0] = self.o_1_obj_wt
+            in_lens_list.append(self.stn_ppt_arr.shape[0])
 
         if self.obj_2_flag:
             self.obj_ftn_wts_arr[1] = self.o_2_obj_wt
+            in_lens_list.append(self.cat_ppt_arr.shape[0])
 
         if self.obj_3_flag:
             self.obj_ftn_wts_arr[2] = self.o_3_obj_wt
+            in_lens_list.append(self.stn_ppt_arr.shape[0])
 
         if self.obj_4_flag:
             self.obj_ftn_wts_arr[3] = self.o_4_obj_wt
+            in_lens_list.append(self.neb_wett_arr.shape[0])
 
         if self.obj_5_flag:
             self.obj_ftn_wts_arr[4] = self.o_5_obj_wt
+            in_lens_list.append(self.cat_ppt_arr.shape[0])
 
         if self.obj_6_flag:
             self.obj_ftn_wts_arr[5] = self.o_6_obj_wt
             assert self.neb_wett_arr.shape[1] == 2, 'For two nebs right now!'
+            in_lens_list.append(self.neb_wett_arr.shape[0])
 
         if self.obj_7_flag:
             self.obj_ftn_wts_arr[6] = self.o_7_obj_wt
             assert self.neb_wett_arr.shape[1] == 3, 'For three nebs right now!'
+            in_lens_list.append(self.neb_wett_arr.shape[0])
 
         if self.obj_8_flag:
             self.obj_ftn_wts_arr[7] = self.o_8_obj_wt
+            in_lens_list.append(self.lorenz_arr.shape[0])
+
+        _len = in_lens_list[0]
+        for curr_len in in_lens_list[1:]:
+            assert curr_len == _len
 
         assert isinstance(self.op_mp_memb_flag, bool)
         assert isinstance(self.op_mp_obj_ftn_flag, bool)

@@ -22,6 +22,7 @@ class CPAssignA(CPOPTBase):
         super().__init__(msgs=msgs)
 
         self._cp_rules_set_flag = False
+        self._mult_cp_rules_set_flag = False
         return
     
     def set_cp_rules(self, cp_rules):
@@ -34,10 +35,27 @@ class CPAssignA(CPOPTBase):
         self._cp_rules_set_flag = True
         return
 
+    def set_mult_cp_rules(self, mult_cp_rules):
+        assert isinstance(mult_cp_rules, np.ndarray)
+        assert check_nans_finite(mult_cp_rules)
+        assert len(mult_cp_rules.shape) == 3
+
+        self.mult_cp_rules = np.array(mult_cp_rules, dtype=DT_UL_NP, order='C')
+
+        self._mult_cp_rules_set_flag = True
+        return
+
     def _verify_input(self):
         assert self._anom_set_flag
         assert self._cp_prms_set_flag
         assert self._cp_rules_set_flag
+        assert isinstance(self.op_mp_memb_flag, bool)
+        return
+
+    def _verify_mult_input(self):
+        assert self._anom_set_flag
+        assert self._cp_prms_set_flag
+        assert self._mult_cp_rules_set_flag
         assert isinstance(self.op_mp_memb_flag, bool)
         return
     
@@ -96,3 +114,32 @@ class CPAssignA(CPOPTBase):
                 print('%10d:%-20.2f' % (x, y))
 
         return
+    
+    def assign_mult_cps(self, n_threads='auto', force_compile=False):
+
+        assert isinstance(n_threads, (int, str))
+
+        if n_threads == 'auto':
+            n_threads = cpu_count() - 1
+        else:
+            assert n_threads > 0
+
+        self._verify_mult_input()
+
+        assign_dict = {}
+        assign_dict['no_cp_val'] = self.no_cp_val
+        assign_dict['p_l'] = self.p_l
+        assign_dict['fuzz_nos_arr'] = self.fuzz_nos_arr
+        assign_dict['mult_cp_rules'] = self.mult_cp_rules
+        assign_dict['n_cpus'] = n_threads
+        assign_dict['anom'] = self.vals_tot_anom
+        assign_dict['mult_cps_assign_flag'] = True
+
+        _assign_cps = self._gen_justi_cyth_mods(force_compile)
+
+#         raise Exception
+        self.assign_dict = _assign_cps(assign_dict)
+
+        self.mult_sel_cps_arr = self.assign_dict['mult_sel_cps']
+        return
+    

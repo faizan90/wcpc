@@ -246,12 +246,12 @@ def write_cp_classi_main_lines(params_dict):
         pyxcd.w('np.ndarray[DT_D_NP_t, ndim=2, mode=\'c\'] ppt_cp_mean_arr')
         pyxcd.els()
 
-    if obj_4_flag:
+    if obj_4_flag or obj_6_flag or obj_7_flag:
         pyxcd.w('# ulongs obj. ftns. 4')
         pyxcd.w('DT_UL n_nebs')
         pyxcd.els()
 
-        pyxcd.w('# arrays for obj. ftns. 4 and 6')
+        pyxcd.w('# arrays for obj. ftns. 4, 6 and 7')
         pyxcd.w('np.ndarray[DT_D_NP_t, ndim=2, mode=\'c\'] in_wet_arr_calib')
         pyxcd.els()
 

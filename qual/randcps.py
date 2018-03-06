@@ -194,32 +194,48 @@ class RandCPsPerfComp(CPAssignA, RandCPsGen, ObjVals):
                                         dtype=DT_D_NP,
                                         order='C')
 
+        in_lens_list = []
         if self.obj_1_flag:
             self.obj_ftn_wts_arr[0] = self.o_1_obj_wt
+            in_lens_list.append(self.stn_ppt_arr.shape[0])
 
         if self.obj_2_flag:
             self.obj_ftn_wts_arr[1] = self.o_2_obj_wt
+            in_lens_list.append(self.cat_ppt_arr.shape[0])
 
         if self.obj_3_flag:
             self.obj_ftn_wts_arr[2] = self.o_3_obj_wt
+            in_lens_list.append(self.stn_ppt_arr.shape[0])
 
         if self.obj_4_flag:
             self.obj_ftn_wts_arr[3] = self.o_4_obj_wt
+            in_lens_list.append(self.neb_wett_arr.shape[0])
 
         if self.obj_5_flag:
             self.obj_ftn_wts_arr[4] = self.o_5_obj_wt
+            in_lens_list.append(self.cat_ppt_arr.shape[0])
 
         if self.obj_6_flag:
             self.obj_ftn_wts_arr[5] = self.o_6_obj_wt
             assert self.neb_wett_arr.shape[1] == 2, 'For two nebs right now!'
+            in_lens_list.append(self.neb_wett_arr.shape[0])
 
         if self.obj_7_flag:
             self.obj_ftn_wts_arr[6] = self.o_7_obj_wt
             assert self.neb_wett_arr.shape[1] == 3, 'For three nebs right now!'
+            in_lens_list.append(self.neb_wett_arr.shape[0])
 
         if self.obj_8_flag:
             self.obj_ftn_wts_arr[7] = self.o_8_obj_wt
+            in_lens_list.append(self.lorenz_arr.shape[0])
 
+        in_lens_list.append(self.mult_sel_cps_arr.shape[1])
+        
+        _len = in_lens_list[0]
+        
+        for curr_len in in_lens_list[1:]:
+            assert curr_len == _len
+        
         assert isinstance(self.op_mp_obj_ftn_flag, bool)
         return
 
@@ -352,14 +368,13 @@ class RandCPsPerfComp(CPAssignA, RandCPsGen, ObjVals):
 #                   np.nanmax(self.mean_wett_arrs[:, i]))
 
         plt.boxplot(box_plots_list, positions=n_cps_rng)
-        plt.scatter(n_cps_rng, in_wettness_arr, label='optimized')
+        plt.scatter(n_cps_rng, in_wettness_arr, label='calibrated')
 
         plt.ylim(0, 1.1 * max(np.nanmax(self.mean_wett_arrs),
                               in_wettness_arr.max()))
 
-        xtick_labs = ['%d\n(%d)' % (n_cps_rng[i], wett_pts_list[i])
-                      for i in range(self.n_cps)]
-        plt.xlabel('CP (n_wett_pts)')
+        xtick_labs = ['%d' % (n_cps_rng[i]) for i in range(self.n_cps)]
+        plt.xlabel('CP')
         plt.ylabel('Wettness Index')
         plt.xticks(n_cps_rng, xtick_labs)
         plt.title('Calibrated vs. Random (n=%d) CPs comparison' % self.n_gens)
@@ -398,7 +413,7 @@ class RandCPsPerfComp(CPAssignA, RandCPsGen, ObjVals):
         plt.figure(figsize=fig_size)
         plt.plot(sorted_obj_vals, probs, marker='o', color='b', label='Random')
         plt.scatter(in_obj_val, interp_prob, color='k', label='Calibrated')
-        plt.ylim(0, 1.1)
+        plt.ylim(0, 1.05)
         plt.xlabel('Objective function value')
         plt.ylabel('Probability')
         plt.title('Calibrated vs. Random (n=%d) CPs comparison' % self.n_gens)
