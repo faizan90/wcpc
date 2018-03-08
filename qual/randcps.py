@@ -194,49 +194,62 @@ class RandCPsPerfComp(CPAssignA, RandCPsGen, ObjVals):
                                         dtype=DT_D_NP,
                                         order='C')
 
+        in_max_cols_list = []
         in_lens_list = []
         if self.obj_1_flag:
             self.obj_ftn_wts_arr[0] = self.o_1_obj_wt
             in_lens_list.append(self.stn_ppt_arr.shape[0])
+            in_max_cols_list.append(self.stn_ppt_arr.shape[1])
 
         if self.obj_2_flag:
             self.obj_ftn_wts_arr[1] = self.o_2_obj_wt
             in_lens_list.append(self.cat_ppt_arr.shape[0])
+            in_max_cols_list.append(self.cat_ppt_arr.shape[1])
 
         if self.obj_3_flag:
             self.obj_ftn_wts_arr[2] = self.o_3_obj_wt
             in_lens_list.append(self.stn_ppt_arr.shape[0])
+            in_max_cols_list.append(self.stn_ppt_arr.shape[1])
 
         if self.obj_4_flag:
             self.obj_ftn_wts_arr[3] = self.o_4_obj_wt
             in_lens_list.append(self.neb_wett_arr.shape[0])
+            in_max_cols_list.append(self.neb_wett_arr.shape[1])
 
         if self.obj_5_flag:
             self.obj_ftn_wts_arr[4] = self.o_5_obj_wt
             in_lens_list.append(self.cat_ppt_arr.shape[0])
+            in_max_cols_list.append(self.cat_ppt_arr.shape[1])
 
         if self.obj_6_flag:
             self.obj_ftn_wts_arr[5] = self.o_6_obj_wt
             assert self.neb_wett_arr.shape[1] == 2, 'For two nebs right now!'
             in_lens_list.append(self.neb_wett_arr.shape[0])
+            in_max_cols_list.append(self.neb_wett_arr.shape[1])
 
         if self.obj_7_flag:
             self.obj_ftn_wts_arr[6] = self.o_7_obj_wt
             assert self.neb_wett_arr.shape[1] == 3, 'For three nebs right now!'
             in_lens_list.append(self.neb_wett_arr.shape[0])
+            in_max_cols_list.append(self.neb_wett_arr.shape[1])
 
         if self.obj_8_flag:
             self.obj_ftn_wts_arr[7] = self.o_8_obj_wt
             in_lens_list.append(self.lorenz_arr.shape[0])
+            in_max_cols_list.append(self.lorenz_arr.shape[1])
 
         in_lens_list.append(self.mult_sel_cps_arr.shape[1])
         
         _len = in_lens_list[0]
-        
         for curr_len in in_lens_list[1:]:
             assert curr_len == _len
         
         assert isinstance(self.op_mp_obj_ftn_flag, bool)
+
+        if max(in_max_cols_list) < (2 * self.n_threads):
+            self.op_mp_obj_ftn_flag = False
+            if self.msgs:
+                print('####op_mp_obj_ftn_flag set to False!')
         return
 
     def cmpt_mult_obj_val(self, n_threads='auto', force_compile=False):
@@ -246,6 +259,8 @@ class RandCPsPerfComp(CPAssignA, RandCPsGen, ObjVals):
             n_threads = cpu_count() - 1
         else:
             assert n_threads > 0
+
+        self.n_threads = n_threads
 
         self._verify_obj_vals_input()
 
@@ -290,7 +305,7 @@ class RandCPsPerfComp(CPAssignA, RandCPsGen, ObjVals):
         if self.obj_8_flag:
             obj_dict['in_lorenz_arr_calib'] = self.lorenz_arr
 
-        obj_dict['n_cpus'] = n_threads
+        obj_dict['n_cpus'] = self.n_threads
         obj_dict['msgs'] = int(self.msgs)
         obj_dict['mult_obj_vals_flag'] = True
 

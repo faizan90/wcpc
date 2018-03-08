@@ -101,40 +101,49 @@ class CPClassiA(CPOPTBase):
                                         dtype=DT_D_NP,
                                         order='C')
 
+        in_max_cols_list = []
         in_lens_list = [self.vals_tot_anom.shape[0]]
         if self.obj_1_flag:
             self.obj_ftn_wts_arr[0] = self.o_1_obj_wt
             in_lens_list.append(self.stn_ppt_arr.shape[0])
+            in_max_cols_list.append(self.stn_ppt_arr.shape[1])
 
         if self.obj_2_flag:
             self.obj_ftn_wts_arr[1] = self.o_2_obj_wt
             in_lens_list.append(self.cat_ppt_arr.shape[0])
+            in_max_cols_list.append(self.cat_ppt_arr.shape[1])
 
         if self.obj_3_flag:
             self.obj_ftn_wts_arr[2] = self.o_3_obj_wt
             in_lens_list.append(self.stn_ppt_arr.shape[0])
+            in_max_cols_list.append(self.stn_ppt_arr.shape[1])
 
         if self.obj_4_flag:
             self.obj_ftn_wts_arr[3] = self.o_4_obj_wt
             in_lens_list.append(self.neb_wett_arr.shape[0])
+            in_max_cols_list.append(self.neb_wett_arr.shape[1])
 
         if self.obj_5_flag:
             self.obj_ftn_wts_arr[4] = self.o_5_obj_wt
             in_lens_list.append(self.cat_ppt_arr.shape[0])
+            in_max_cols_list.append(self.cat_ppt_arr.shape[1])
 
         if self.obj_6_flag:
             self.obj_ftn_wts_arr[5] = self.o_6_obj_wt
             assert self.neb_wett_arr.shape[1] == 2, 'For two nebs right now!'
             in_lens_list.append(self.neb_wett_arr.shape[0])
+            in_max_cols_list.append(self.neb_wett_arr.shape[1])
 
         if self.obj_7_flag:
             self.obj_ftn_wts_arr[6] = self.o_7_obj_wt
             assert self.neb_wett_arr.shape[1] == 3, 'For three nebs right now!'
             in_lens_list.append(self.neb_wett_arr.shape[0])
+            in_max_cols_list.append(self.neb_wett_arr.shape[1])
 
         if self.obj_8_flag:
             self.obj_ftn_wts_arr[7] = self.o_8_obj_wt
             in_lens_list.append(self.lorenz_arr.shape[0])
+            in_max_cols_list.append(self.lorenz_arr.shape[1])
 
         _len = in_lens_list[0]
         for curr_len in in_lens_list[1:]:
@@ -142,6 +151,11 @@ class CPClassiA(CPOPTBase):
 
         assert isinstance(self.op_mp_memb_flag, bool)
         assert isinstance(self.op_mp_obj_ftn_flag, bool)
+        
+        if max(in_max_cols_list) < (2 * self.n_threads):
+            self.op_mp_obj_ftn_flag = False
+            if self.msgs:
+                print('####op_mp_obj_ftn_flag set to False!')
 
         return
 
@@ -181,6 +195,8 @@ class CPClassiA(CPOPTBase):
             n_threads = cpu_count() - 1
         else:
             assert n_threads > 0
+
+        self.n_threads = n_threads
     
         assert self._sim_anneal_prms_set_flag
         self._verify_input()
@@ -236,7 +252,7 @@ class CPClassiA(CPOPTBase):
         calib_dict['temp_red_alpha'] = self.tem_alpha
         calib_dict['max_m_iters'] = self.tem_chng_iters
         calib_dict['max_n_iters'] = self.max_iters
-        calib_dict['n_cpus'] = n_threads
+        calib_dict['n_cpus'] = self.n_threads
         calib_dict['msgs'] = int(self.msgs)
         calib_dict['max_idxs_ct'] = self.max_idx_ct
         calib_dict['max_iters_wo_chng'] = self.max_iters_wo_chng
