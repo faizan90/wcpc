@@ -1,6 +1,6 @@
-# cython: nonecheck=True
-# cython: boundscheck=True
-# cython: wraparound=True
+# cython: nonecheck=False
+# cython: boundscheck=False
+# cython: wraparound=False
 # cython: cdivision=True
 # cython: language_level=3
 
@@ -120,12 +120,10 @@ cpdef get_obj_val(dict args_dict):
         print('mult_obj_vals_flag:', mult_obj_vals_flag)
         print('n_gens:', n_gens)
         print('in_cats_ppt_arr shape: (%d, %d)' % (in_cats_ppt_arr.shape[0], in_cats_ppt_arr.shape[1]))
-        if mult_obj_vals_flag:
-            print(mult_sel_cps.shape[0], mult_sel_cps.shape[1])
-        
+
     # initialize the required variables
-    ppt_cp_n_vals_arr = np.zeros(n_cps, dtype=DT_D_NP)
-    obj_vals_arr = np.zeros(n_gens, dtype=DT_D_NP)
+    ppt_cp_n_vals_arr = np.full(n_cps, 0.0, dtype=DT_D_NP)
+    obj_vals_arr = np.full(n_gens, 0.0, dtype=DT_D_NP)
 
     # initialize obj. ftn. 2 variables
     cats_ppt_mean_pis_arr = np.full((n_cats, n_o_2_threshs), 0.0, dtype=DT_D_NP)
@@ -159,7 +157,7 @@ cpdef get_obj_val(dict args_dict):
                 n_max,
                 n_time_steps,
                 )
- 
+
             obj_vals_arr[i] = curr_obj_val
 
     else:
@@ -182,11 +180,15 @@ cpdef get_obj_val(dict args_dict):
             n_time_steps,
             )
 
-    args_dict['n_max'] = n_max
-    args_dict['n_time_steps_calib'] = n_time_steps
-    args_dict['curr_obj_val'] = curr_obj_val
-    if mult_obj_vals_flag:
-        args_dict['obj_vals_arr'] = obj_vals_arr
+    out_dict = {}
+    for key in args_dict:
+        out_dict[key] = args_dict[key]
 
-    return args_dict
+    out_dict['n_max'] = n_max
+    out_dict['n_time_steps_calib'] = n_time_steps
+    out_dict['curr_obj_val'] = curr_obj_val
+    if mult_obj_vals_flag:
+        out_dict['obj_vals_arr'] = obj_vals_arr
+
+    return out_dict
 

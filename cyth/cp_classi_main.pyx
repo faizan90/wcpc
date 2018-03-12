@@ -7,7 +7,7 @@
 ### obj_ftns:False;True;False;False;False;False;False;False
 
 ### op_mp_memb_flag:True
-### op_mp_obj_ftn_flag:True
+### op_mp_obj_ftn_flag:False
 
 import numpy as np
 cimport numpy as np
@@ -263,7 +263,7 @@ cpdef classify_cps(dict args_dict):
     for q in range(n_cats):
         for r in range(n_o_2_threshs):
             cats_ppt_mean_pis_arr[q, r] = np.mean(in_cats_ppt_arr[:, q] > o_2_ppt_thresh_arr[r])
-            assert (not isnan(cats_ppt_mean_pis_arr[q, r]) and (cats_ppt_mean_pis_arr[q, r] > 0)), (q, r, cats_ppt_mean_pis_arr[q, r])
+            assert (not isnan(cats_ppt_mean_pis_arr[q, r]) and (cats_ppt_mean_pis_arr[q, r] > 0))
 
     # start simulated annealing
     while ((curr_n_iter < max_n_iters) and (curr_iters_wo_chng < max_iters_wo_chng)) or (not temp_adjed):
