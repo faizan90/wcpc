@@ -129,6 +129,9 @@ class SnipNC:
                                           self.end_time_str],
                                          format=self.time_fmt_str)
 
+        self.beg_time = self.beg_time - pd.Timedelta(days=1)
+        self.end_time = self.end_time + pd.Timedelta(days=1)
+
         # TODO: implement for other resolutions as well
         assert self.time_res_str == 'H'
         if self.hrs_list is not None:

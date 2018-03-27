@@ -9,6 +9,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import xarray as xr
+# from scipy.stats import norm
 
 from ..misc.error_msgs import print_warning
 from ..misc.checks import check_nans_finite, check_nats
@@ -22,7 +23,6 @@ class Anomaly:
 
         self._vars_read_flag = False
         self.nc_ext = 'nc'
-
         return
     
     def _verify_input(self):
@@ -47,7 +47,7 @@ class Anomaly:
         in_ds = xr.open_dataset(str(self.in_ds_path))
 
         _ = pd.DatetimeIndex(getattr(in_ds, self.time_dim_lab).values)
-        self.times_tot = pd.DatetimeIndex(_)
+        self.times_tot = pd.DatetimeIndex(pd.DatetimeIndex(_).date)
 
         assert not np.sum(self.times_tot.duplicated())
 
@@ -191,19 +191,34 @@ class Anomaly:
             self.vals_tot_anom[_] = self.anom_type_a_nan_rep
         return
 
-    def calc_anomaly_type_b(self, anom_type_b_nan_rep=None):
+    def calc_anomaly_type_b(self,
+                            strt_time,
+                            end_time,
+                            time_fmt='%Y-%m-%d',
+                            anom_type_b_nan_rep=None):
         assert self._vars_read_flag
+
+        assert isinstance(strt_time, str)
+        assert isinstance(end_time, str)
+        assert isinstance(time_fmt, str)
 
         if anom_type_b_nan_rep is not None:
             assert isinstance(anom_type_b_nan_rep, (int, float))
 
         self.anom_type_b_nan_rep = anom_type_b_nan_rep
 
-        self.mean_arr = np.mean(self.vals_tot_rav, axis=0)
-        self.sigma_arr = np.std(self.vals_tot_rav, axis=0)
+        curr_time_idxs = self.get_time_range_idxs(strt_time,
+                                                  end_time,
+                                                  time_fmt)
 
-        self.vals_tot_anom = ((self.vals_tot_rav - self.mean_arr) /
-                                  self.sigma_arr)
+        self.times = self.times_tot[curr_time_idxs]
+
+        self.mean_arr = np.mean(self.vals_tot_rav[curr_time_idxs], axis=0)
+        self.sigma_arr = np.std(self.vals_tot_rav[curr_time_idxs], axis=0)
+
+        self.vals_tot_anom = (
+            (self.vals_tot_rav[curr_time_idxs] - self.mean_arr) /
+            self.sigma_arr)
 
         _anom_min = np.nanmin(self.vals_tot_anom, axis=1)
         _anom_max = np.nanmax(self.vals_tot_anom, axis=1)
@@ -213,7 +228,9 @@ class Anomaly:
 
         self.vals_tot_anom = _1 / _2
 
-        assert len(self.vals_tot_rav.shape) == len(self.vals_tot_anom.shape)
+        assert (curr_time_idxs.sum() ==
+                self.vals_tot_anom.shape[0] ==
+                self.times.shape[0])
 
         nan_ct = np.sum(np.isnan(self.vals_tot_anom))
         _msg = '%d NaNs out of %d in anomaly of type B.' % (nan_ct,
@@ -230,21 +247,58 @@ class Anomaly:
             _ = np.isnan(self.vals_tot_anom)
             self.vals_tot_anom[_] = self.anom_type_b_nan_rep
         return
+    
+    def get_time_range_idxs(self,
+                            strt_time,
+                            end_time,
+                            time_fmt):
 
-    def calc_anomaly_type_c(self, anom_type_c_nan_rep=None):
+        strt_time, end_time = pd.to_datetime([strt_time, end_time],
+                                             format=time_fmt)
+
+        assert strt_time < end_time, (strt_time, end_time)
+        assert strt_time >= self.times_tot[0], (strt_time, self.times_tot[0])
+        assert end_time <= self.times_tot[-1], (end_time, self.times_tot[-1])
+
+        # just in case
+        assert (self.times_tot.shape[0] == self.vals_tot_rav.shape[0])
+        
+        curr_idxs = ((self.times_tot >= strt_time) &
+                     ((self.times_tot <= end_time)))
+
+        assert curr_idxs.sum()
+        return curr_idxs
+
+    def calc_anomaly_type_c(self,
+                            strt_time,
+                            end_time,
+                            time_fmt='%Y-%m-%d',
+                            anom_type_c_nan_rep=None):
         assert self._vars_read_flag
 
         if anom_type_c_nan_rep is not None:
             assert isinstance(anom_type_c_nan_rep, (int, float))
 
+        assert isinstance(strt_time, str)
+        assert isinstance(end_time, str)
+        assert isinstance(time_fmt, str)
+
         self.anom_type_c_nan_rep = anom_type_c_nan_rep
 
         self.vals_tot_anom = np.full_like(self.vals_tot_rav, np.nan)
 
+        curr_time_idxs = self.get_time_range_idxs(strt_time,
+                                                  end_time,
+                                                  time_fmt)
+
+        self.times = self.times_tot[curr_time_idxs]
+
         for i in range(12):
             m_idxs = self.times_tot.month == (i + 1)
             for j in range(31):
-                d_idxs = m_idxs & (self.times_tot.day == (j + 1))
+                d_idxs = (m_idxs &
+                          (self.times_tot.day == (j + 1)) &
+                          curr_time_idxs)
                 
                 if not d_idxs.sum():
                     continue
@@ -257,6 +311,8 @@ class Anomaly:
                 curr_anoms = (curr_vals - mean_arr) / sigma_arr
                 self.vals_tot_anom[d_idxs] = curr_anoms
 
+        self.vals_tot_anom = self.vals_tot_anom[curr_time_idxs]
+
         _anom_min = np.nanmin(self.vals_tot_anom, axis=1)
         _anom_max = np.nanmax(self.vals_tot_anom, axis=1)
 
@@ -264,8 +320,6 @@ class Anomaly:
         _2 = (_anom_max - _anom_min)[:, None]
 
         self.vals_tot_anom = _1 / _2
-
-        assert len(self.vals_tot_rav.shape) == len(self.vals_tot_anom.shape)
 
         nan_ct = np.sum(np.isnan(self.vals_tot_anom))
         _msg = '%d NaNs out of %d in anomaly of type B.' % (nan_ct,
@@ -281,4 +335,89 @@ class Anomaly:
 
             _ = np.isnan(self.vals_tot_anom)
             self.vals_tot_anom[_] = self.anom_type_c_nan_rep
+        return
+
+    def calc_anomaly_type_d(self,
+                            strt_time,
+                            end_time,
+                            strt_time_all,
+                            end_time_all,
+                            time_fmt='%Y-%m-%d',
+                            anom_type_d_nan_rep=None,
+                            eig_cum_sum_ratio=0.95):
+        assert self._vars_read_flag
+
+        if anom_type_d_nan_rep is not None:
+            assert isinstance(anom_type_d_nan_rep, (int, float))
+
+        assert isinstance(strt_time, str)
+        assert isinstance(end_time, str)
+
+        assert isinstance(strt_time_all, str)
+        assert isinstance(end_time_all, str)
+
+        assert isinstance(time_fmt, str)
+
+        assert isinstance(eig_cum_sum_ratio, float)
+        assert 0 < eig_cum_sum_ratio <= 1
+
+        self.anom_type_d_nan_rep = anom_type_d_nan_rep
+
+        self.calc_anomaly_type_b(strt_time_all,
+                                 end_time_all,
+                                 time_fmt,
+                                 self.anom_type_d_nan_rep)
+
+        corr_mat = np.corrcoef(self.vals_tot_anom.T)
+        eig_val, eig_mat = np.linalg.eig(corr_mat)
+        sort_idxs = np.argsort(eig_val)[::-1]
+        eig_val = eig_val[sort_idxs]
+        eig_mat = eig_mat[:, sort_idxs]
+        eig_val_sum = eig_val.sum()
+        eig_val_cum_sum_arr = np.cumsum(eig_val) / eig_val_sum
+
+        _idxs = eig_val_cum_sum_arr >= eig_cum_sum_ratio
+        assert _idxs.sum()
+        self.n_dims = np.where(_idxs)[0][0] + 1
+
+        curr_time_all_idxs = self.get_time_range_idxs(strt_time_all,
+                                                      end_time_all,
+                                                      time_fmt)
+
+        curr_time_idxs = self.get_time_range_idxs(strt_time,
+                                                  end_time,
+                                                  time_fmt)[curr_time_all_idxs]
+
+        self.times = self.times[curr_time_idxs]
+        b_j_s = np.dot(self.vals_tot_anom, eig_mat.T)[curr_time_idxs]
+
+        self.vals_anom = np.full((curr_time_idxs.sum(),
+                                  self.n_dims),
+                                 np.nan)
+
+        for i in range(self.n_dims):
+            curr_bjs_arr = b_j_s[:, i]
+            curr_bjs_probs_arr = ((np.argsort(np.argsort(curr_bjs_arr)) + 1) /
+                                  (curr_bjs_arr.shape[0] + 1))
+            self.vals_anom[:, i] = curr_bjs_probs_arr
+
+#             self.vals_anom[:, i] = norm.ppf(curr_bjs_probs_arr)
+
+#             self.vals_anom[:, i] = (
+#                 (curr_bjs_arr - curr_bjs_arr.min()) /
+#                 (curr_bjs_arr.max() - curr_bjs_arr.min()))
+
+        assert check_nans_finite(self.vals_anom)
+
+        try:
+            assert (curr_time_idxs.sum() ==
+                    self.vals_anom.shape[0] ==
+                    self.times.shape[0])
+        except:
+            tre = 1
+
+        assert (np.all(self.vals_anom > 0) and
+                np.all(self.vals_anom < 1))
+#         assert (np.all(self.vals_anom >= 0) and
+#                 np.all(self.vals_anom <= 1))
         return

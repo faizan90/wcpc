@@ -136,7 +136,7 @@ cpdef get_rand_cp_rules(dict args_dict):
         cp_exists_sum = 0
         for i in range(n_cps):
             cp_exists_sum += cp_exists_arr[i]
-        
+            
         if cp_exists_sum == n_cps:
             curr_gen += 1
             print('gen %0.3d out of %0.3d gens!' % (curr_gen, n_gens))
