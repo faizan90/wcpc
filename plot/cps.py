@@ -122,7 +122,7 @@ class PlotCPs:
         self._anom_arr_set_flag = True
         return
 
-    def set_other_prms(self, fuzz_nos_arr, n_cps, in_coords_type='geo'):
+    def set_other_prms(self, fuzz_nos_arr, n_cps, anom_type, in_coords_type='geo'):
         assert isinstance(fuzz_nos_arr, np.ndarray)
         assert check_nans_finite(fuzz_nos_arr)
         assert fuzz_nos_arr.shape[0] > 0
@@ -134,9 +134,14 @@ class PlotCPs:
         assert isinstance(in_coords_type, str)
         assert (in_coords_type == 'geo') or (in_coords_type == 'proj')
 
+        assert isinstance(anom_type, str)
+        assert len(anom_type) == 1
+        assert 'b' <= anom_type <= 'd'
+
         self.n_fuzz_nos = fuzz_nos_arr.shape[0]
         self.n_cps = n_cps
         self.in_coords_type = in_coords_type
+        self.anom_type = anom_type
 
         self._other_prms_set_flag = True
         return
@@ -255,7 +260,12 @@ class PlotCPs:
 
             curr_mean_cp = self.best_cps_mean_anoms[j]
 
-            curr_false_idxs = self.cp_rules_arr[j] == self.n_fuzz_nos
+            if self.anom_type != 'd':
+                curr_false_idxs = self.cp_rules_arr[j] == self.n_fuzz_nos
+            else:
+                curr_false_idxs = np.zeros(self.best_cps_mean_anoms[j].shape[0],
+                                           dtype=bool)
+
             curr_true_idxs = np.logical_not(curr_false_idxs)
             curr_mean_cp[curr_false_idxs] = np.nan
 
@@ -370,7 +380,8 @@ class PlotCPs:
                              linestyles='solid',
                              extend='both')
 
-            plt.scatter(self.cp_x_coords_list[j], self.cp_y_coords_list[j])
+            if self.anom_type != 'd':
+                plt.scatter(self.cp_x_coords_list[j], self.cp_y_coords_list[j])
             plt.title('CP no. %d, %s' % (j, self.vgs_list[j]))
 
             plt.xlim(self.krige_x_coords_mesh.min(),
@@ -420,21 +431,24 @@ class PlotCPs:
                             interpolation=None,
                             cmap=cmap)
 
-            _cp_rules_str = self.cp_rules_arr[j].reshape(self.best_cps_std_anoms[j].shape).astype('|U')
+            if self.anom_type != 'd':
+                _cp_rules_str = (
+                    self.cp_rules_arr[j].reshape(
+                        self.best_cps_std_anoms[j].shape).astype('|U'))
 
-            txt_x_corrs = np.tile(range(_cp_rules_str.shape[1]),
-                                  _cp_rules_str.shape[0])
+                txt_x_corrs = np.tile(range(_cp_rules_str.shape[1]),
+                                      _cp_rules_str.shape[0])
 
-            txt_y_corrs = np.repeat(range(_cp_rules_str.shape[0]),
-                                    _cp_rules_str.shape[1])
+                txt_y_corrs = np.repeat(range(_cp_rules_str.shape[0]),
+                                        _cp_rules_str.shape[1])
 
-            for k in range(txt_x_corrs.shape[0]):
-                ax.text(txt_x_corrs[k],
-                        txt_y_corrs[k],
-                        _cp_rules_str[txt_y_corrs[k], txt_x_corrs[k]],
-                        va='center',
-                        ha='center',
-                        color='black')
+                for k in range(txt_x_corrs.shape[0]):
+                    ax.text(txt_x_corrs[k],
+                            txt_y_corrs[k],
+                            _cp_rules_str[txt_y_corrs[k], txt_x_corrs[k]],
+                            va='center',
+                            ha='center',
+                            color='black')
 
             ax.set_xticks(x_ticks_pos[::x_step_size])
             ax.set_yticks(y_ticks_pos[::y_step_size])

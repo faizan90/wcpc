@@ -3,6 +3,12 @@ Created on Dec 29, 2017
 
 @author: Faizan
 '''
+import os
+
+os.environ[str('MKL_NUM_THREADS')] = str(1)
+os.environ[str('NUMEXPR_NUM_THREADS')] = str(1)
+os.environ[str('OMP_NUM_THREADS')] = str(1)
+
 from .core.anomaly import Anomaly
 from .core.assigncp import CPAssignA
 from .core.classify import CPClassiA
