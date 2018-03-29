@@ -591,6 +591,7 @@ class Anomaly:
                             time_fmt='%Y-%m-%d',
                             anom_type_d_nan_rep=None,
                             eig_cum_sum_ratio=0.95,
+                            eig_sum_flag=False,
                             fig_out_dir=None,
                             n_cpus=1):
         assert self._vars_read_flag
@@ -638,7 +639,10 @@ class Anomaly:
 
         _idxs = eig_val_cum_sum_arr >= eig_cum_sum_ratio
         assert _idxs.sum()
+
         self.n_dims = np.where(_idxs)[0][0] + 1
+        if eig_sum_flag:
+            self.n_dims += 1
 
         curr_time_all_idxs = self.get_time_range_idxs(strt_time_all,
                                                       end_time_all,
@@ -652,6 +656,12 @@ class Anomaly:
         b_j_s = np.dot(self.vals_tot_anom, eig_mat.T)[curr_time_idxs]
         self.vals_anom_for_cp_plots = self.vals_tot_anom[curr_time_idxs]
 
+        if eig_sum_flag:
+            b_j_s[:, self.n_dims - 1] = (
+                (b_j_s[:, self.n_dims - 1:] ** 2).sum(axis=1))
+
+        b_j_s = b_j_s[:, :self.n_dims]
+
         assert check_nans_finite(b_j_s)
 
         self.vals_anom = np.full((curr_time_idxs.sum(),
@@ -659,7 +669,11 @@ class Anomaly:
                                  np.nan)
 
         for i in range(self.n_dims):
+#             if eig_sum_flag and (i == (self.n_dims - 1)):
+#                 curr_bjs_arr = (b_j_s[:, i:] ** 2).sum(axis=1)
+#             else:
             curr_bjs_arr = b_j_s[:, i]
+
             curr_bjs_probs_arr = ((np.argsort(np.argsort(curr_bjs_arr)) + 1) /
                                   (curr_bjs_arr.shape[0] + 1))
             self.vals_anom[:, i] = curr_bjs_probs_arr
@@ -675,7 +689,7 @@ class Anomaly:
         if fig_out_dir is not None:
             print('Saving anomaly and bjs CDF figs in:', fig_out_dir)
             _prep_anomaly_bjs_mp(self.vals_anom,
-                                 b_j_s[:, :self.n_dims],
+                                 b_j_s,
                                  n_cpus,
                                  fig_out_dir)
         return
