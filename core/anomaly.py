@@ -386,6 +386,7 @@ class Anomaly:
     def calc_anomaly_type_b(self,
                             strt_time,
                             end_time,
+                            season_months,
                             time_fmt='%Y-%m-%d',
                             anom_type_b_nan_rep=None,
                             fig_out_dir=None,
@@ -397,6 +398,12 @@ class Anomaly:
         assert isinstance(time_fmt, str)
         assert isinstance(n_cpus, int)
         assert n_cpus > 0
+
+        assert isinstance(season_months, np.ndarray)
+        assert check_nans_finite(season_months)
+        assert len(season_months.shape) == 1
+        assert np.all(season_months >= 0)
+        assert season_months.shape[0] > 0
 
         if fig_out_dir is not None:
             assert isinstance(fig_out_dir, (Path, str))
@@ -414,6 +421,7 @@ class Anomaly:
 
         curr_time_idxs = self.get_time_range_idxs(strt_time,
                                                   end_time,
+                                                  season_months,
                                                   time_fmt)
 
         self.times = self.times_tot[curr_time_idxs]
@@ -452,25 +460,6 @@ class Anomaly:
             _ = np.isnan(self.vals_tot_anom)
             self.vals_tot_anom[_] = self.anom_type_b_nan_rep
 
-        #======================================================================
-#         self.probs_anom = np.full((curr_time_idxs.sum(),
-#                                   self.vals_tot_anom.shape[1]),
-#                                   np.nan)
-#
-#         for i in range(self.vals_tot_anom.shape[1]):
-#             curr_bjs_arr = self.vals_tot_anom[:, i]
-#             curr_bjs_probs_arr = ((np.argsort(np.argsort(curr_bjs_arr)) + 1) /
-#                                   (curr_bjs_arr.shape[0] + 1))
-#             self.probs_anom[:, i] = curr_bjs_probs_arr
-#
-#         if fig_out_dir is not None:
-#             print('Saving anomaly and probs CDF figs in:', fig_out_dir)
-#             _prep_anomaly_bjs_mp(self.probs_anom,
-#                                  self.vals_tot_anom,
-#                                  n_cpus,
-#                                  fig_out_dir)
-        #======================================================================
-
         if fig_out_dir is not None:
             print('Saving anomaly CDF figs in:', fig_out_dir)
             _prep_anomaly_mp(self.vals_tot_anom, n_cpus, fig_out_dir)
@@ -479,6 +468,7 @@ class Anomaly:
     def get_time_range_idxs(self,
                             strt_time,
                             end_time,
+                            season_months,
                             time_fmt):
 
         strt_time, end_time = pd.to_datetime([strt_time, end_time],
@@ -494,12 +484,19 @@ class Anomaly:
         curr_idxs = ((self.times_tot >= strt_time) &
                      ((self.times_tot <= end_time)))
 
+        month_idxs = np.zeros(self.times_tot.shape[0], dtype=bool)
+        for month in season_months:
+            month_idxs = month_idxs | (self.times_tot.month == month)
+
+        curr_idxs = curr_idxs & month_idxs
+
         assert curr_idxs.sum()
         return curr_idxs
 
     def calc_anomaly_type_c(self,
                             strt_time,
                             end_time,
+                            season_months,
                             time_fmt='%Y-%m-%d',
                             anom_type_c_nan_rep=None,
                             fig_out_dir=None,
@@ -516,6 +513,12 @@ class Anomaly:
         assert isinstance(n_cpus, int)
         assert n_cpus > 0
 
+        assert isinstance(season_months, np.ndarray)
+        assert check_nans_finite(season_months)
+        assert len(season_months.shape) == 1
+        assert np.all(season_months >= 0)
+        assert season_months.shape[0] > 0
+
         if fig_out_dir is not None:
             assert isinstance(fig_out_dir, (Path, str))
 
@@ -531,6 +534,7 @@ class Anomaly:
 
         curr_time_idxs = self.get_time_range_idxs(strt_time,
                                                   end_time,
+                                                  season_months,
                                                   time_fmt)
 
         self.times = self.times_tot[curr_time_idxs]
@@ -588,6 +592,7 @@ class Anomaly:
                             end_time,
                             strt_time_all,
                             end_time_all,
+                            season_months,
                             time_fmt='%Y-%m-%d',
                             anom_type_d_nan_rep=None,
                             eig_cum_sum_ratio=0.95,
@@ -613,6 +618,12 @@ class Anomaly:
         assert isinstance(eig_cum_sum_ratio, float)
         assert 0 < eig_cum_sum_ratio <= 1
 
+        assert isinstance(season_months, np.ndarray)
+        assert check_nans_finite(season_months)
+        assert len(season_months.shape) == 1
+        assert np.all(season_months >= 0)
+        assert season_months.shape[0] > 0
+
         if fig_out_dir is not None:
             assert isinstance(fig_out_dir, (Path, str))
 
@@ -626,6 +637,7 @@ class Anomaly:
 
         self.calc_anomaly_type_b(strt_time_all,
                                  end_time_all,
+                                 season_months,
                                  time_fmt,
                                  self.anom_type_d_nan_rep)
 
@@ -646,10 +658,12 @@ class Anomaly:
 
         curr_time_all_idxs = self.get_time_range_idxs(strt_time_all,
                                                       end_time_all,
+                                                      season_months,
                                                       time_fmt)
 
         curr_time_idxs = self.get_time_range_idxs(strt_time,
                                                   end_time,
+                                                  season_months,
                                                   time_fmt)[curr_time_all_idxs]
 
         self.times = self.times[curr_time_idxs]

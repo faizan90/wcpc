@@ -33,4 +33,3 @@ def ret_mp_idxs(n_vals, n_cpus):
 
     assert (idxs[0] == 0) & (idxs[-1] == n_vals), idxs
     return idxs
-            

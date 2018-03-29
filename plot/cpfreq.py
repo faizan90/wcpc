@@ -55,6 +55,7 @@ class CPHistPlot:
                            prev_steps,
                            post_steps,
                            miss_cp_val,
+                           season_months,
                            min_prob=None,
                            max_prob=None,
                            freq='D'):
@@ -92,6 +93,14 @@ class CPHistPlot:
 
         assert (min_prob is not None) or (max_prob is not None)
 
+        assert isinstance(season_months, np.ndarray)
+        assert check_nans_finite(season_months)
+        assert len(season_months.shape) == 1
+        assert np.all(season_months >= 0)
+        assert season_months.shape[0] > 0
+
+        self.season_months = season_months
+
         tot_splots = prev_steps + post_steps + 1
         self.tot_splot_cols = int(tot_splots / 2) + (tot_splots % 2)
         self.tot_splot_rows = 2
@@ -117,6 +126,11 @@ class CPHistPlot:
         _dates = pd.date_range(self.values_ser.index[0],
                                self.values_ser.index[-1],
                                freq=self.freq)
+
+        month_idxs = np.zeros(_dates.shape[0], dtype=bool)
+        for month in self.season_months:
+            month_idxs = month_idxs | (_dates.month == month)
+        _dates = _dates[month_idxs]
 
         self.values_ser = self.values_ser.reindex(_dates)
         self.sel_cps_ser = self.sel_cps_ser.reindex(_dates)
@@ -170,6 +184,8 @@ class CPHistPlot:
                 _time_lag = pd.Timedelta(lag * self.freq)
 
                 _time_lag_dates = self._xx_list[i][1] + _time_lag
+                _time_lag_dates = (
+                    _time_lag_dates.intersection(self.sel_cps_ser.index))
 
                 _time_lag_cps = self.sel_cps_ser.loc[_time_lag_dates]
 
