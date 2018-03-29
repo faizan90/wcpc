@@ -459,7 +459,7 @@ def write_cp_classi_main_lines(params_dict):
 
     pyxcd.w('if max_idxs_ct > (n_pts / n_fuzz_nos):')
     pyxcd.ind()
-    pyxcd.w('max_idxs_ct = <DT_UL> (n_pts / n_fuzz_nos)')
+    pyxcd.w('max_idxs_ct = max(1, <DT_UL> (n_pts / n_fuzz_nos))')
     pyxcd.w(r'print(("\n\n\n\n######### max_idxs_ct reset to %d!#########\n\n\n\n" % max_idxs_ct))')
     pyxcd.ded()
     pyxcd.w('curr_n_iter = 0')

@@ -177,7 +177,7 @@ cpdef classify_cps(dict args_dict):
     n_time_steps = slp_anom.shape[0]
 
     if max_idxs_ct > (n_pts / n_fuzz_nos):
-        max_idxs_ct = <DT_UL> (n_pts / n_fuzz_nos)
+        max_idxs_ct = max(1, <DT_UL> (n_pts / n_fuzz_nos))
         print(("\n\n\n\n######### max_idxs_ct reset to %d!#########\n\n\n\n" % max_idxs_ct))
 
     curr_n_iter = 0
