@@ -683,14 +683,12 @@ class Anomaly:
                                  np.nan)
 
         for i in range(self.n_dims):
-#             if eig_sum_flag and (i == (self.n_dims - 1)):
-#                 curr_bjs_arr = (b_j_s[:, i:] ** 2).sum(axis=1)
-#             else:
             curr_bjs_arr = b_j_s[:, i]
-
             curr_bjs_probs_arr = ((np.argsort(np.argsort(curr_bjs_arr)) + 1) /
                                   (curr_bjs_arr.shape[0] + 1))
             self.vals_anom[:, i] = curr_bjs_probs_arr
+
+#             self.vals_anom[:, i] = curr_bjs_arr
 
         assert check_nans_finite(self.vals_anom)
         assert (curr_time_idxs.sum() ==

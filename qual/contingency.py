@@ -31,8 +31,8 @@ class ContingencyTablePlot:
                         n_cps_2,
                         no_cp_val_1,
                         no_cp_val_2,
-                        miss_day_val_1=None,
-                        miss_day_val_2=None):
+                        miss_day_val_1,
+                        miss_day_val_2):
 
         assert isinstance(sel_cps_1_arr, np.ndarray)
         assert np.issubdtype(sel_cps_1_arr.dtype, np.integer)
@@ -52,10 +52,9 @@ class ContingencyTablePlot:
         assert isinstance(no_cp_val_1, int)
         assert no_cp_val_1 > n_cps_1
 
-        if miss_day_val_1 is not None:
-            assert isinstance(miss_day_val_1, int)
-            assert miss_day_val_1 > n_cps_1
-            assert miss_day_val_1 != no_cp_val_1
+        assert isinstance(miss_day_val_1, int)
+        assert miss_day_val_1 > n_cps_1
+        assert miss_day_val_1 != no_cp_val_1
 
         assert isinstance(n_cps_2, int)
         assert n_cps_2 > 0
@@ -63,10 +62,9 @@ class ContingencyTablePlot:
         assert isinstance(no_cp_val_2, int)
         assert no_cp_val_2 > n_cps_2
 
-        if miss_day_val_2 is not None:
-            assert isinstance(miss_day_val_2, int)
-            assert miss_day_val_2 > n_cps_2
-            assert miss_day_val_2 != no_cp_val_2
+        assert isinstance(miss_day_val_2, int)
+        assert miss_day_val_2 > n_cps_2
+        assert miss_day_val_2 != no_cp_val_2
 
         self.sel_cps_1_arr = np.array(sel_cps_1_arr, dtype=DT_UL_NP, order='C')
         self.sel_cps_2_arr = np.array(sel_cps_2_arr, dtype=DT_UL_NP, order='C')
@@ -95,37 +93,17 @@ class ContingencyTablePlot:
                                                     return_counts=True)
         assert check_nans_finite(self.unique_sel_cps_2_arr)
 
-        # for first classi
-        if self.miss_day_val_1 is None:
-            _miss_cond = False
-        else:
-            _miss_cond = True
-            
         for uni_val in self.unique_sel_cps_1_arr:
             cond_1 = (0 <= uni_val < self.n_cps_1)
             cond_2 = uni_val == self.no_cp_val_1
-            
-            if _miss_cond:
-                cond_3 = uni_val == self.miss_day_val_1
-            else:
-                cond_3 = False
+            cond_3 = uni_val == self.miss_day_val_1
 
             assert any([cond_1, cond_2, cond_3]), 'Unknown value: %d' % uni_val
-
-        # for second classi
-        if self.miss_day_val_2 is None:
-            _miss_cond = False
-        else:
-            _miss_cond = True
 
         for uni_val in self.unique_sel_cps_2_arr:
             cond_1 = (0 <= uni_val < self.n_cps_2)
             cond_2 = uni_val == self.no_cp_val_2
-
-            if _miss_cond:
-                cond_3 = uni_val == self.miss_day_val_2
-            else:
-                cond_3 = False
+            cond_3 = uni_val == self.miss_day_val_2
 
             assert any([cond_1, cond_2, cond_3]), 'Unknown value: %d' % uni_val
 
@@ -283,8 +261,8 @@ class ContingencyTablePlot:
                   [lab_2,
                    lab_1,
                    '%s_%s' % (lab_2, lab_1),
-                   self.unique_sel_cps_1_arr,
                    self.unique_sel_cps_2_arr,
+                   self.unique_sel_cps_1_arr,
                    self.stats_dict_2]]
 
         for i, (tab, strs) in enumerate(_):
@@ -325,11 +303,14 @@ class ContingencyTablePlot:
                                     _suffs[i][4].shape[0])
 
             for j in range(txt_x_corrs.shape[0]):
-                ax.text(txt_x_corrs[j],
-                        txt_y_corrs[j],
-                        strs[txt_y_corrs[j], txt_x_corrs[j]],
-                        va='center',
-                        ha='center',)
+                try:
+                    ax.text(txt_x_corrs[j],
+                            txt_y_corrs[j],
+                            strs[txt_y_corrs[j], txt_x_corrs[j]],
+                            va='center',
+                            ha='center',)
+                except:
+                    tre = 1
 
             out_fig_name = 'rel_cp_freq_%s.png' % _suffs[i][2]
             out_fig_path = out_figs_dir / out_fig_name
