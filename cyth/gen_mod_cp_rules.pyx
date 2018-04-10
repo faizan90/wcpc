@@ -7,6 +7,7 @@
 
 import numpy as np
 cimport numpy as np
+from cython.parallel import prange
 
 DT_D_NP = np.float64
 DT_UL_NP = np.uint64
@@ -48,13 +49,14 @@ cdef void gen_cp_rules(
         DT_UL rand_i, rand_v
         DT_UL max_iters = 1000000, curr_iter_ctr = 0
 
-    for j in range(n_cps):
+    for j in prange(n_cps, schedule='static', nogil=True, num_threads=n_cpus):
         for k in range(n_pts):
             cp_rules[j, k] = n_fuzz_nos
 
         curr_iter_ctr = 0
         for l in range(n_fuzz_nos):
-            curr_idxs_ct = <DT_UL> (rand_c() * (max_idxs_ct + 1))
+#             curr_idxs_ct = <DT_UL> (rand_c() * (max_idxs_ct + 1))
+            curr_idxs_ct = <DT_UL> max_idxs_ct 
             cp_rules_idx_ctr[j, l] = curr_idxs_ct
 
             curr_idxs_ctr = 0
@@ -100,6 +102,7 @@ cdef void mod_cp_rules(
         if rand_v[0] < n_fuzz_nos:
             cp_rules_idx_ctr[rand_k[0], rand_v[0]] -= 1 
 
+        loc_mod_ctr[rand_k[0], rand_i[0]] -= 1
         cp_rules[rand_k[0], rand_i[0]] = old_v_i_k[0]
 
         dont_stop = 0  # just in case

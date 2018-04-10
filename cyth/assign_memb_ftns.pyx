@@ -128,4 +128,6 @@ cpdef dict _assign_cps(dict args_dict):
         ret_dict['mult_sel_cps'] = mult_sel_cps
     else:
         ret_dict['sel_cps'] = sel_cps
+        ret_dict['cp_dof_arr'] = cp_dof_arr
+        ret_dict['dofs_arr'] = dofs_arr
     return ret_dict

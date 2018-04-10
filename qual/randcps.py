@@ -344,7 +344,6 @@ class RandCPsPerfComp(CPAssignA, RandCPsGen, ObjVals):
             _mean_wett_arr = wettness.mean_cp_wett_sorted_arr
             self.mean_wett_arrs[i] = _mean_wett_arr
 
-        print(self.mean_wett_arrs)
         self._mult_wett_calced = True
         return
 

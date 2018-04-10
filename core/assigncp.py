@@ -23,6 +23,7 @@ class CPAssignA(CPOPTBase):
 
         self._cp_rules_set_flag = False
         self._mult_cp_rules_set_flag = False
+        self._cps_assigned_flag = False
         return
     
     def set_cp_rules(self, cp_rules):
@@ -104,6 +105,7 @@ class CPAssignA(CPOPTBase):
         self.assign_dict = _assign_cps(assign_dict)
 
         self.sel_cps_arr = self.assign_dict['sel_cps']
+        self.dofs_arr = self.assign_dict['dofs_arr']
 
         if self.msgs:
             uni_cps, cps_freqs = np.unique(self.sel_cps_arr, return_counts=True)
@@ -113,6 +115,7 @@ class CPAssignA(CPOPTBase):
             for x, y in zip(uni_cps, cp_rel_freqs):
                 print('%10d:%-20.2f' % (x, y))
 
+        self._cps_assigned_flag = True
         return
     
     def assign_mult_cps(self, n_threads='auto', force_compile=False):

@@ -10,13 +10,14 @@ from psutil import cpu_count
 
 import numpy as np
 import matplotlib.pyplot as plt
-
-plt.ioff()
+import matplotlib.gridspec as gridspec
 
 from .bases import CPOPTBase
 from ..alg_dtypes import DT_D_NP
 from ..misc.checks import check_nans_finite
 from ..codegenr.gen_all import create_classi_cython_files
+
+plt.ioff()
 
 
 class CPClassiA(CPOPTBase):
@@ -287,7 +288,7 @@ class CPClassiA(CPOPTBase):
 
         self._classified_flag = True
         return
-
+    
     def plot_iter_obj_vals(self, out_fig_loc, fig_size=(17, 10)):
         if self.msgs:
             print('\n\nPlotting objective function evolution...')
@@ -326,7 +327,7 @@ class CPClassiA(CPOPTBase):
                             alpha=0.5)
         ax_twin.set_ylabel('Acceptance Rate (%)')
         ax_twin.set_ylim(0, 100)
-        
+
         pls = pl_1 + pl_2 + pl_3
         labs = [pl.get_label() for pl in pls]
         ax.legend(pls, labs, loc=0)
@@ -335,5 +336,91 @@ class CPClassiA(CPOPTBase):
                       '(max=%0.3f)') % self.best_obj_vals_arr[-1])
 
         plt.savefig(str(out_fig_loc), bbox_inches='tight')
+        plt.close()
+        return
+
+    def plot_verifs(self, out_dir, fig_size=(17, 10)):
+        if self.msgs:
+            print('\n\nPlotting calibration verification variables...')
+
+        assert self._classified_flag
+
+        assert isinstance(out_dir, (str, Path))
+        out_dir = Path(out_dir)
+        assert out_dir.exists()
+
+        # rand stuff
+        cps_occ_arr = self.calib_dict['rands_rec_arr'][:, 0]
+        cps_occ_arr = cps_occ_arr[cps_occ_arr != 9999]
+
+        pts_occ_arr = self.calib_dict['rands_rec_arr'][:, 1]
+        pts_occ_arr = pts_occ_arr[pts_occ_arr != 9999]
+
+        fuz_occ_arr = self.calib_dict['rands_rec_arr'][:, 2]
+        fuz_occ_arr = fuz_occ_arr[fuz_occ_arr != 9999]
+
+        unq_cps, unq_cps_cts = np.unique(cps_occ_arr, return_counts=True)
+        unq_pts, unq_pts_cts = np.unique(pts_occ_arr, return_counts=True)
+        unq_fuz, unq_fuz_cts = np.unique(fuz_occ_arr, return_counts=True)
+
+        _vars = [('CP', 'rand_gen_cps_ct.png'),
+                 ('Point', 'rand_gen_pts_ct.png'),
+                 ('Fuzzy', 'rand_gen_fuz_ct.png')]
+
+        fig = plt.figure(figsize=fig_size)
+        ax = fig.gca()
+        
+        for i, (unq, cts) in enumerate(((unq_cps, unq_cps_cts), 
+                                        (unq_pts, unq_pts_cts), 
+                                        (unq_fuz, unq_fuz_cts))):
+            
+            ax.plot(unq, cts / float(cts[0]), alpha=0.7)
+            ax.set_xlabel(_vars[i][0] + ' No.')
+            ax.set_ylabel('Relative count')
+            ax.set_title('Randomly generated %s no. counts during calibration'
+                         % _vars[i][0])
+            ax.grid()
+            plt.savefig(str(out_dir / _vars[i][1]), bbox_inches='tight')
+            ax.cla()
+
+        plt.close()
+
+        # loc_mod stuff
+        loc_mod_ctr_arr = self.calib_dict['loc_mod_ctr']
+        assert loc_mod_ctr_arr.shape[0] == self.n_cps
+        loc_rows = max(1, int(0.25 * self.n_cps))
+        loc_cols = max(1, int(np.ceil(self.n_cps / loc_rows)))
+        tot_sub_plots = loc_rows * loc_cols
+        assert tot_sub_plots >= self.n_cps
+
+        rows_idxs, cols_idxs = np.meshgrid(np.arange(loc_rows),
+                                           np.arange(loc_cols),
+                                           indexing='ij')
+        rows_idxs, cols_idxs = rows_idxs.ravel(), cols_idxs.ravel()
+
+        plt.figure(figsize=fig_size)
+        hists_grid = gridspec.GridSpec(loc_rows, loc_cols)
+        pt_rng = np.arange(loc_mod_ctr_arr.shape[1])
+        for i in range(self.n_cps):
+            hist_ax = plt.subplot(hists_grid[rows_idxs[i], cols_idxs[i]])
+            hist_ax.bar(pt_rng, loc_mod_ctr_arr[i, :])
+            hist_ax.set_title('CP No. %2d' % i)
+            
+            if rows_idxs[i] == rows_idxs[-1]:
+                hist_ax.set_xlabel('Point no.')
+            else:
+                hist_ax.set_xticklabels([])
+
+            if cols_idxs[i] == 0:
+                hist_ax.set_ylabel('Count')
+            else:
+                hist_ax.set_yticklabels([])
+
+        for i in range(self.n_cps, tot_sub_plots):
+            hist_ax = plt.subplot(hists_grid[rows_idxs[i], cols_idxs[i]])
+            hist_ax.set_axis_off()
+
+        plt.suptitle('Counts of visited points per CP during calibration')
+        plt.savefig(str(out_dir / 'loc_mod_ctr.png'), bbox_inches='tight')
         plt.close()
         return

@@ -161,6 +161,7 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('np.ndarray[DT_UL_NP_t, ndim=2, mode=\'c\'] cp_rules_idx_ctr')
     pyxcd.w('np.ndarray[DT_UL_NP_t, ndim=2, mode=\'c\'] best_cp_rules_idx_ctr')
     pyxcd.w('np.ndarray[DT_UL_NP_t, ndim=2, mode=\'c\'] loc_mod_ctr')
+    pyxcd.w('np.ndarray[np.uint32_t, ndim=2, mode=\'c\'] rands_rec_arr')
     pyxcd.els()
 
     pyxcd.w('# 2D double arrays')
@@ -459,7 +460,7 @@ def write_cp_classi_main_lines(params_dict):
 
     pyxcd.w('if max_idxs_ct > (n_pts / n_fuzz_nos):')
     pyxcd.ind()
-    pyxcd.w('max_idxs_ct = max(1, <DT_UL> (n_pts / n_fuzz_nos))')
+    pyxcd.w('max_idxs_ct = <DT_UL> max(1, (n_pts / n_fuzz_nos))')
     pyxcd.w(r'print(("\n\n\n\n######### max_idxs_ct reset to %d!#########\n\n\n\n" % max_idxs_ct))')
     pyxcd.ded()
     pyxcd.w('curr_n_iter = 0')
@@ -560,6 +561,10 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('chnge_steps = np.zeros(n_time_steps, dtype=DT_UL_NP)')
     pyxcd.w('dofs_arr = np.full((n_time_steps, n_cps), 0.0, dtype=DT_D_NP)')
     pyxcd.w('best_dofs_arr = dofs_arr.copy()')
+    pyxcd.els()
+
+    pyxcd.w('# an array to save all the randomly generated integers')
+    pyxcd.w('rands_rec_arr = np.full((max_n_iters + 1, 3), 9999, dtype=np.uint32)')
     pyxcd.els()
 
     pyxcd.w('# initialize the obj. ftn. variables')
@@ -726,7 +731,7 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('# start simulated annealing')
     pyxcd.w('while ((curr_n_iter < max_n_iters) and '
             '(curr_iters_wo_chng < max_iters_wo_chng)) or '
-            '(not temp_adjed):')
+            '(not temp_adjed) or (run_type == 2):')
     pyxcd.ind()
 
     pyxcd.w('if (curr_m_iter >= max_m_iters) and '
@@ -1256,7 +1261,9 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('acc_rate_list.append(acc_rate)')
     pyxcd.w('cp_pcntge_list.append(ppt_cp_n_vals_arr.copy() / n_time_steps)')
     pyxcd.w('curr_n_iters_list.append(curr_n_iter)')
-        
+    pyxcd.w('rands_rec_arr[curr_n_iter, 0] = rand_k')
+    pyxcd.w('rands_rec_arr[curr_n_iter, 1] = rand_i')
+    pyxcd.w('rands_rec_arr[curr_n_iter, 2] = rand_v')
     pyxcd.w('curr_m_iter += 1')
     pyxcd.w('curr_n_iter += 1')
     pyxcd.ded()
@@ -1321,6 +1328,8 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('out_dict[\'curr_n_iters_arr\'] = np.array(curr_n_iters_list, '
             'dtype=np.uint64)')
     pyxcd.w('out_dict[\'acc_rate_arr\'] = np.array(acc_rate_list)')
+    pyxcd.w('out_dict[\'loc_mod_ctr\'] = loc_mod_ctr')
+    pyxcd.w('out_dict[\'rands_rec_arr\'] = rands_rec_arr')
 
     pyxcd.w('return out_dict')
     pyxcd.ded()

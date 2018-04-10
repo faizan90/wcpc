@@ -161,7 +161,8 @@ def write_gen_mod_cp_rules_lines(params_dict):
     pyxcd.w('curr_iter_ctr = 0')
     pyxcd.w('for l in range(n_fuzz_nos):')
     pyxcd.ind()
-    pyxcd.w('curr_idxs_ct = <DT_UL> (rand_c() * (max_idxs_ct + 1))')
+#     pyxcd.w('curr_idxs_ct = <DT_UL> (rand_c() * (max_idxs_ct + 1))')
+    pyxcd.w('curr_idxs_ct = max_idxs_ct')
     pyxcd.w('cp_rules_idx_ctr[j, l] = curr_idxs_ct')
 
     pyxcd.els()
@@ -254,6 +255,7 @@ def write_gen_mod_cp_rules_lines(params_dict):
     pyxcd.w('cp_rules_idx_ctr[rand_k[0], rand_v[0]] -= 1 ')
     pyxcd.ded()
 
+    pyxcd.w('loc_mod_ctr[rand_k[0], rand_i[0]] -= 1')
     pyxcd.w('cp_rules[rand_k[0], rand_i[0]] = old_v_i_k[0]')
 
     pyxcd.els()

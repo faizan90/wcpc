@@ -8,17 +8,16 @@ from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 
-plt.ioff()
-
 from .bases import QualBases
 from ..alg_dtypes import DT_D_NP
 from ..misc.checks import check_nans_finite
 
+plt.ioff()
 
 class WettnessIndex(QualBases):
 
     def __init__(self, msgs=True):
-        super(WettnessIndex, self).__init__(msgs)
+        super().__init__(msgs)
 
         self.old_new_cp_map_arr = None
 
@@ -170,7 +169,8 @@ class WettnessIndex(QualBases):
             assert obj_val_list
             n_obj_vals = len(obj_val_list)
             assert n_obj_vals == n_wett_arrs
-            assert all([isinstance(obj_val_list[i], float) for i in range(n_obj_vals)])
+            assert all([isinstance(obj_val_list[i], float)
+                        for i in range(n_obj_vals)])
         else:
             obj_val_list = [0.0] * n_labs
 
@@ -209,4 +209,44 @@ class WettnessIndex(QualBases):
 
         plt.savefig(str(out_fig_path), bbox_inches='tight')
         plt.close()
+        return
+
+
+class WettnessIndexPCA(WettnessIndex):
+
+    def __init__(self, msgs=True):
+        super().__init__(msgs)
+        self._ppt_ref_arr_set_flag = False
+        return
+
+    def set_ppt_ref_arr(self, ppt_ref_arr):
+        assert isinstance(ppt_ref_arr, np.ndarray)
+        assert check_nans_finite(ppt_ref_arr)
+        assert len(ppt_ref_arr.shape) == 2
+        self.ppt_ref_arr = ppt_ref_arr.copy(order='C')
+        self._ppt_ref_arr_set_flag = True
+        return
+
+    def cmpt_wettness_idx(self):
+        self._verify_input()
+        assert self._ppt_ref_arr_set_flag
+
+        self.ppt_mean_arr = self.ppt_ref_arr.mean(axis=0).copy(order='C')
+
+        assert np.all(self.ppt_mean_arr > 0)
+        self.ppt_cp_wett_arr = np.zeros((self.n_cps,
+                                         self.n_ppt_cols),
+                                        dtype=DT_D_NP,
+                                        order='C')
+
+        for j in range(self.n_cps):
+            curr_cp_idxs = self.sel_cps_arr == j
+            for m in range(self.n_ppt_cols):
+                _ = (self.ppt_arr[curr_cp_idxs, m].mean() /
+                     self.ppt_mean_arr[m])
+
+                self.ppt_cp_wett_arr[j, m] = _
+
+        self.mean_cp_wett_arr = np.round(self.ppt_cp_wett_arr.mean(axis=1), 5)
+        self._wettness_cmptd_flag = True
         return

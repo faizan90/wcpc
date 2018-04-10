@@ -20,7 +20,7 @@ def plot_tri_fuzz_no(in_tri_fuzz_nos_arr, out_fig_path, fig_size=(15, 7)):
     assert in_tri_fuzz_nos_arr.shape[0] > 0
     assert in_tri_fuzz_nos_arr.shape[1] == 3
 
-#     assert np.all(np.ediff1d(in_tri_fuzz_nos_arr[:, 1]) > 0)
+    assert np.all(np.ediff1d(in_tri_fuzz_nos_arr[:, 1]) > 0)
 
     out_fig_path = Path(out_fig_path)
     assert out_fig_path.parents[0].exists()

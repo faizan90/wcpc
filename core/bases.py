@@ -117,6 +117,7 @@ class CPDataBase:
         assert check_nans_finite(self.fuzz_nos_arr)
         assert self.fuzz_nos_arr.shape[0] > 0
         assert self.fuzz_nos_arr.shape[1] == 3
+        assert np.all(np.ediff1d(self.fuzz_nos_arr[:, 1]) > 0)
 
         assert isinstance(self.lo_freq_pen_wt, (int, float))
         assert (self.lo_freq_pen_wt >= 0) and (self.lo_freq_pen_wt < np.inf)
