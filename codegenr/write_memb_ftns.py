@@ -154,7 +154,6 @@ def write_memb_ftns_lines(params_dict):
     pyxcd.w('# Fill the membership value matrix at each time step,')
     pyxcd.w('# each CP and each point.')
     pyxcd.w('# Select the CP with the greatest DOF for a given step.')
-    pyxcd.w('# Set everything to the previous step in case of a roll back.')
 
     if op_mp_flag:
         pyxcd.w('for i in prange(n_time_steps, schedule=\'dynamic\', '

@@ -23,7 +23,7 @@ from .plot.cpfreq import CPHistPlot
 from .plot.cps import PlotCPs, plot_iter_cp_pcntgs
 from .plot.var2d import PlotNC
 from .plot.fuzznos import plot_tri_fuzz_no
-from .plot.cpdofs import PlotDOFs
+from .plot.cpdofs import PlotDOFs, PlotFuzzDOFs
 
 from .misc.snipnc import SnipNC
 from .misc.checks import check_nans_finite

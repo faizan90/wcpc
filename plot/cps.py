@@ -3,12 +3,16 @@ Created on Jan 4, 2018
 
 @author: Faizan-Uni
 '''
+import gc
 from pathlib import Path
+from functools import partial
+from multiprocessing import Pool
 
 import numpy as np
 import shapefile as shp
 import matplotlib.pyplot as plt
 from descartes import PolygonPatch
+import matplotlib.gridspec as gridspec
 
 plt.ioff()
 
@@ -21,6 +25,7 @@ import geostatistics_mixed_vg as gs
 from ..misc.ftns import change_pt_crs
 from ..misc.checks import check_nans_finite
 from ..alg_dtypes import DT_D_NP, DT_UL_NP
+from ..misc.ftns import ret_mp_idxs
 
 
 class PlotCPs:
@@ -336,8 +341,12 @@ class PlotCPs:
         
         self._kriged_flag = True
         return
-    
-    def plot_kriged_cps(self, cont_levels, out_figs_dir, fig_size=((10, 7))):
+
+    def plot_kriged_cps(self,
+                        cont_levels,
+                        out_figs_dir,
+                        fig_size=((10, 7)),
+                        n_cpus=1):
         assert self._kriged_flag
 
         assert isinstance(cont_levels, np.ndarray)
@@ -356,180 +365,291 @@ class PlotCPs:
         assert fig_size[0] > 0
         assert fig_size[1] > 0
 
-        # CP
-        for j in range(self.n_cps):
-            if self.msgs:
-                print('Plotting CP:', (j))
+        assert isinstance(n_cpus, int)
+        assert n_cpus > 0
 
-            fig = plt.figure(figsize=fig_size)
-            ax = fig.gca()
+        _plot_kriged_cps_partial = (
+            partial(_plot_kriged_cps,
+                    fig_size=fig_size,
+                    bck_polys_list=self.bck_polys_list,
+                    krige_x_coords_mesh=self.krige_x_coords_mesh,
+                    krige_y_coords_mesh=self.krige_y_coords_mesh,
+                    anom_type=self.anom_type,
+                    cont_levels=cont_levels,
+                    out_figs_dir=out_figs_dir,
+                    x_coords=self.x_coords,
+                    y_coords=self.y_coords,
+                    best_cps_min_anoms=self.best_cps_min_anoms,
+                    best_cps_max_anoms=self.best_cps_max_anoms,
+                    best_cps_std_anoms=self.best_cps_std_anoms))
 
-            if self.bck_polys_list is not None:
-                for poly in self.bck_polys_list:
-                    ax.add_patch(PolygonPatch(poly,
+        _idxs = ret_mp_idxs(self.n_cps, n_cpus)
+        cp_nos_list = [_idxs[i: i + 2] for i in range(n_cpus)]
+
+        _z_gen = (
+            (self.krige_z_coords_mesh[cp_nos_list[i][0]:cp_nos_list[i][1]])
+            for i in range(n_cpus))
+        _x_gen = (self.cp_x_coords_list[cp_nos_list[i][0]:cp_nos_list[i][1]]
+                  for i in range(n_cpus))
+        _y_gen = (self.cp_y_coords_list[cp_nos_list[i][0]:cp_nos_list[i][1]]
+                  for i in range(n_cpus))
+        _vgs_gen = (self.vgs_list[cp_nos_list[i][0]:cp_nos_list[i][1]]
+                    for i in range(n_cpus))
+        _cp_rules_gen = (self.cp_rules_arr[cp_nos_list[i][0]:cp_nos_list[i][1]]
+                         for i in range(n_cpus))
+
+        _all_gen = (
+            (cp_nos_list[i],
+             self.krige_z_coords_mesh[cp_nos_list[i][0]:cp_nos_list[i][1]],
+             self.cp_x_coords_list[cp_nos_list[i][0]:cp_nos_list[i][1]],
+             self.cp_y_coords_list[cp_nos_list[i][0]:cp_nos_list[i][1]],
+             self.vgs_list[cp_nos_list[i][0]:cp_nos_list[i][1]],
+             self.cp_rules_arr[cp_nos_list[i][0]:cp_nos_list[i][1]])
+             for i in range(n_cpus))
+
+        import timeit
+        _strt = timeit.default_timer()
+        if n_cpus == 1:
+            _map = list(map(_plot_kriged_cps_partial, _all_gen))
+        else:
+            mp_pool = Pool(processes=n_cpus, maxtasksperchild=1)
+            _map = list(mp_pool.imap_unordered(_plot_kriged_cps_partial,
+                                               _all_gen))
+            mp_pool.terminate()
+
+        print(_map)
+        _stop = timeit.default_timer()
+        print('Took: %0.3f' % (_stop - _strt))
+        return
+
+def _plot_kriged_cps(args,
+                     fig_size,
+                     bck_polys_list,
+                     krige_x_coords_mesh,
+                     krige_y_coords_mesh,
+                     anom_type,
+                     cont_levels,
+                     out_figs_dir,
+                     x_coords,
+                     y_coords,
+                     best_cps_min_anoms,
+                     best_cps_max_anoms,
+                     best_cps_std_anoms):
+
+    __plot_kriged_cps(args,
+                         fig_size,
+                         bck_polys_list,
+                         krige_x_coords_mesh,
+                         krige_y_coords_mesh,
+                         anom_type,
+                         cont_levels,
+                         out_figs_dir,
+                         x_coords,
+                         y_coords,
+                         best_cps_min_anoms,
+                         best_cps_max_anoms,
+                         best_cps_std_anoms)
+
+    return
+    
+
+def __plot_kriged_cps(args,
+                     fig_size,
+                     bck_polys_list,
+                     krige_x_coords_mesh,
+                     krige_y_coords_mesh,
+                     anom_type,
+                     cont_levels,
+                     out_figs_dir,
+                     x_coords,
+                     y_coords,
+                     best_cps_min_anoms,
+                     best_cps_max_anoms,
+                     best_cps_std_anoms):
+
+    (cp_nos,
+     krige_z_coords_mesh,
+     cp_x_coords_list,
+     cp_y_coords_list,
+     vgs_list,
+     cp_rules_arr) = args
+
+    max_n_coords = 10
+    n_x_coords = x_coords.shape[0]
+    n_y_coords = y_coords.shape[0]
+
+    x_ticks_pos = np.arange(0, n_x_coords)
+    y_ticks_pos = np.arange(0, n_y_coords)
+
+    if n_x_coords > max_n_coords:
+        x_step_size = n_x_coords // max_n_coords
+    else:
+        x_step_size = 1
+
+    if n_y_coords > max_n_coords:
+        y_step_size = n_y_coords // max_n_coords
+    else:
+        y_step_size = 1
+
+    cmap = plt.get_cmap('autumn')
+
+    min_cbar_val = min(best_cps_min_anoms.min(),
+                       best_cps_max_anoms.min())
+
+    max_cbar_val = max(best_cps_min_anoms.max(),
+                       best_cps_max_anoms.max())
+
+    # CP
+    cps_fig = plt.figure(figsize=fig_size)
+    cps_ax = cps_fig.gca()
+
+    cp_std_fig = plt.figure(figsize=fig_size)
+    cp_std_ax = cp_std_fig.gca()
+
+    for j, cp_no in enumerate(range(cp_nos[0], cp_nos[1])):
+        print('Plotting for CP No.', cp_no)
+        plt.figure(cps_fig.number)
+
+        if bck_polys_list is not None:
+            for poly in bck_polys_list:
+                cps_ax.add_patch(PolygonPatch(poly,
                                               alpha=0.5,
                                               fc='#999999',
                                               ec='#999999'))
 
-            cs = plt.contour(self.krige_x_coords_mesh,
-                             self.krige_y_coords_mesh,
-                             self.krige_z_coords_mesh[j],
-                             levels=cont_levels,
-                             vmin=0.0,
-                             vmax=1.0,
-                             linestyles='solid',
-                             extend='both')
+        cs = cps_ax.contour(krige_x_coords_mesh,
+                            krige_y_coords_mesh,
+                            krige_z_coords_mesh[j],
+                            levels=cont_levels,
+                            vmin=0.0,
+                            vmax=1.0,
+                            linestyles='solid',
+                            extend='both')
 
-            if self.anom_type != 'd':
-                plt.scatter(self.cp_x_coords_list[j], self.cp_y_coords_list[j])
-            plt.title('CP no. %d, %s' % (j, self.vgs_list[j]))
+        if anom_type != 'd':
+            cps_ax.scatter(cp_x_coords_list[j], cp_y_coords_list[j])
 
-            plt.xlim(self.krige_x_coords_mesh.min(),
-                     self.krige_x_coords_mesh.max())
-            plt.ylim(self.krige_y_coords_mesh.min(),
-                     self.krige_y_coords_mesh.max())
+        cps_ax.set_title('CP no. %d, %s' % (cp_no, vgs_list[j]))
 
-            plt.xlabel('Eastings')
-            plt.ylabel('Northings')
+        cps_ax.set_xlim(krige_x_coords_mesh.min(),
+                        krige_x_coords_mesh.max())
+        cps_ax.set_ylim(krige_y_coords_mesh.min(),
+                        krige_y_coords_mesh.max())
 
-            plt.clabel(cs, inline=True, inline_spacing=0.01, fontsize=10)
+        cps_ax.set_xlabel('Eastings')
+        cps_ax.set_ylabel('Northings')
 
-            plt.savefig(str(out_figs_dir / ('cp_map_%0.2d.png' % (j))),
-                        bbox_inches='tight')
+        cps_ax.clabel(cs, inline=True, inline_spacing=0.01, fontsize=10)
 
-            plt.close()
+        plt.savefig(str(out_figs_dir / ('cp_map_%0.2d.png' % (cp_no))),
+                    bbox_inches='tight')
 
-        max_n_coords = 10
-        n_x_coords = self.x_coords.shape[0]
-        n_y_coords = self.y_coords.shape[0]
-
-        x_ticks_pos = np.arange(0, n_x_coords)
-        y_ticks_pos = np.arange(0, n_y_coords)
-
-        if n_x_coords > max_n_coords:
-            x_step_size = n_x_coords // max_n_coords
-        else:
-            x_step_size = 1
-
-        if n_y_coords > max_n_coords:
-            y_step_size = n_y_coords // max_n_coords
-        else:
-            y_step_size = 1
-
-        cmap = plt.get_cmap('autumn')
+        cps_ax.cla()
 
         # CP Std.
-        for j in range(self.n_cps):
-            if self.msgs:
-                print('Plotting Std. CP:', (j))
+        plt.figure(cp_std_fig.number)
+        cax = cp_std_ax.imshow(best_cps_std_anoms[cp_no],
+                               origin='upper',
+                               interpolation=None,
+                               cmap=cmap)
 
-            fig = plt.figure(figsize=fig_size)
-            ax = fig.gca()
+        if anom_type != 'd':
+            _cp_rules_str = (
+                cp_rules_arr[j].reshape(
+                    best_cps_std_anoms[cp_no].shape).astype('|U'))
 
-            cax = ax.imshow(self.best_cps_std_anoms[j],
-                            origin='upper',
-                            interpolation=None,
-                            cmap=cmap)
+            txt_x_corrs = np.tile(range(_cp_rules_str.shape[1]),
+                                  _cp_rules_str.shape[0])
 
-            if self.anom_type != 'd':
-                _cp_rules_str = (
-                    self.cp_rules_arr[j].reshape(
-                        self.best_cps_std_anoms[j].shape).astype('|U'))
+            txt_y_corrs = np.repeat(range(_cp_rules_str.shape[0]),
+                                    _cp_rules_str.shape[1])
 
-                txt_x_corrs = np.tile(range(_cp_rules_str.shape[1]),
-                                      _cp_rules_str.shape[0])
+            for k in range(txt_x_corrs.shape[0]):
+                cp_std_ax.text(txt_x_corrs[k],
+                               txt_y_corrs[k],
+                               _cp_rules_str[txt_y_corrs[k],
+                                             txt_x_corrs[k]],
+                               va='center',
+                               ha='center',
+                               color='black')
 
-                txt_y_corrs = np.repeat(range(_cp_rules_str.shape[0]),
-                                        _cp_rules_str.shape[1])
+        cp_std_ax.set_xticks(x_ticks_pos[::x_step_size])
+        cp_std_ax.set_yticks(y_ticks_pos[::y_step_size])
 
-                for k in range(txt_x_corrs.shape[0]):
-                    ax.text(txt_x_corrs[k],
-                            txt_y_corrs[k],
-                            _cp_rules_str[txt_y_corrs[k], txt_x_corrs[k]],
-                            va='center',
-                            ha='center',
-                            color='black')
+        cp_std_ax.set_xticklabels(x_coords[::x_step_size])
+        cp_std_ax.set_yticklabels(y_coords[::y_step_size])
 
-            ax.set_xticks(x_ticks_pos[::x_step_size])
-            ax.set_yticks(y_ticks_pos[::y_step_size])
+        cp_std_ax.set_xlabel('Eastings')
+        cp_std_ax.set_ylabel('Northings')
 
-            ax.set_xticklabels(self.x_coords[::x_step_size])
-            ax.set_yticklabels(self.y_coords[::y_step_size])
+        cbar = cp_std_fig.colorbar(cax, orientation='horizontal')
+        cbar.set_label('Anomaly Std.')
 
-            ax.set_xlabel('Eastings')
-            ax.set_ylabel('Northings')
+        cp_std_ax.set_title('Std. CP no. %d' % (cp_no))
 
-            cbar = fig.colorbar(cax, orientation='horizontal')
-            cbar.set_label('Anomaly Std.')
-            
-            ax.set_title('Std. CP no. %d' % (j,))
-
-            plt.savefig(str(out_figs_dir / ('std_cp_map_%0.2d.png' % (j))),
-                        bbox_inches='tight')
-
-            plt.close()
-
-        min_cbar_val = min(self.best_cps_min_anoms.min(),
-                           self.best_cps_max_anoms.min())
-
-        max_cbar_val = max(self.best_cps_min_anoms.max(),
-                           self.best_cps_max_anoms.max())
+        plt.savefig(str(out_figs_dir / ('std_cp_map_%0.2d.png' % (cp_no))),
+                    bbox_inches='tight')
+        cbar.remove()
+        cp_std_ax.cla()
 
         # CP Min. and Max.
-        for j in range(self.n_cps):
-            if self.msgs:
-                print('Plotting Min. and Max. CP:', (j))
+        cp_min_max_fig = plt.figure(figsize=fig_size)
+        cp_min_max_grid = gridspec.GridSpec(1, 2)
+        cp_min_ax = plt.subplot(cp_min_max_grid[0, 0])
+        cp_max_ax = plt.subplot(cp_min_max_grid[0, 1])
+    
+        plt.figure(cp_min_max_fig.number)
 
-            fig, (ax_min, ax_max) = plt.subplots(1, 2, figsize=fig_size)
+        # Min
+        cax_min = cp_min_ax.imshow(best_cps_min_anoms[cp_no],
+                                   origin='upper',
+                                   interpolation=None,
+                                   vmin=min_cbar_val,
+                                   vmax=max_cbar_val,
+                                   cmap=cmap)
 
-            # Min
-            ax_min.imshow(self.best_cps_min_anoms[j],
-                          origin='upper',
-                          interpolation=None,
-                          vmin=min_cbar_val,
-                          vmax=max_cbar_val,
-                          cmap=cmap)
+        cp_min_ax.set_xticks(x_ticks_pos[::x_step_size])
+        cp_min_ax.set_yticks(y_ticks_pos[::y_step_size])
 
-            ax_min.set_xticks(x_ticks_pos[::x_step_size])
-            ax_min.set_yticks(y_ticks_pos[::y_step_size])
+        cp_min_ax.set_xticklabels(x_coords[::x_step_size])
+        cp_min_ax.set_yticklabels(y_coords[::y_step_size])
 
-            ax_min.set_xticklabels(self.x_coords[::x_step_size])
-            ax_min.set_yticklabels(self.y_coords[::y_step_size])
+        cp_min_ax.set_xlabel('Eastings')
+        cp_min_ax.set_ylabel('Northings')
 
-            ax_min.set_xlabel('Eastings')
-            ax_min.set_ylabel('Northings')
+        cp_min_ax.set_title('Min. Anomaly CP no. %d' % (cp_no))
 
-            ax_min.set_title('Min. Anomaly CP no. %d' % (j,))
+        # Max
+        cp_max_ax.imshow(best_cps_max_anoms[cp_no],
+                         origin='upper',
+                         interpolation=None,
+                         vmin=min_cbar_val,
+                         vmax=max_cbar_val,
+                         cmap=cmap)
 
-            # Max
-            cax_max = ax_max.imshow(self.best_cps_max_anoms[j],
-                                    origin='upper',
-                                    interpolation=None,
-                                    vmin=min_cbar_val,
-                                    vmax=max_cbar_val,
-                                    cmap=cmap)
+        cp_max_ax.set_xticks(x_ticks_pos[::x_step_size])
+        cp_max_ax.set_yticks(y_ticks_pos[::y_step_size])
 
-            ax_max.set_xticks(x_ticks_pos[::x_step_size])
-            ax_max.set_yticks(y_ticks_pos[::y_step_size])
+        cp_max_ax.set_xticklabels(x_coords[::x_step_size])
+        cp_max_ax.set_yticklabels([])
 
-            ax_max.set_xticklabels(self.x_coords[::x_step_size])
-            ax_max.set_yticklabels([])
+        cp_max_ax.set_xlabel('Eastings')
 
-            ax_max.set_xlabel('Eastings')
+        cbar = cp_min_max_fig.colorbar(cax_min,
+                                       ax=[cp_min_ax, cp_max_ax],
+                                       orientation='horizontal')
 
-            fig.colorbar(cax_max,
-                         ax=[ax_min, ax_max],
-                         orientation='horizontal')
+        cp_max_ax.set_title('Max. Anomaly CP no. %d' % (cp_no))
 
-            ax_max.set_title('Max. Anomaly CP no. %d' % (j,))
+        plt.savefig(str(out_figs_dir /
+                        ('min_max_cp_map_%0.2d.png' % (cp_no))),
+                    bbox_inches='tight')
 
-            plt.savefig(str(out_figs_dir / ('min_max_cp_map_%0.2d.png' % (j))),
-                        bbox_inches='tight')
+        plt.close()
 
-            plt.close()
-#             break
-
-        return
+    plt.close('all')
+    gc.collect()
+    return
 
 
 def plot_iter_cp_pcntgs(n_cps,

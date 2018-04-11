@@ -203,7 +203,7 @@ def _prep_anomaly_bjs_mp(anoms_arr, bjs_arr, n_cpus, fig_out_dir):
     except Exception as msg:
         mp_pool.close()
         mp_pool.join()
-        print('Error in _plot_anomaly_cdf:', msg)
+        print('Error in _plot_anomaly_bjs_cdf:', msg)
     return
 
 
@@ -351,7 +351,35 @@ class Anomaly:
 
         self._vars_read_flag = True
         return
+
+    def get_time_range_idxs(self,
+                            strt_time,
+                            end_time,
+                            season_months,
+                            time_fmt):
+
+        strt_time, end_time = pd.to_datetime([strt_time, end_time],
+                                             format=time_fmt)
+
+        assert strt_time < end_time, (strt_time, end_time)
+        assert strt_time >= self.times_tot[0], (strt_time, self.times_tot[0])
+        assert end_time <= self.times_tot[-1], (end_time, self.times_tot[-1])
+
+        # just in case
+        assert (self.times_tot.shape[0] == self.vals_tot_rav.shape[0])
         
+        curr_idxs = ((self.times_tot >= strt_time) &
+                     ((self.times_tot <= end_time)))
+
+        month_idxs = np.zeros(self.times_tot.shape[0], dtype=bool)
+        for month in season_months:
+            month_idxs = month_idxs | (self.times_tot.month == month)
+
+        curr_idxs = curr_idxs & month_idxs
+
+        assert curr_idxs.sum()
+        return curr_idxs
+
     def calc_anomaly_type_a(self, anom_type_a_nan_rep=None):
         assert self._vars_read_flag
         
@@ -441,6 +469,12 @@ class Anomaly:
 
         self.vals_tot_anom = _1 / _2
 
+#         for i in range(self.vals_tot_anom.shape[1]):
+#             curr_bjs_probs_arr = (
+#                 (np.argsort(np.argsort(self.vals_tot_anom[:, i])) + 1) /
+#                 (self.vals_tot_anom.shape[0] + 1))
+#             self.vals_tot_anom[:, i] = curr_bjs_probs_arr
+            
         assert (curr_time_idxs.sum() ==
                 self.vals_tot_anom.shape[0] ==
                 self.times.shape[0])
@@ -465,34 +499,6 @@ class Anomaly:
             _prep_anomaly_mp(self.vals_tot_anom, n_cpus, fig_out_dir)
         return
     
-    def get_time_range_idxs(self,
-                            strt_time,
-                            end_time,
-                            season_months,
-                            time_fmt):
-
-        strt_time, end_time = pd.to_datetime([strt_time, end_time],
-                                             format=time_fmt)
-
-        assert strt_time < end_time, (strt_time, end_time)
-        assert strt_time >= self.times_tot[0], (strt_time, self.times_tot[0])
-        assert end_time <= self.times_tot[-1], (end_time, self.times_tot[-1])
-
-        # just in case
-        assert (self.times_tot.shape[0] == self.vals_tot_rav.shape[0])
-        
-        curr_idxs = ((self.times_tot >= strt_time) &
-                     ((self.times_tot <= end_time)))
-
-        month_idxs = np.zeros(self.times_tot.shape[0], dtype=bool)
-        for month in season_months:
-            month_idxs = month_idxs | (self.times_tot.month == month)
-
-        curr_idxs = curr_idxs & month_idxs
-
-        assert curr_idxs.sum()
-        return curr_idxs
-
     def calc_anomaly_type_c(self,
                             strt_time,
                             end_time,
@@ -687,7 +693,8 @@ class Anomaly:
             curr_bjs_probs_arr = ((np.argsort(np.argsort(curr_bjs_arr)) + 1) /
                                   (curr_bjs_arr.shape[0] + 1))
             self.vals_anom[:, i] = curr_bjs_probs_arr
-
+#             curr_bjs_arr = ((curr_bjs_arr - curr_bjs_arr.min()) /
+#                             (curr_bjs_arr.max() - curr_bjs_arr.min()))
 #             self.vals_anom[:, i] = curr_bjs_arr
 
         assert check_nans_finite(self.vals_anom)

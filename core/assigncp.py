@@ -106,6 +106,7 @@ class CPAssignA(CPOPTBase):
 
         self.sel_cps_arr = self.assign_dict['sel_cps']
         self.dofs_arr = self.assign_dict['dofs_arr']
+        self.fuzz_dofs_arr = self.assign_dict['cp_dof_arr']
 
         if self.msgs:
             uni_cps, cps_freqs = np.unique(self.sel_cps_arr, return_counts=True)

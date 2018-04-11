@@ -162,6 +162,7 @@ class CPDataBase:
         assert o_1_ppt_thresh_arr.shape[0] > 0
         assert check_nans_finite(o_1_ppt_thresh_arr)
         assert np.all(np.ediff1d(o_1_ppt_thresh_arr) > 0)
+        assert np.all(o_1_ppt_thresh_arr)
 
         assert isinstance(o_1_obj_wt, (int, float))
         assert check_nans_finite(o_1_obj_wt)
@@ -194,6 +195,7 @@ class CPDataBase:
         assert o_2_ppt_thresh_arr.shape[0] > 0
         assert check_nans_finite(o_2_ppt_thresh_arr)
         assert np.all(np.ediff1d(o_2_ppt_thresh_arr) > 0)
+        assert np.all(o_2_ppt_thresh_arr)
 
         assert isinstance(o_2_obj_wt, (int, float))
         assert check_nans_finite(o_2_obj_wt)

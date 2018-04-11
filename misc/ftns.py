@@ -29,6 +29,9 @@ def change_pt_crs(x, y, in_epsg, out_epsg):
 
 def ret_mp_idxs(n_vals, n_cpus):
     idxs = np.linspace(0, n_vals, n_cpus + 1, endpoint=True, dtype='int64')
+
+    idxs = np.unique(idxs)
+
     assert idxs.shape[0]
 
     if idxs.shape[0] == 1:

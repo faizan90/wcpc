@@ -398,6 +398,9 @@ class CPClassiA(CPOPTBase):
                                            indexing='ij')
         rows_idxs, cols_idxs = rows_idxs.ravel(), cols_idxs.ravel()
 
+        _min_ct = loc_mod_ctr_arr.min()
+        _max_ct = loc_mod_ctr_arr.max()
+
         plt.figure(figsize=fig_size)
         hists_grid = gridspec.GridSpec(loc_rows, loc_cols)
         pt_rng = np.arange(loc_mod_ctr_arr.shape[1])
@@ -415,6 +418,8 @@ class CPClassiA(CPOPTBase):
                 hist_ax.set_ylabel('Count')
             else:
                 hist_ax.set_yticklabels([])
+
+            hist_ax.set_ylim(_min_ct, _max_ct)
 
         for i in range(self.n_cps, tot_sub_plots):
             hist_ax = plt.subplot(hists_grid[rows_idxs[i], cols_idxs[i]])
