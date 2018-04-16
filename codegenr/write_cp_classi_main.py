@@ -68,7 +68,6 @@ def write_cp_classi_main_lines(params_dict):
     #==========================================================================
     pyxcd.w('import numpy as np')
     pyxcd.w('cimport numpy as np')
-    pyxcd.w('from cython.parallel import prange')
     pyxcd.els()
     pyxcd.w(('from .gen_mod_cp_rules cimport '
              '(gen_cp_rules, mod_cp_rules)'))
@@ -124,7 +123,9 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.ind()
     pyxcd.w('# ulongs')
     pyxcd.w('Py_ssize_t i, j, k, l')
-    pyxcd.w('DT_UL n_cps, n_pts, n_time_steps, n_fuzz_nos, n_cpus, msgs, n_max = 0')
+    pyxcd.w('int no_steep_anom_flag, gen_mod_cp_err_flag = 0, thresh_steep = 1')
+    pyxcd.w('DT_UL n_cps, n_pts, n_time_steps, n_fuzz_nos, msgs, n_max = 0')
+    pyxcd.w('DT_UL n_cpus, n_cpus_obj, n_cpus_mem')
     pyxcd.w('DT_UL curr_n_iter, curr_m_iter, max_m_iters, max_n_iters')
     pyxcd.w('DT_UL best_accept_iters, accept_iters, rand_acc_iters, reject_iters')
     pyxcd.w('DT_UL rand_k, rand_i, rand_v, old_v_i_k, run_type, no_cp_val')
@@ -133,6 +134,7 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('DT_UL max_temp_adj_atmps, curr_temp_adj_iter = 0')
     pyxcd.w('DT_UL max_iters_wo_chng, curr_iters_wo_chng = 0, temp_adjed = 0')
     pyxcd.w('DT_UL temp_adj_iters, min_acc_rate, max_acc_rate')
+    pyxcd.w('DT_UL n_anom_rows, n_anoms_cols, curr_anom_row, curr_anom_col')
     pyxcd.els()
 
     pyxcd.w('# doubles')
@@ -162,6 +164,7 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('np.ndarray[DT_UL_NP_t, ndim=2, mode=\'c\'] best_cp_rules_idx_ctr')
     pyxcd.w('np.ndarray[DT_UL_NP_t, ndim=2, mode=\'c\'] loc_mod_ctr')
     pyxcd.w('np.ndarray[np.uint32_t, ndim=2, mode=\'c\'] rands_rec_arr')
+    pyxcd.w('np.ndarray[np.uint8_t, ndim=2, mode=\'c\'] anom_crnr_flags_arr')
     pyxcd.els()
 
     pyxcd.w('# 2D double arrays')
@@ -358,7 +361,8 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('temp_red_alpha = args_dict[\'temp_red_alpha\']')
     pyxcd.w('max_m_iters = args_dict[\'max_m_iters\']')
     pyxcd.w('max_n_iters = args_dict[\'max_n_iters\']')
-    pyxcd.w('n_cpus = args_dict[\'n_cpus\']')
+    pyxcd.w('n_cpus_obj = args_dict[\'n_cpus_obj\']')
+    pyxcd.w('n_cpus_mem = args_dict[\'n_cpus_mem\']')
     pyxcd.w('max_idxs_ct = args_dict[\'max_idxs_ct\']')
     pyxcd.w('max_iters_wo_chng = args_dict[\'max_iters_wo_chng\']')
 
@@ -369,6 +373,13 @@ def write_cp_classi_main_lines(params_dict):
 
     pyxcd.w('lo_freq_pen_wt = args_dict[\'lo_freq_pen_wt\']')
     pyxcd.w('min_freq = args_dict[\'min_freq\']')
+
+    pyxcd.w('no_steep_anom_flag = <int> args_dict[\'no_steep_anom_flag\']')
+    pyxcd.w('n_anom_rows = <DT_UL> args_dict[\'n_anom_rows\']')
+    pyxcd.w('n_anom_cols = <DT_UL> args_dict[\'n_anom_cols\']')
+    pyxcd.els()
+
+    pyxcd.w('n_cpus = <DT_UL> max(n_cpus_obj, n_cpus_mem)')
     pyxcd.els()
 
     pyxcd.w('if \'msgs\' in args_dict:')
@@ -420,6 +431,8 @@ def write_cp_classi_main_lines(params_dict):
 
     pyxcd.w('print(\'n_cps:\', n_cps)')
     pyxcd.w('print(\'n_cpus:\', n_cpus)')
+    pyxcd.w('print(\'n_cpus_obj:\', n_cpus_obj)')
+    pyxcd.w('print(\'n_cpus_mem:\', n_cpus_mem)')
     pyxcd.w('print(\'no_cp_val:\', no_cp_val)')
     pyxcd.w('print(\'p_l:\', p_l)')
     pyxcd.w(r"print('fuzz_nos_arr:\n', fuzz_nos_arr)")
@@ -441,6 +454,9 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('print(\'lo_freq_pen_wt:\', lo_freq_pen_wt)')
     pyxcd.w('print(\'min_freq:\', min_freq)')
     pyxcd.w('print(\'n_max:\', n_max)')
+    pyxcd.w('print(\'no_steep_anom_flag:\', no_steep_anom_flag)')
+    pyxcd.w('print(\'n_anom_rows:\', n_anom_rows)')
+    pyxcd.w('print(\'n_anom_cols:\', n_anom_cols)')
 
     if obj_1_flag or obj_3_flag:
         pyxcd.w('print(\'in_ppt_arr shape: (%d, %d)\' % '
@@ -458,10 +474,10 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('n_time_steps = slp_anom.shape[0]')
     pyxcd.els()
 
-    pyxcd.w('if max_idxs_ct > (n_pts / n_fuzz_nos):')
+    pyxcd.w('if max_idxs_ct > <DT_UL>(n_pts / n_fuzz_nos):')
     pyxcd.ind()
     pyxcd.w('max_idxs_ct = <DT_UL> max(1, (n_pts / n_fuzz_nos))')
-    pyxcd.w(r'print(("\n\n\n\n######### max_idxs_ct reset to %d!#########\n\n\n\n" % max_idxs_ct))')
+    pyxcd.w(r'print(("\n######### max_idxs_ct reset to %d!#########\n" % max_idxs_ct))')
     pyxcd.ded()
     pyxcd.w('curr_n_iter = 0')
     pyxcd.w('curr_m_iter = 0')
@@ -517,16 +533,73 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('loc_mod_ctr = np.zeros((n_cps, n_pts), dtype=DT_UL_NP)')
     pyxcd.els()
 
+    pyxcd.w('anom_crnr_flags_arr = np.ones((n_pts, 8), dtype=np.uint8)')
+    pyxcd.w('if no_steep_anom_flag:')
+    pyxcd.ind()
+    pyxcd.w('for k in range(n_pts):')
+    pyxcd.ind()
+    pyxcd.w('curr_anom_row = <DT_UL> (k / n_anom_cols)')
+    pyxcd.w('curr_anom_col = <DT_UL> (k % n_anom_cols)')
+    pyxcd.els()
+
+    pyxcd.w('if curr_anom_row == 0:')
+    pyxcd.ind()
+    pyxcd.w('anom_crnr_flags_arr[k, 0] = 0')
+    pyxcd.w('anom_crnr_flags_arr[k, 1] = 0')
+    pyxcd.w('anom_crnr_flags_arr[k, 2] = 0')
+    pyxcd.ded()
+
+    pyxcd.w('if curr_anom_col == 0:')
+    pyxcd.ind()
+    pyxcd.w('anom_crnr_flags_arr[k, 0] = 0')
+    pyxcd.w('anom_crnr_flags_arr[k, 3] = 0')
+    pyxcd.w('anom_crnr_flags_arr[k, 5] = 0')
+    pyxcd.ded()
+
+    pyxcd.w('if curr_anom_row == (n_anom_rows - 1):')
+    pyxcd.ind()
+    pyxcd.w('anom_crnr_flags_arr[k, 5] = 0')
+    pyxcd.w('anom_crnr_flags_arr[k, 6] = 0')
+    pyxcd.w('anom_crnr_flags_arr[k, 7] = 0')
+    pyxcd.ded()
+
+    pyxcd.w('if curr_anom_col == (n_anom_cols - 1):')
+    pyxcd.ind()
+    pyxcd.w('anom_crnr_flags_arr[k, 2] = 0')
+    pyxcd.w('anom_crnr_flags_arr[k, 4] = 0')
+    pyxcd.w('anom_crnr_flags_arr[k, 7] = 0')
+    pyxcd.ded(lev=3)
+
+    pyxcd.els()
     pyxcd.w('gen_cp_rules(')
     pyxcd.ind()
     pyxcd.w('cp_rules,')
     pyxcd.w('cp_rules_idx_ctr,')
+    pyxcd.w('anom_crnr_flags_arr,')
+    pyxcd.w('no_steep_anom_flag,')
     pyxcd.w('max_idxs_ct,')
     pyxcd.w('n_cps,')
     pyxcd.w('n_pts,')
     pyxcd.w('n_fuzz_nos,')
-    pyxcd.w('n_cpus)')
+    pyxcd.w('n_cpus,')
+    pyxcd.w('n_anom_cols,')
+    pyxcd.w('thresh_steep,')
+    pyxcd.w('&gen_mod_cp_err_flag)')
     pyxcd.ded()
+
+    pyxcd.w('if gen_mod_cp_err_flag:')
+    pyxcd.ind()
+    pyxcd.w('raise RuntimeError(\'gen_cp_rules failed. '
+            'Choose a lower value for max_idxs_ct!\')')
+    pyxcd.ded()
+
+#     pyxcd.w('for i in range(n_cps):')
+#     pyxcd.ind()
+#     pyxcd.w('print(cp_rules[i, :].reshape(n_anom_rows, n_anom_cols))')
+#     pyxcd.w(r'print(cp_rules_idx_ctr[i, :], "\n")')
+#     pyxcd.ded()
+    # pyxcd.w('raise Exception')
+
     pyxcd.w('best_cps = cp_rules.copy()')
     pyxcd.w('best_sel_cps = np.zeros(n_time_steps, dtype=DT_UL_NP)')
     pyxcd.els()
@@ -564,7 +637,7 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.els()
 
     pyxcd.w('# an array to save all the randomly generated integers')
-    pyxcd.w('rands_rec_arr = np.full((max_n_iters + 1, 3), 9999, dtype=np.uint32)')
+    pyxcd.w('rands_rec_arr = np.full((max_n_iters + 5, 3), 9999, dtype=np.uint32)')
     pyxcd.els()
 
     pyxcd.w('# initialize the obj. ftn. variables')
@@ -748,6 +821,8 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('cp_rules,')
     pyxcd.w('cp_rules_idx_ctr,')
     pyxcd.w('loc_mod_ctr,')
+    pyxcd.w('anom_crnr_flags_arr,')
+    pyxcd.w('no_steep_anom_flag,')
     pyxcd.w('max_idxs_ct,')
     pyxcd.w('n_cps,')
     pyxcd.w('n_pts,')
@@ -756,28 +831,20 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('&rand_k,')
     pyxcd.w('&rand_i,')
     pyxcd.w('&rand_v,')
-    pyxcd.w('&old_v_i_k)')
+    pyxcd.w('&old_v_i_k,')
+    pyxcd.w('n_anom_cols,')
+    pyxcd.w('thresh_steep,')
+    pyxcd.w('&gen_mod_cp_err_flag)')
+    pyxcd.ded()
+
+    pyxcd.w('if gen_mod_cp_err_flag:')
+    pyxcd.ind()
+    pyxcd.w('raise RuntimeError(\'mod_cp_rules failed. '
+            'Choose a lower value for max_idxs_ct!\')')
     pyxcd.ded()
 
     pyxcd.w('if run_type == 1:')
     pyxcd.ind()
-#     pyxcd.w('for i in prange(n_time_steps, nogil=True, schedule=\'dynamic\', '
-#             'num_threads=n_cpus):')
-#     pyxcd.ind()
-#     pyxcd.w('for j in range(n_cps):')
-#     pyxcd.ind()
-#     pyxcd.w('for k in range(n_pts):')
-#     pyxcd.ind()
-#     pyxcd.w('mu_i_k_arr[i, j, k] = 0.0')
-#     pyxcd.ded()
-#     pyxcd.w('dofs_arr[i, j] = 0.0')
-#     pyxcd.ded()
-#
-#     pyxcd.w('sel_cps[i] = 0')
-#     pyxcd.w('old_sel_cps[i] = no_cp_val')
-#     pyxcd.w('chnge_steps[i] = 0')
-#     pyxcd.ded()
-
     pyxcd.w('new_iters_ct += 1')
     pyxcd.ded()
 
@@ -807,7 +874,7 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('chnge_steps,')
     pyxcd.w('no_cp_val,')
     pyxcd.w('p_l,')
-    pyxcd.w('n_cpus,')
+    pyxcd.w('n_cpus_mem,')
     pyxcd.w('n_time_steps,')
     pyxcd.w('n_pts,')
     pyxcd.w('n_cps,')
@@ -834,7 +901,7 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('chnge_steps,')
     pyxcd.w('no_cp_val,')
     pyxcd.w('p_l,')
-    pyxcd.w('n_cpus,')
+    pyxcd.w('n_cpus_mem,')
     pyxcd.w('n_time_steps,')
     pyxcd.w('n_cps,')
     pyxcd.w('n_fuzz_nos)')
@@ -860,7 +927,7 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('chnge_steps,')
     pyxcd.w('no_cp_val,')
     pyxcd.w('p_l,')
-    pyxcd.w('n_cpus,')
+    pyxcd.w('n_cpus_mem,')
     pyxcd.w('n_time_steps,')
     pyxcd.w('n_cps,')
     pyxcd.w('n_fuzz_nos)')
@@ -933,13 +1000,10 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('sel_cps,')
     pyxcd.w('lo_freq_pen_wt,')
     pyxcd.w('min_freq,')
-    pyxcd.w('n_cpus,')
+    pyxcd.w('n_cpus_obj,')
     pyxcd.w('n_cps,')
     pyxcd.w('n_max,')
-    pyxcd.w('n_time_steps,')
-
-    pyxcd.w(')')
-
+    pyxcd.w('n_time_steps)')
     pyxcd.ded()
 
     pyxcd.w('run_type = 2')
@@ -1013,11 +1077,10 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('chnge_steps,')
     pyxcd.w('lo_freq_pen_wt,')
     pyxcd.w('min_freq,')
-    pyxcd.w('n_cpus,')
+    pyxcd.w('n_cpus_obj,')
     pyxcd.w('n_cps,')
     pyxcd.w('n_max,')
-    pyxcd.w('n_time_steps,')
-    pyxcd.w(')')
+    pyxcd.w('n_time_steps)')
     pyxcd.ded(lev=2)
 
     pyxcd.w('#print(curr_m_iter, curr_n_iter, run_type, round(curr_obj_val, 2), round(pre_obj_val, 2))')
@@ -1216,36 +1279,6 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('curr_n_iter = 0')
     pyxcd.w('curr_m_iter = 0')
     pyxcd.w('best_obj_val = -np.inf')
-#     pyxcd.w('pre_obj_val = best_obj_val')
-#
-#     pyxcd.w('best_accept_iters = 0')
-#     pyxcd.w('accept_iters = 0')
-#     pyxcd.w('rand_acc_iters = 0')
-#     pyxcd.w('reject_iters = 0')
-#
-#     pyxcd.w('new_iters_ct = 0')
-#     pyxcd.w('update_iters_ct = 0')
-#     pyxcd.w('rollback_iters_ct = 0')
-#
-#     pyxcd.w('rand_k = n_cps - 1')
-#     pyxcd.w('rand_i = n_pts - 1')
-#     pyxcd.w('rand_v = n_fuzz_nos')
-#     pyxcd.w('old_v_i_k = n_fuzz_nos')
-#
-#     pyxcd.w('curr_iters_wo_chng = 0')
-#
-#     pyxcd.w('curr_temp_adj_iter += 1')
-#
-#     pyxcd.w('gen_cp_rules(')
-#     pyxcd.ind()
-#     pyxcd.w('cp_rules,')
-#     pyxcd.w('cp_rules_idx_ctr,')
-#     pyxcd.w('max_idxs_ct,')
-#     pyxcd.w('n_cps,')
-#     pyxcd.w('n_pts,')
-#     pyxcd.w('n_fuzz_nos,')
-#     pyxcd.w('n_cpus)')
-#     pyxcd.ded()
 
     pyxcd.w('continue')
     pyxcd.ded()
@@ -1253,7 +1286,7 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.ind()
     pyxcd.w('print(\'#######Could not converge to an acceptable annealing temperature in %d tries!#########\')')
     pyxcd.w('print(\'Terminating optimization....\')')
-    pyxcd.w('raise Exception')
+    pyxcd.w('raise RuntimeError')
     pyxcd.ded(lev=3)
 
     pyxcd.w('curr_obj_vals_list.append(curr_obj_val)')

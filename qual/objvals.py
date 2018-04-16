@@ -23,7 +23,6 @@ class ObjVals(CPDataBase):
         super().__init__(msgs=msgs)
 
         self._cps_set_flag = False
-
         return
 
     def set_cps_arr(self, sel_cps_arr, n_cps):
@@ -32,7 +31,8 @@ class ObjVals(CPDataBase):
 
         assert isinstance(sel_cps_arr, np.ndarray)
         assert check_nans_finite(sel_cps_arr)
-        assert len(sel_cps_arr.shape) == 1
+        assert sel_cps_arr.ndim == 1
+        assert sel_cps_arr.shape[0]
 
         self.sel_cps_arr = np.array(sel_cps_arr, dtype=DT_UL_NP, order='C')
         self.n_cps = n_cps
@@ -83,11 +83,9 @@ class ObjVals(CPDataBase):
 
         assert isinstance(self.op_mp_memb_flag, bool)
         assert isinstance(self.op_mp_obj_ftn_flag, bool)
-
         return
 
     def _gen_obj_cyth_mods(self, force_compile=False):
-
         cyth_dir = Path(__file__).parents[1] / 'cyth'
 
         create_obj_cython_files(self.obj_1_flag,

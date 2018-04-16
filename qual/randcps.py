@@ -34,6 +34,9 @@ class RandCPsGen:
         self.cyth_cdivision = True
         self.cyth_language_level = 3
         self.cyth_infer_types = None
+
+        self.op_mp_memb_flag = True
+        self.op_mp_obj_ftn_flag = True
         return
 
     def set_cyth_flags(self,
@@ -53,7 +56,6 @@ class RandCPsGen:
         return
 
     def _gen_mod_cp_rules_cyth_mods(self, force_compile=False):
-
         cyth_dir = Path(__file__).parents[1] / 'cyth'
 
         gen_mod_cp_rules_cyth_files(self.cyth_nonecheck,
@@ -63,7 +65,9 @@ class RandCPsGen:
                                     self.cyth_infer_types,
                                     self.cyth_language_level,
                                     force_compile,
-                                    cyth_dir)
+                                    cyth_dir,
+                                    self.op_mp_memb_flag,
+                                    self.op_mp_obj_ftn_flag)
 
 #         raise Exception
         importlib.invalidate_caches()
@@ -80,6 +84,9 @@ class RandCPsGen:
                      no_cp_val,
                      fuzz_nos_arr,
                      anom,
+                     n_anom_rows,
+                     n_anom_cols,
+                     no_steep_anom_flag,
                      n_threads='auto',
                      force_compile=False):
 
@@ -104,14 +111,18 @@ class RandCPsGen:
 
         assert isinstance(fuzz_nos_arr, np.ndarray)
         assert check_nans_finite(fuzz_nos_arr)
-        assert fuzz_nos_arr.shape[0] > 0
+        assert fuzz_nos_arr.ndim == 2
+        assert fuzz_nos_arr.shape[0]
         assert fuzz_nos_arr.shape[1] == 3
 
         assert isinstance(anom, np.ndarray)
         assert check_nans_finite(anom)
-        assert len(anom.shape) == 2
-        assert anom.shape[0] > 0
-        assert anom.shape[1] > 0
+        assert anom.ndim == 2
+        assert anom.shape[0] and anom.shape[1]
+
+        assert isinstance(n_anom_rows, int)
+        assert isinstance(n_anom_cols, int)
+#         assert (n_anom_rows * n_anom_cols) == anom.shape[1]
 
         assert isinstance(n_threads, (int, str))
 
@@ -133,7 +144,11 @@ class RandCPsGen:
         gen_dict['p_l'] = p_l
         gen_dict['fuzz_nos_arr'] = fuzz_nos_arr
         gen_dict['anom'] = anom
-    
+
+        gen_dict['no_steep_anom_flag'] = no_steep_anom_flag
+        gen_dict['n_anom_rows'] = n_anom_rows
+        gen_dict['n_anom_cols'] = n_anom_cols
+
         self.gen_dict = gen_cps_ftn(gen_dict)
         self.mult_cp_rules = self.gen_dict['mult_cp_rules']
         self.mult_sel_cps = self.gen_dict['mult_sel_cps']
@@ -142,43 +157,66 @@ class RandCPsGen:
 
 
 class RandCPsPerfComp(CPAssignA, RandCPsGen, ObjVals):
-
     def __init__(self):
-#         super().__init__()
         CPAssignA.__init__(self)
         RandCPsGen.__init__(self)
         ObjVals.__init__(self)
 
         self._mult_cp_rules_set_flag = False
-        self._mult_sel_cps_arr_set_flag = False
-        self._mult_obj_calced = False
-        self._mult_wett_calced = False
 
-        self.obj_vals_arr = None
+        self._mult_sel_cps_arr_set_flag = False
+        self._mult_obj_cmptd = False
+        self._mult_wett_cmptd = False
+
+        self._sim_sel_cps_arr_set_flag = False
+        self._sim_obj_cmptd = False
+        self._sim_wett_cmptd = False
+
+        self._curr_cmpt_var = None
+
+        self.mult_cps_obj_vals_arr = None
+        self.sim_sel_cps_obj_vals_arr = None
         return
 
     def set_mult_cp_rules(self, mult_cp_rules):
         assert isinstance(mult_cp_rules, np.ndarray)
         assert check_nans_finite(mult_cp_rules)
-        assert len(mult_cp_rules.shape) == 3
-
+        assert mult_cp_rules.ndim == 3
+        assert all(mult_cp_rules.shape)
+        
         self.mult_cp_rules = np.array(mult_cp_rules, dtype=DT_UL_NP, order='C')
         self.n_gens = self.mult_cp_rules.shape[0]
-
         self._mult_cp_rules_set_flag = True
         return
 
     def set_mult_sel_cps_arr(self, mult_sel_cps_arr):
         assert isinstance(mult_sel_cps_arr, np.ndarray)
         assert check_nans_finite(mult_sel_cps_arr)
-        assert len(mult_sel_cps_arr.shape) == 2
+        assert mult_sel_cps_arr.ndim == 2
+        assert all(mult_sel_cps_arr.shape)
 
-        self.mult_sel_cps_arr = np.array(mult_sel_cps_arr, dtype=DT_UL_NP, order='C')
-
+        self.mult_sel_cps_arr = np.array(mult_sel_cps_arr,
+                                         dtype=DT_UL_NP,
+                                         order='C')
         self._mult_sel_cps_arr_set_flag = True
         return
 
+    def set_sim_sel_cps_arr(self, sim_sel_cps_arr):
+        assert isinstance(sim_sel_cps_arr, np.ndarray)
+        assert check_nans_finite(sim_sel_cps_arr)
+        assert sim_sel_cps_arr.ndim == 2
+        assert all(sim_sel_cps_arr.shape)
+
+        self.sim_sel_cps_arr = np.array(sim_sel_cps_arr,
+                                        dtype=DT_UL_NP,
+                                        order='C')
+        self.n_sims = sim_sel_cps_arr.shape[0]
+        self._sim_sel_cps_arr_set_flag = True
+        return
+
     def _verify_obj_vals_input(self):
+        assert self._cp_prms_set_flag
+
         assert any((self.obj_1_flag,
                     self.obj_2_flag,
                     self.obj_3_flag,
@@ -188,8 +226,6 @@ class RandCPsPerfComp(CPAssignA, RandCPsGen, ObjVals):
                     self.obj_7_flag,
                     self.obj_8_flag))
 
-        assert self._mult_cp_rules_set_flag
-        assert self._mult_sel_cps_arr_set_flag
         self.obj_ftn_wts_arr = np.zeros(self._n_obj_ftns,
                                         dtype=DT_D_NP,
                                         order='C')
@@ -246,13 +282,20 @@ class RandCPsPerfComp(CPAssignA, RandCPsGen, ObjVals):
         
         assert isinstance(self.op_mp_obj_ftn_flag, bool)
 
-        if max(in_max_cols_list) < (2 * self.n_threads):
+        max_cols = max(in_max_cols_list)
+
+        if max_cols < (self.n_threads):
+            self._n_threads_obj = 1
             self.op_mp_obj_ftn_flag = False
             if self.msgs:
                 print('####op_mp_obj_ftn_flag set to False!')
-        return
 
-    def cmpt_mult_obj_val(self, n_threads='auto', force_compile=False):
+        return
+    
+    def _prep_mult_sim_obj_vals_input(self,
+                                      sel_cps,
+                                      n_threads='auto',
+                                      force_compile=False):
         assert isinstance(n_threads, (int, str))
 
         if n_threads == 'auto':
@@ -266,12 +309,10 @@ class RandCPsPerfComp(CPAssignA, RandCPsGen, ObjVals):
 
         obj_ftn = self._gen_obj_cyth_mods(force_compile)
 
-#         raise Exception
-
         obj_dict = {}
 
         obj_dict['obj_ftn_wts_arr'] = self.obj_ftn_wts_arr
-        obj_dict['mult_sel_cps'] = self.mult_sel_cps_arr
+        obj_dict['mult_sel_cps'] = sel_cps
 
         if self.obj_1_flag:
             obj_dict['o_1_ppt_thresh_arr'] = self.o_1_ppt_thresh_arr
@@ -316,46 +357,135 @@ class RandCPsPerfComp(CPAssignA, RandCPsGen, ObjVals):
         self.obj_dict = obj_ftn(obj_dict)
         _stop = timeit.default_timer()
 
-        self.obj_vals_arr = self.obj_dict['obj_vals_arr']
-
         if self.msgs:
             print('Took %0.1f seconds to compute obj. val.' % (_stop - _strt))
-        self._mult_obj_calced = True
+
         return
 
-    def cmpt_wettnesses(self, in_ppt_arr):
+    def cmpt_mult_obj_val(self, n_threads='auto', force_compile=False):
         assert self._mult_cp_rules_set_flag
         assert self._mult_sel_cps_arr_set_flag
+        self._curr_cmpt_var = 'mult'
+
+        self._prep_mult_sim_obj_vals_input(self.mult_sel_cps_arr,
+                                           n_threads=n_threads,
+                                           force_compile=force_compile)
+
+        self.mult_cps_obj_vals_arr = self.obj_dict['obj_vals_arr']
+        self._mult_obj_cmptd = True
+        return
+
+    def cmpt_sim_obj_val(self, n_threads='auto', force_compile=False):
+        assert self._sim_sel_cps_arr_set_flag
+
+        self._curr_cmpt_var = 'sim'
+        self._prep_mult_sim_obj_vals_input(self.sim_sel_cps_arr,
+                                           n_threads=n_threads,
+                                           force_compile=force_compile)
+
+        self.sim_sel_cps_obj_vals_arr = self.obj_dict['obj_vals_arr']
+        self._sim_obj_cmptd = True
+        return
+
+    def cmpt_mult_wettnesses(self, in_ppt_arr):
+        self._curr_cmpt_var = 'mult'
+        self._cmpt_wettnesses(in_ppt_arr)
+        return
+    
+    def cmpt_sim_wettnesses(self, in_ppt_arr):
+        self._curr_cmpt_var = 'sim'
+        self._cmpt_wettnesses(in_ppt_arr)
+        return
+
+    def _cmpt_wettnesses(self, in_ppt_arr):
+        assert self._curr_cmpt_var is not None
+
+        if self._curr_cmpt_var == 'mult':
+            assert self._mult_cp_rules_set_flag
+            assert self._mult_sel_cps_arr_set_flag
+        elif self._curr_cmpt_var == 'sim':
+            assert self._sim_sel_cps_arr_set_flag
+        else:
+            raise ValueError('Unknown _curr_cmpt_var: %s' %
+                             str(self._curr_cmpt_var))
 
         wettness = WettnessIndex(False)
         wettness.set_ppt_arr(in_ppt_arr)
         
-        self.mult_cp_rules_sorted = np.zeros_like(self.mult_cp_rules)
-        self.mean_wett_arrs = np.zeros((self.n_gens, self.n_cps),
-                                       dtype=DT_D_NP,
-                                       order='C')
+        if self._curr_cmpt_var == 'mult':
+            self.mult_cp_rules_sorted = np.zeros_like(self.mult_cp_rules)
+            self.mean_mult_wett_arrs = np.zeros((self.n_gens, self.n_cps),
+                                           dtype=DT_D_NP,
+                                           order='C')
+            for i in range(self.n_gens):
+                wettness.set_cps_arr(self.mult_sel_cps_arr[i], self.n_cps)
+                wettness.cmpt_wettness_idx()
+                wettness.reorder_cp_rules(self.mult_cp_rules[i])
+                self.mult_cp_rules_sorted[i] = wettness.cp_rules_sorted
 
-        for i in range(self.n_gens):
-            wettness.set_cps_arr(self.mult_sel_cps_arr[i], self.n_cps)
-            wettness.cmpt_wettness_idx()
-            wettness.reorder_cp_rules(self.mult_cp_rules[i])
-            self.mult_cp_rules_sorted[i] = wettness.cp_rules_sorted
+                _mean_wett_arr = wettness.mean_cp_wett_sorted_arr
+                self.mean_mult_wett_arrs[i] = _mean_wett_arr
 
-            _mean_wett_arr = wettness.mean_cp_wett_sorted_arr
-            self.mean_wett_arrs[i] = _mean_wett_arr
+            self._mult_wett_cmptd = True
+        elif self._curr_cmpt_var == 'sim':
+            self.mean_sim_wett_arrs = np.zeros((self.n_sims, self.n_cps),
+                                               dtype=DT_D_NP,
+                                               order='C')
 
-        self._mult_wett_calced = True
+            for i in range(self.n_sims):
+                wettness.set_cps_arr(self.sim_sel_cps_arr[i], self.n_cps)
+                wettness.cmpt_wettness_idx()
+
+                _mean_wett_arr = wettness.mean_cp_wett_arr
+                self.mean_sim_wett_arrs[i] = _mean_wett_arr
+
+            self._sim_wett_cmptd = True
         return
 
-    def compare_wettnesses(self,
-                           in_wettness_arr,
-                           out_fig_path,
-                           fig_size=(15, 10)):
-        assert self._mult_wett_calced
+    def compare_mult_wettnesses(self,
+                                in_wettness_arr,
+                                out_fig_path,
+                                fig_size=(15, 10)):
+        self._curr_cmpt_var = 'mult'
+        self._compare_wettnesses(in_wettness_arr,
+                                 out_fig_path,
+                                 fig_size)
+        return
+
+    def compare_sim_wettnesses(self,
+                                in_wettness_arr,
+                                out_fig_path,
+                                fig_size=(15, 10)):
+        self._curr_cmpt_var = 'sim'
+        self._compare_wettnesses(in_wettness_arr,
+                                 out_fig_path,
+                                 fig_size)
+        return
+
+    def _compare_wettnesses(self,
+                            in_wettness_arr,
+                            out_fig_path,
+                            fig_size=(15, 10)):
+
+        assert self._curr_cmpt_var is not None
+
+        if self._curr_cmpt_var == 'mult':
+            assert self._mult_wett_cmptd
+            _titl_lab = 'Random'
+            _n_gen_sim = self.n_gens
+            _mean_wett_arrs = self.mean_mult_wett_arrs
+        elif self._curr_cmpt_var == 'sim':
+            assert self._sim_wett_cmptd
+            _titl_lab = 'Simulated'
+            _n_gen_sim = self.n_sims
+            _mean_wett_arrs = self.mean_sim_wett_arrs
+        else:
+            raise ValueError('Unknown _curr_cmpt_var: %s' %
+                             str(self._curr_cmpt_var))
 
         assert isinstance(in_wettness_arr, np.ndarray)
         assert check_nans_finite(in_wettness_arr)
-        assert len(in_wettness_arr.shape) == 1
+        assert in_wettness_arr.ndim == 1
         assert in_wettness_arr.shape[0] == self.n_cps
 
         out_fig_path = Path(out_fig_path)
@@ -363,8 +493,7 @@ class RandCPsPerfComp(CPAssignA, RandCPsGen, ObjVals):
 
         assert isinstance(fig_size, (tuple, list))
         assert len(fig_size) == 2
-        assert fig_size[0] > 0
-        assert fig_size[1] > 0
+        assert all(fig_size)
 
         n_cps_rng = list(range(self.n_cps))
         plt.figure(figsize=fig_size)
@@ -372,37 +501,70 @@ class RandCPsPerfComp(CPAssignA, RandCPsGen, ObjVals):
         box_plots_list = []
         wett_pts_list = []
         for i in range(self.n_cps):
-            _idxs = ~np.isnan(self.mean_wett_arrs[:, i])
-            box_plots_list.append(self.mean_wett_arrs[:, i][_idxs])
+            _idxs = ~np.isnan(_mean_wett_arrs[:, i])
+            box_plots_list.append(_mean_wett_arrs[:, i][_idxs])
             wett_pts_list.append(_idxs.sum())
-
-#             print(i,
-#                   self.mean_wett_arrs[:, i][_idxs],
-#                   np.nanmin(self.mean_wett_arrs[:, i]),
-#                   np.nanmax(self.mean_wett_arrs[:, i]))
 
         plt.boxplot(box_plots_list, positions=n_cps_rng)
         plt.scatter(n_cps_rng, in_wettness_arr, label='calibrated')
 
-        plt.ylim(0, 1.1 * max(np.nanmax(self.mean_wett_arrs),
+        plt.ylim(0, 1.1 * max(np.nanmax(_mean_wett_arrs),
                               in_wettness_arr.max()))
 
         xtick_labs = ['%d' % (n_cps_rng[i]) for i in range(self.n_cps)]
         plt.xlabel('CP')
         plt.ylabel('Wettness Index')
         plt.xticks(n_cps_rng, xtick_labs)
-        plt.title('Calibrated vs. Random (n=%d) CPs comparison' % self.n_gens)
+        plt.title('Calibrated vs. %s (n=%d) CPs comparison'
+                  % (_titl_lab, _n_gen_sim))
         plt.grid()
         plt.legend()
         plt.savefig(str(out_fig_path), bbox_inches='tight')
         plt.close()
         return
 
-    def compare_obj_vals(self,
-                         in_obj_val,
-                         out_fig_path,
-                         fig_size=(15, 10)):
-        assert self._mult_obj_calced
+    def compare_mult_obj_vals(self,
+                              in_obj_val,
+                              out_fig_path,
+                              fig_size=(15, 10)):
+
+        self._curr_cmpt_var = 'mult'
+        self._compare_obj_vals(in_obj_val,
+                               out_fig_path,
+                               fig_size)
+        return
+
+    def compare_sim_obj_vals(self,
+                            in_obj_val,
+                            out_fig_path,
+                            fig_size=(15, 10)):
+
+        self._curr_cmpt_var = 'sim'
+        self._compare_obj_vals(in_obj_val,
+                               out_fig_path,
+                               fig_size)
+        return
+
+    def _compare_obj_vals(self,
+                          in_obj_val,
+                          out_fig_path,
+                          fig_size=(15, 10)):
+
+        assert self._curr_cmpt_var is not None
+
+        if self._curr_cmpt_var == 'mult':
+            assert self._mult_obj_cmptd
+            _titl_lab = 'Random'
+            _n_gen_sim = self.n_gens
+            obj_vals_arr = self.mult_cps_obj_vals_arr
+        elif self._curr_cmpt_var == 'sim':
+            assert self._sim_obj_cmptd
+            _titl_lab = 'Simulated'
+            _n_gen_sim = self.n_sims
+            obj_vals_arr = self.sim_sel_cps_obj_vals_arr
+        else:
+            raise ValueError('Unknown _curr_cmpt_var: %s' %
+                             str(self._curr_cmpt_var))
 
         assert isinstance(in_obj_val, float)
         assert check_nans_finite(in_obj_val)
@@ -412,25 +574,29 @@ class RandCPsPerfComp(CPAssignA, RandCPsGen, ObjVals):
 
         assert isinstance(fig_size, (tuple, list))
         assert len(fig_size) == 2
-        assert fig_size[0] > 0
-        assert fig_size[1] > 0
+        assert all(fig_size)
 
-        sorted_obj_vals = np.sort(self.obj_vals_arr)
-        probs = np.arange(1, self.n_gens + 1) / (self.n_gens + 1)
+        sorted_obj_vals = np.sort(obj_vals_arr)
+        probs = np.arange(1, _n_gen_sim + 1) / (_n_gen_sim + 1)
 
         obj_val_idx = np.searchsorted(sorted_obj_vals, in_obj_val)
-        if obj_val_idx == self.n_gens:
+        if obj_val_idx == _n_gen_sim:
             interp_prob = 1
         else:
             interp_prob = probs[obj_val_idx]
 
         plt.figure(figsize=fig_size)
-        plt.plot(sorted_obj_vals, probs, marker='o', color='b', label='Random')
+        plt.plot(sorted_obj_vals,
+                 probs,
+                 marker='o',
+                 color='b',
+                 label=_titl_lab)
         plt.scatter(in_obj_val, interp_prob, color='k', label='Calibrated')
         plt.ylim(0, 1.05)
         plt.xlabel('Objective function value')
         plt.ylabel('Probability')
-        plt.title('Calibrated vs. Random (n=%d) CPs comparison' % self.n_gens)
+        plt.title('Calibrated vs. %s (n=%d) CPs comparison'
+                  % (_titl_lab, _n_gen_sim))
         plt.legend()
         plt.grid()
 

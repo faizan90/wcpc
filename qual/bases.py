@@ -10,7 +10,6 @@ from ..alg_dtypes import DT_D_NP, DT_UL_NP
 
 
 class QualBases:
-
     def __init__(self, msgs=True):
         assert isinstance(msgs, (int, bool))
 
@@ -23,15 +22,13 @@ class QualBases:
     def set_ppt_arr(self, ppt_arr):
         assert isinstance(ppt_arr, np.ndarray)
         assert check_nans_finite(ppt_arr)
-        assert len(ppt_arr.shape) == 2
+        assert ppt_arr.ndim == 2
+        assert all(ppt_arr.shape)
         assert np.all(ppt_arr >= 0)
 
         self.ppt_arr = np.array(ppt_arr, dtype=DT_D_NP, order='C')
         self.n_ppt_cols = ppt_arr.shape[1]
         self.n_time_steps = ppt_arr.shape[0]
-
-        assert self.n_ppt_cols > 0
-        assert self.n_time_steps > 0
 
         self._ppt_set_flag = True
         return
@@ -42,7 +39,8 @@ class QualBases:
 
         assert isinstance(sel_cps_arr, np.ndarray)
         assert check_nans_finite(sel_cps_arr)
-        assert len(sel_cps_arr.shape) == 1
+        assert sel_cps_arr.ndim == 1
+        assert sel_cps_arr.shape[0]
 
         self.sel_cps_arr = np.array(sel_cps_arr, dtype=DT_UL_NP, order='C')
         self.n_cps = n_cps

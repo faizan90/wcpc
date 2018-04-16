@@ -6,7 +6,6 @@
 
 import numpy as np
 cimport numpy as np
-from cython.parallel import prange
 
 from .gen_mod_cp_rules cimport gen_cp_rules
 from .memb_ftns cimport calc_membs_dof_cps
@@ -26,9 +25,12 @@ cpdef get_rand_cp_rules(dict args_dict):
     cdef:
         Py_ssize_t i, j
 
+        int no_steep_anom_flag, gen_mod_cp_err_flag = 0, thresh_steep = 1
+        
         # ulongs
         DT_UL max_idxs_ct, n_gens, n_cps, n_pts, n_fuzz_nos, n_cpus, msgs
         DT_UL curr_gen = 0, no_cp_val, cp_exists_sum
+        DT_UL n_anom_rows, n_anoms_cols, curr_anom_row, curr_anom_col
 
         # doubles for obj. ftns.
         DT_D p_l
@@ -40,7 +42,8 @@ cpdef get_rand_cp_rules(dict args_dict):
         # 2D ulong arrays
         np.ndarray[DT_UL_NP_t, ndim=2, mode='c'] cp_rules
         np.ndarray[DT_UL_NP_t, ndim=3, mode='c'] mult_cp_rules
-
+        np.ndarray[np.uint8_t, ndim=2, mode='c'] anom_crnr_flags_arr
+        
         # 2D double arrays
         np.ndarray[DT_D_NP_t, ndim=2, mode='c'] anom, fuzz_nos_arr
         np.ndarray[DT_D_NP_t, ndim=2, mode='c'] dofs_arr
@@ -61,6 +64,10 @@ cpdef get_rand_cp_rules(dict args_dict):
     fuzz_nos_arr = args_dict['fuzz_nos_arr']
     anom = args_dict['anom']
 
+    no_steep_anom_flag = <int> args_dict['no_steep_anom_flag']
+    n_anom_rows = <DT_UL> args_dict['n_anom_rows']
+    n_anom_cols = <DT_UL> args_dict['n_anom_cols']
+    
     n_fuzz_nos = fuzz_nos_arr.shape[0]
     n_pts = anom.shape[1]
     n_time_steps = anom.shape[0]
@@ -96,17 +103,53 @@ cpdef get_rand_cp_rules(dict args_dict):
 
     chnge_steps = np.zeros(n_time_steps, dtype=DT_UL_NP)
     dofs_arr = np.zeros((n_time_steps, n_cps), dtype=DT_D_NP)
-    
+
+    anom_crnr_flags_arr = np.ones((n_pts, 8), dtype=np.uint8)
+    if no_steep_anom_flag:
+        for k in range(n_pts):
+            curr_anom_row = <DT_UL> (k / n_anom_cols)
+            curr_anom_col = <DT_UL> (k % n_anom_cols)
+
+            if curr_anom_row == 0:
+                anom_crnr_flags_arr[k, 0] = 0
+                anom_crnr_flags_arr[k, 1] = 0
+                anom_crnr_flags_arr[k, 2] = 0
+
+            if curr_anom_col == 0:
+                anom_crnr_flags_arr[k, 0] = 0
+                anom_crnr_flags_arr[k, 3] = 0
+                anom_crnr_flags_arr[k, 5] = 0
+
+            if curr_anom_row == (n_anom_rows - 1):
+                anom_crnr_flags_arr[k, 5] = 0
+                anom_crnr_flags_arr[k, 6] = 0
+                anom_crnr_flags_arr[k, 7] = 0
+
+            if curr_anom_col == (n_anom_cols - 1):
+                anom_crnr_flags_arr[k, 2] = 0
+                anom_crnr_flags_arr[k, 4] = 0
+                anom_crnr_flags_arr[k, 7] = 0
+
     print('\n')
 
     while curr_gen < n_gens:
         gen_cp_rules(mult_cp_rules[curr_gen, :, :],
                      cp_rules_idx_ctr,
+                     anom_crnr_flags_arr,
+                     no_steep_anom_flag,
                      max_idxs_ct,
                      n_cps,
                      n_pts,
                      n_fuzz_nos,
-                     n_cpus)
+                     n_cpus,
+                     n_anom_cols,
+                     thresh_steep,
+                     &gen_mod_cp_err_flag)
+    
+        if gen_mod_cp_err_flag:
+            raise Exception('gen_cp_rules failed. '
+                            'Choose a lower value for max_idxs_ct!')
+
 
         calc_membs_dof_cps(
             mult_cp_rules[curr_gen, :],

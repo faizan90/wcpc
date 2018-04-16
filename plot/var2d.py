@@ -16,7 +16,6 @@ from ..misc.error_msgs import print_warning
 
 
 class PlotNC:
-
     def __init__(self, msgs=True):
         assert isinstance(msgs, (int, bool))
         self.msgs = msgs
@@ -75,7 +74,6 @@ class PlotNC:
         return
 
     def plot(self, fig_size=(13, 10)):
-
         assert self._vars_set_flag
 
         time_idxs = pd.DatetimeIndex(getattr(self.in_ds,
@@ -102,8 +100,8 @@ class PlotNC:
         x_coords_arr = getattr(plot_ds, self.x_coords_lab).values
         y_coords_arr = getattr(plot_ds, self.y_coords_lab).values
 
-        assert len(x_coords_arr.shape) == 1
-        assert len(y_coords_arr.shape) == 1
+        assert x_coords_arr.ndim == 1
+        assert y_coords_arr.ndim == 1
 
         times_arr = pd.DatetimeIndex(getattr(plot_ds, self.time_lab).values)
         n_steps = times_arr.shape[0]
@@ -112,6 +110,7 @@ class PlotNC:
 
         if self.msgs:
             print('\nPlotting %d steps...' % np.sum(time_idxs_bool))
+
         for i in range(n_steps):
             curr_var_ds = plot_ds[{self.time_lab: i}]
             curr_var_vals = getattr(curr_var_ds, self.var_lab).values
@@ -166,8 +165,8 @@ class PlotNC:
             if self.msgs:
                 print(_)
 
-            ax.set_title('Variable: \'%s\' at time %s' % (self.var_lab,
-                                                      str(_)))
+            ax.set_title('Variable: \'%s\' at time %s' %
+                         (self.var_lab, str(_)))
 
             out_fig_path = self.out_dir / out_fig_name
 

@@ -33,9 +33,8 @@ class PlotDOFs:
     
     def _verify_dof(self, dofs_arr):
         assert check_nans_finite(dofs_arr)
-        assert len(dofs_arr.shape) == 2, len(dofs_arr.shape)
-        assert dofs_arr.shape[0] > 0
-        assert dofs_arr.shape[1] > 0
+        assert dofs_arr.ndim == 2
+        assert dofs_arr.shape[0] and dofs_arr.shape[1]
 
         assert np.all(dofs_arr >= 0)
         assert np.all(dofs_arr <= 1)
@@ -140,7 +139,6 @@ class PlotDOFs:
                 curr_dofs = curr_dofs[:, i].copy()
                 curr_dofs.sort()
 
-#                 if self._calib_dofs_set_flag and (_lab != 'calib'):
                 if self._calib_dofs_set_flag:
                     ks_res = ks_part_ftn(sim_vals=curr_dofs)
                     ks_str += (', ' + _lab + ': ' + ks_res)
@@ -197,12 +195,8 @@ class PlotFuzzDOFs:
     def _verify_dof(self, dofs_arr):
         assert check_nans_finite(dofs_arr)
         assert dofs_arr.ndim == 3, dofs_arr.ndim
-        assert dofs_arr.shape[0] > 0
-        assert dofs_arr.shape[1] > 0
-        assert dofs_arr.shape[2] > 0
-
-        assert np.all(dofs_arr >= 0)
-        assert np.all(dofs_arr <= 1)
+        assert dofs_arr.shape[0] and dofs_arr.shape[1] and dofs_arr.shape[2]
+        assert np.all(dofs_arr >= 0) and np.all(dofs_arr <= 1)
 
         dofs_arr = dofs_arr.sum(axis=-1)
 
@@ -227,8 +221,9 @@ class PlotFuzzDOFs:
     def set_calib_dofs(self, dofs_arr):
 
         self.calib_dofs_arr = self._verify_dof(dofs_arr)
-        self.calib_probs_arr = (np.arange(1.0, self.calib_dofs_arr.shape[0] + 1) /
-                                (self.calib_dofs_arr.shape[0] + 1))
+        self.calib_probs_arr = (
+            (np.arange(1.0, self.calib_dofs_arr.shape[0] + 1) /
+             (self.calib_dofs_arr.shape[0] + 1)))
 
         self._probs_dofs_arr_dict[self._labs_list[0]] = (self.calib_dofs_arr,
                                                          self.calib_probs_arr)
@@ -239,8 +234,9 @@ class PlotFuzzDOFs:
     def set_valid_dofs(self, dofs_arr):
 
         self.valid_dofs_arr = self._verify_dof(dofs_arr)
-        self.valid_probs_arr = (np.arange(1.0, self.valid_dofs_arr.shape[0] + 1) /
-                                (self.valid_dofs_arr.shape[0] + 1))
+        self.valid_probs_arr = (
+            (np.arange(1.0, self.valid_dofs_arr.shape[0] + 1) /
+             (self.valid_dofs_arr.shape[0] + 1)))
 
         self._probs_dofs_arr_dict[self._labs_list[1]] = (self.valid_dofs_arr,
                                                          self.valid_probs_arr)
@@ -303,7 +299,6 @@ class PlotFuzzDOFs:
                 curr_dofs = curr_dofs[:, i].copy()
                 curr_dofs.sort()
 
-#                 if self._calib_dofs_set_flag and (_lab != 'calib'):
                 if self._calib_dofs_set_flag:
                     ks_res = ks_part_ftn(sim_vals=curr_dofs)
                     ks_str += (', ' + _lab + ': ' + ks_res)

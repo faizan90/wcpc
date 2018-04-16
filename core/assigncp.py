@@ -10,40 +10,95 @@ from psutil import cpu_count
 import numpy as np
 
 from .bases import CPOPTBase
-from ..alg_dtypes import DT_UL_NP
+from ..alg_dtypes import DT_UL_NP, DT_D_NP
 from ..misc.checks import check_nans_finite
 
 from ..codegenr.gen_all import create_justi_cython_files
 
 
 class CPAssignA(CPOPTBase):
-
     def __init__(self, msgs=True):
         super().__init__(msgs=msgs)
 
         self._cp_rules_set_flag = False
         self._mult_cp_rules_set_flag = False
         self._cps_assigned_flag = False
+        self._sim_sel_cps_dofs_arr_set_flag = False
         return
     
     def set_cp_rules(self, cp_rules):
         assert isinstance(cp_rules, np.ndarray)
         assert check_nans_finite(cp_rules)
-        assert len(cp_rules.shape) == 2
+        assert cp_rules.ndim == 2
 
         self.cp_rules = np.array(cp_rules, dtype=DT_UL_NP, order='C')
-
         self._cp_rules_set_flag = True
         return
 
     def set_mult_cp_rules(self, mult_cp_rules):
         assert isinstance(mult_cp_rules, np.ndarray)
         assert check_nans_finite(mult_cp_rules)
-        assert len(mult_cp_rules.shape) == 3
+        assert mult_cp_rules.ndim == 3
 
         self.mult_cp_rules = np.array(mult_cp_rules, dtype=DT_UL_NP, order='C')
-
         self._mult_cp_rules_set_flag = True
+        return
+
+    def set_sim_sel_cps_dofs_arr(self, dofs_arr):
+        assert isinstance(dofs_arr, np.ndarray)
+        assert check_nans_finite(dofs_arr)
+        assert dofs_arr.ndim == 2
+
+        self.sim_sel_cps_dofs_arr = np.array(dofs_arr,
+                                             dtype=DT_D_NP,
+                                             order='C')
+        self._sim_sel_cps_dofs_arr_set_flag = True
+        return
+
+    def sim_sel_cps(self, n_sel_cp_sims, n_nrst_cps, samp_type='unif'):
+        assert isinstance(n_sel_cp_sims, int)
+        assert n_sel_cp_sims > 0
+
+        assert isinstance(n_nrst_cps, int)
+        assert n_nrst_cps > 0
+
+        assert isinstance(samp_type, str)
+        assert (samp_type == 'unif')
+
+        self._verify_sim_input()
+
+        if not self._sim_sel_cps_dofs_arr_set_flag:
+            self.sim_sel_cps_dofs_arr = self.dofs_arr.copy(order='C')
+
+        n_time_steps = self.sim_sel_cps_dofs_arr.shape[0]
+        n_cps = self.sim_sel_cps_dofs_arr.shape[1]
+        assert n_nrst_cps <= n_cps
+
+        desc_dofs_sel_cps_arr = np.full((n_time_steps, n_cps),
+                                        9999,
+                                        dtype=DT_UL_NP)
+        _cps_rng = np.arange(n_cps)
+        for i in range(n_time_steps):
+            curr_sort_dof_idxs = (
+                np.argsort(self.sim_sel_cps_dofs_arr[i, :])[::-1])
+            desc_dofs_sel_cps_arr[i, :] = _cps_rng[curr_sort_dof_idxs]
+
+        sim_sel_shape = (n_sel_cp_sims, n_time_steps)
+        sim_sel_cps_arr = np.full(sim_sel_shape, 9999, dtype=DT_UL_NP)
+
+        _time_steps_idxs = np.arange(n_time_steps)
+        for i in range(n_sel_cp_sims):
+            rand_idxs_arr = np.random.randint(0, n_nrst_cps, n_time_steps)
+            sim_sel_cps_arr[i] = desc_dofs_sel_cps_arr[_time_steps_idxs,
+                                                       rand_idxs_arr]
+
+        self.desc_dofs_sel_cps_arr = desc_dofs_sel_cps_arr
+        self.sim_sel_cps_arr = sim_sel_cps_arr
+        return
+
+    def _verify_sim_input(self):
+        assert self._cp_prms_set_flag
+        assert (self._sim_sel_cps_dofs_arr_set_flag or self._cps_assigned_flag)
         return
 
     def _verify_input(self):
@@ -61,7 +116,6 @@ class CPAssignA(CPOPTBase):
         return
     
     def _gen_justi_cyth_mods(self, force_compile):
-
         cyth_dir = Path(__file__).parents[1] / 'cyth'
 
         create_justi_cython_files(self.cyth_nonecheck,
@@ -138,7 +192,7 @@ class CPAssignA(CPOPTBase):
         assign_dict['n_cpus'] = n_threads
         assign_dict['anom'] = self.vals_tot_anom
         assign_dict['mult_cps_assign_flag'] = True
-
+    
         _assign_cps = self._gen_justi_cyth_mods(force_compile)
 
 #         raise Exception

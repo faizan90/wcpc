@@ -22,17 +22,24 @@ DT_UL_NP = np.uint64
 cdef void gen_cp_rules(
     DT_UL_NP_t[:, :] cp_rules,
     DT_UL_NP_t[:, :] cp_rules_idx_ctr,
+    const np.uint8_t[:, :] anom_crnr_flags_arr,
+    const int no_steep_anom_flag,
     const DT_UL max_idxs_ct,
     const DT_UL n_cps,
     const DT_UL n_pts,
     const DT_UL n_fuzz_nos,
     const DT_UL n_cpus,
+    const DT_UL n_anom_cols,
+    const int thresh_steep,
+    int *gen_mod_cp_err_flag,
     ) nogil
 
 cdef void mod_cp_rules(
     DT_UL_NP_t[:, :] cp_rules,
     DT_UL_NP_t[:, :] cp_rules_idx_ctr,
     DT_UL_NP_t[:, :] loc_mod_ctr,
+    const np.uint8_t[:, :] anom_crnr_flags_arr,
+    const int no_steep_anom_flag,
     const DT_UL max_idxs_ct,
     const DT_UL n_cps,
     const DT_UL n_pts,
@@ -42,5 +49,8 @@ cdef void mod_cp_rules(
     DT_UL *rand_i,
     DT_UL *rand_v,
     DT_UL *old_v_i_k,
+    const DT_UL n_anom_cols,
+    const int thresh_steep,
+    int *gen_mod_cp_err_flag,
     ) nogil
 

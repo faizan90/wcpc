@@ -21,7 +21,8 @@ class ThreshPPT(QualBases):
     def set_ge_vals_arr(self, ge_vals_arr):
         assert isinstance(ge_vals_arr, np.ndarray)
         assert check_nans_finite(ge_vals_arr)
-        assert len(ge_vals_arr.shape) == 1
+        assert ge_vals_arr.ndim == 1
+        assert all(ge_vals_arr.shape)
 
         self.ge_vals_arr = np.array(ge_vals_arr, dtype=DT_D_NP, order='C')
         self.n_ge_vals = self.ge_vals_arr.shape[0]
@@ -69,7 +70,8 @@ class ThreshPPT(QualBases):
     def set_le_vals_arr(self, le_vals_arr):
         assert isinstance(le_vals_arr, np.ndarray)
         assert check_nans_finite(le_vals_arr)
-        assert len(le_vals_arr.shape) == 1
+        assert le_vals_arr.ndim == 1
+        assert all(le_vals_arr.shape)
 
         self.le_vals_arr = np.array(le_vals_arr, dtype=DT_D_NP, order='C')
         self.n_le_vals = self.le_vals_arr.shape[0]

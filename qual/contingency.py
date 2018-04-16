@@ -7,7 +7,6 @@ from pathlib import Path
 
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.cm as cmaps
 
 plt.ioff()
 
@@ -37,12 +36,14 @@ class ContingencyTablePlot:
         assert isinstance(sel_cps_1_arr, np.ndarray)
         assert np.issubdtype(sel_cps_1_arr.dtype, np.integer)
         assert check_nans_finite(sel_cps_1_arr)
-        assert len(sel_cps_1_arr.shape) == 1
+        assert sel_cps_1_arr.ndim == 1
+        assert sel_cps_1_arr.shape[0]
 
         assert isinstance(sel_cps_2_arr, np.ndarray)
         assert np.issubdtype(sel_cps_2_arr.dtype, np.integer)
         assert check_nans_finite(sel_cps_2_arr)
-        assert len(sel_cps_2_arr.shape) == 1
+        assert sel_cps_2_arr.ndim == 1
+        assert sel_cps_2_arr.shape[0]
 
         assert sel_cps_1_arr.shape[0] == sel_cps_2_arr.shape[0]
 
@@ -243,8 +244,7 @@ class ContingencyTablePlot:
 
         assert isinstance(fig_size, (tuple, list))
         assert len(fig_size) == 2
-        assert fig_size[0] > 0
-        assert fig_size[1] > 0
+        assert fig_size[0] and fig_size[1]
 
         _ = [[self.cont_table_1_arr, self.cont_table_str_1_arr],
              [self.cont_table_2_arr, self.cont_table_str_2_arr]]
@@ -269,7 +269,7 @@ class ContingencyTablePlot:
             fig = plt.figure(figsize=fig_size)
             ax = fig.gca()
 
-            cax = ax.imshow(tab, vmin=0, vmax=1, cmap=cmaps.Blues)
+            cax = ax.imshow(tab, vmin=0, vmax=1, cmap=plt.get_cmap('Blues'))
             cbar = fig.colorbar(cax, orientation='vertical')
             cbar.set_label(('Relative frequency of classification '
                             '%s w.r.t %s') %
@@ -303,20 +303,16 @@ class ContingencyTablePlot:
                                     _suffs[i][4].shape[0])
 
             for j in range(txt_x_corrs.shape[0]):
-                try:
-                    ax.text(txt_x_corrs[j],
-                            txt_y_corrs[j],
-                            strs[txt_y_corrs[j], txt_x_corrs[j]],
-                            va='center',
-                            ha='center',)
-                except:
-                    tre = 1
+                ax.text(txt_x_corrs[j],
+                        txt_y_corrs[j],
+                        strs[txt_y_corrs[j], txt_x_corrs[j]],
+                        va='center',
+                        ha='center',)
 
             out_fig_name = 'rel_cp_freq_%s.png' % _suffs[i][2]
             out_fig_path = out_figs_dir / out_fig_name
 
             plt.savefig(str(out_fig_path), bbox_inches='tight')
             plt.close()
-
         return
 

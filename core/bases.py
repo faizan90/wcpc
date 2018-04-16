@@ -16,9 +16,7 @@ from ..alg_dtypes import DT_D_NP, DT_UL_NP
 
 
 class CPDataBase:
-
     def __init__(self, msgs=True):
-
         assert isinstance(msgs, (bool, int))
         self.msgs = bool(msgs)
 
@@ -48,57 +46,51 @@ class CPDataBase:
 
         self.op_mp_memb_flag = True
         self.op_mp_obj_ftn_flag = True
+        self.no_steep_anom_flag = True
 
         self.min_abs_ppt_thresh = 0.0
         return
 
     def set_stn_ppt(self, stn_ppt_arr):
-
         assert isinstance(stn_ppt_arr, np.ndarray)
         assert check_nans_finite(stn_ppt_arr)
-        assert len(stn_ppt_arr.shape) == 2
+        assert stn_ppt_arr.ndim == 2
         assert np.all(stn_ppt_arr >= 0)
-        assert stn_ppt_arr.shape[0] > 0
+        assert stn_ppt_arr.shape[0] and stn_ppt_arr.shape[1]
 
         self.stn_ppt_arr = np.array(stn_ppt_arr, dtype=DT_D_NP, order='C')
-
         self._stn_ppt_set_flag = True
         return
 
     def set_cat_ppt(self, cat_ppt_arr):
-
         assert isinstance(cat_ppt_arr, np.ndarray)
         assert check_nans_finite(cat_ppt_arr)
-        assert len(cat_ppt_arr.shape) == 2
+        assert cat_ppt_arr.ndim == 2
         assert np.all(cat_ppt_arr >= 0)
-        assert cat_ppt_arr.shape[0] > 0
+        assert cat_ppt_arr.shape[0] and cat_ppt_arr.shape[1]
 
         self.cat_ppt_arr = np.array(cat_ppt_arr, dtype=DT_D_NP, order='C')
-
         self._cat_ppt_set_flag = True
         return
 
     def set_neb_wett(self, neb_wett_arr):
-
         assert isinstance(neb_wett_arr, np.ndarray)
         assert check_nans_finite(neb_wett_arr)
-        assert len(neb_wett_arr.shape) == 2
+        assert neb_wett_arr.ndim == 2
         assert np.all(neb_wett_arr >= 0)
-        assert neb_wett_arr.shape[0] > 0
+        assert neb_wett_arr.shape[0] and neb_wett_arr.shape[1]
 
         self.neb_wett_arr = np.array(neb_wett_arr, dtype=DT_D_NP, order='C')
-
         self._neb_wett_set_flag = True
         return
 
     def set_lorenz_arr(self, lorenz_arr):
         assert isinstance(lorenz_arr, np.ndarray)
         assert check_nans_finite(lorenz_arr)
-        assert len(lorenz_arr.shape) == 2
-        assert lorenz_arr.shape[0] > 0
+        assert lorenz_arr.ndim == 2
+        assert lorenz_arr.shape[0] and lorenz_arr.shape[1]
 
         self.lorenz_arr = np.array(lorenz_arr, dtype=DT_UL_NP, order='C')
-
         self._lorenz_set_flag = True
         return
 
@@ -115,7 +107,7 @@ class CPDataBase:
         assert self.p_l > 0
 
         assert check_nans_finite(self.fuzz_nos_arr)
-        assert self.fuzz_nos_arr.shape[0] > 0
+        assert self.fuzz_nos_arr.shape[0]
         assert self.fuzz_nos_arr.shape[1] == 3
         assert np.all(np.ediff1d(self.fuzz_nos_arr[:, 1]) > 0)
 
@@ -124,7 +116,6 @@ class CPDataBase:
 
         assert isinstance(self.min_freq, float)
         assert 0 <= self.min_freq < (1 / self.n_cps)
-
         return
 
     def set_cp_prms(self,
@@ -149,7 +140,6 @@ class CPDataBase:
         self._verify_cp_prms()
 
         self.fuzz_nos_arr = np.array(fuzz_nos_arr, dtype=DT_D_NP, order='C')
-
         self._cp_prms_set_flag = True
         return
 
@@ -158,8 +148,8 @@ class CPDataBase:
         assert self._stn_ppt_set_flag
 
         assert isinstance(o_1_ppt_thresh_arr, np.ndarray)
-        assert len(o_1_ppt_thresh_arr.shape) == 1
-        assert o_1_ppt_thresh_arr.shape[0] > 0
+        assert o_1_ppt_thresh_arr.ndim == 1
+        assert o_1_ppt_thresh_arr.shape[0]
         assert check_nans_finite(o_1_ppt_thresh_arr)
         assert np.all(np.ediff1d(o_1_ppt_thresh_arr) > 0)
         assert np.all(o_1_ppt_thresh_arr)
@@ -172,7 +162,6 @@ class CPDataBase:
                                            dtype=DT_D_NP,
                                            order='C')
         self.o_1_obj_wt = o_1_obj_wt
-
         self.obj_1_flag = True
         return
 
@@ -187,12 +176,11 @@ class CPDataBase:
         return
 
     def set_obj_2_on(self, o_2_ppt_thresh_arr, o_2_obj_wt):
-
         assert self._cat_ppt_set_flag
 
         assert isinstance(o_2_ppt_thresh_arr, np.ndarray)
-        assert len(o_2_ppt_thresh_arr.shape) == 1
-        assert o_2_ppt_thresh_arr.shape[0] > 0
+        assert o_2_ppt_thresh_arr.ndim == 1
+        assert o_2_ppt_thresh_arr.shape[0]
         assert check_nans_finite(o_2_ppt_thresh_arr)
         assert np.all(np.ediff1d(o_2_ppt_thresh_arr) > 0)
         assert np.all(o_2_ppt_thresh_arr)
@@ -205,7 +193,6 @@ class CPDataBase:
                                            dtype=DT_D_NP,
                                            order='C')
         self.o_2_obj_wt = o_2_obj_wt
-
         self.obj_2_flag = True
         return
 
@@ -220,7 +207,6 @@ class CPDataBase:
         return
 
     def set_obj_3_on(self, o_3_obj_wt):
-
         assert self._stn_ppt_set_flag
 
         assert isinstance(o_3_obj_wt, (int, float))
@@ -240,11 +226,10 @@ class CPDataBase:
         return
 
     def set_obj_4_on(self, o_4_wett_thresh_arr, o_4_obj_wt):
-
         assert self._neb_wett_set_flag
 
         assert isinstance(o_4_wett_thresh_arr, np.ndarray)
-        assert len(o_4_wett_thresh_arr.shape) == 1
+        assert o_4_wett_thresh_arr.ndim == 1
         assert o_4_wett_thresh_arr.shape[0] > 0
         assert check_nans_finite(o_4_wett_thresh_arr)
         assert np.all(np.ediff1d(o_4_wett_thresh_arr) > 0)
@@ -257,7 +242,6 @@ class CPDataBase:
                                             dtype=DT_D_NP,
                                             order='C')
         self.o_4_obj_wt = o_4_obj_wt
-
         self.obj_4_flag = True
         return
 
@@ -272,7 +256,6 @@ class CPDataBase:
         return
 
     def set_obj_5_on(self, o_5_obj_wt):
-
         assert self._cat_ppt_set_flag
 
         assert isinstance(o_5_obj_wt, (int, float))
@@ -292,7 +275,6 @@ class CPDataBase:
         return
 
     def set_obj_6_on(self, o_6_obj_wt, min_wettness_thresh):
-
         assert self._neb_wett_set_flag
 
         assert isinstance(o_6_obj_wt, (int, float))
@@ -315,7 +297,6 @@ class CPDataBase:
         return
 
     def set_obj_7_on(self, o_7_obj_wt):
-
         assert self._neb_wett_set_flag
 
         assert isinstance(o_7_obj_wt, (int, float))
@@ -323,7 +304,6 @@ class CPDataBase:
         assert o_7_obj_wt > 0
 
         self.o_7_obj_wt = o_7_obj_wt
-
         self.obj_7_flag = True
         return
 
@@ -335,7 +315,6 @@ class CPDataBase:
         return
 
     def set_obj_8_on(self, o_8_obj_wt):
-
         assert self._lorenz_set_flag
 
         assert isinstance(o_8_obj_wt, (int, float))
@@ -343,7 +322,6 @@ class CPDataBase:
         assert o_8_obj_wt > 0
 
         self.o_8_obj_wt = o_8_obj_wt
-
         self.obj_8_flag = True
         return
 
@@ -372,21 +350,25 @@ class CPDataBase:
 
 
 class CPOPTBase(CPDataBase):
-
     def __init__(self, msgs=True):
         super().__init__(msgs=msgs)
 
         self._anom_set_flag = False
         return
 
-    def set_anomaly(self, vals_tot_anom):
-
+    def set_anomaly(self, vals_tot_anom, n_anom_rows, n_anom_cols):
         assert isinstance(vals_tot_anom, np.ndarray)
         assert check_nans_finite(vals_tot_anom)
-        assert len(vals_tot_anom.shape) == 2
-        assert vals_tot_anom.shape[0] > 0
+        assert vals_tot_anom.ndim == 2
+        assert vals_tot_anom.shape[0] and vals_tot_anom.shape[1]
+
+        assert isinstance(n_anom_rows, int)
+        assert isinstance(n_anom_cols, int)
+#         assert (n_anom_rows * n_anom_cols) == vals_tot_anom.shape[1]
 
         self.vals_tot_anom = np.array(vals_tot_anom, dtype=DT_D_NP, order='C')
+        self.n_anom_rows = n_anom_rows
+        self.n_anom_cols = n_anom_cols
 
         self._anom_set_flag = True
         return

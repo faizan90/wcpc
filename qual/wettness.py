@@ -15,7 +15,6 @@ from ..misc.checks import check_nans_finite
 plt.ioff()
 
 class WettnessIndex(QualBases):
-
     def __init__(self, msgs=True):
         super().__init__(msgs)
 
@@ -53,8 +52,9 @@ class WettnessIndex(QualBases):
             self.cmpt_wettness_idx()
 
         assert isinstance(cp_rules, np.ndarray)
-        assert len(cp_rules.shape) == 2
+        assert cp_rules.ndim == 2
         assert cp_rules.shape[0] == self.n_cps
+        assert all(cp_rules.shape)
         assert check_nans_finite(cp_rules)
 
         sorted_idxs = np.argsort(self.mean_cp_wett_arr)
@@ -102,8 +102,7 @@ class WettnessIndex(QualBases):
 
         assert isinstance(fig_size, (tuple, list))
         assert len(fig_size) == 2
-        assert fig_size[0] > 0
-        assert fig_size[1] > 0
+        assert all(fig_size)
         
         if self.msgs:
             print('Plotting Wettness index...')
@@ -145,8 +144,7 @@ class WettnessIndex(QualBases):
         n_wett_arrs = len(wett_arrs_list)
         assert all([isinstance(wett_arrs_list[i], np.ndarray)
                     for i in range(n_wett_arrs)])
-        assert all([len(wett_arrs_list[i].shape) == 1
-                    for i in range(n_wett_arrs)])
+        assert all([wett_arrs_list[i].ndim == 1 for i in range(n_wett_arrs)])
 
         assert isinstance(n_cps, int)
         assert n_cps > 0
@@ -176,8 +174,7 @@ class WettnessIndex(QualBases):
 
         assert isinstance(fig_size, (tuple, list))
         assert len(fig_size) == 2
-        assert fig_size[0] > 0
-        assert fig_size[1] > 0
+        assert all(fig_size)
 
         if msgs:
             print('Plotting Wettness index...')
@@ -213,7 +210,6 @@ class WettnessIndex(QualBases):
 
 
 class WettnessIndexPCA(WettnessIndex):
-
     def __init__(self, msgs=True):
         super().__init__(msgs)
         self._ppt_ref_arr_set_flag = False
@@ -222,7 +218,9 @@ class WettnessIndexPCA(WettnessIndex):
     def set_ppt_ref_arr(self, ppt_ref_arr):
         assert isinstance(ppt_ref_arr, np.ndarray)
         assert check_nans_finite(ppt_ref_arr)
-        assert len(ppt_ref_arr.shape) == 2
+        assert ppt_ref_arr.ndim == 2
+        assert all(ppt_ref_arr.shape)
+
         self.ppt_ref_arr = ppt_ref_arr.copy(order='C')
         self._ppt_ref_arr_set_flag = True
         return

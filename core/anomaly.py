@@ -9,7 +9,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import xarray as xr
-# from scipy.stats import norm
 import matplotlib.pyplot as plt
 from pathos.multiprocessing import ProcessPool
 
@@ -20,195 +19,7 @@ from ..misc.ftns import ret_mp_idxs
 plt.ioff()
 
 
-def _plot_anomaly_cdf(dims_idxs, anoms_arr, fig_out_dir):
-    plt.figure(figsize=(10, 7))
-
-    top_plot = plt.subplot2grid((5, 1), (0, 0), rowspan=3)
-    bot_plot = plt.subplot2grid((5, 1), (3, 0), rowspan=2)
-
-    assert (dims_idxs[1] - dims_idxs[0]) == anoms_arr.shape[1]
-
-    for i, dim_idx in enumerate(range(dims_idxs[0], dims_idxs[1], 1)):
-        curr_anoms_arr = anoms_arr[:, i].copy()
-        curr_anoms_arr.sort()
-        curr_anoms_probs_arr = (
-            (np.arange(1, curr_anoms_arr.shape[0] + 1)) /
-            (curr_anoms_arr.shape[0] + 1))
-
-        top_plot.plot(curr_anoms_arr,
-                      curr_anoms_probs_arr,
-                      alpha=0.5,
-                      marker='o',
-                      markersize=3)
-
-        top_plot.set_xticklabels([])
-        top_plot.set_ylim(-0.05, 1.05)
-        top_plot.set_ylabel('Probability')
-        top_plot.grid()
-        top_plot.get_xaxis().set_tick_params(width=0)
-
-        bot_plot.hist(curr_anoms_arr,
-                      bins=20,
-                      alpha=0.7)
-        bot_plot.set_xlim(*top_plot.get_xlim())
-        bot_plot.set_xlabel('Anomaly')
-        bot_plot.set_ylabel('Frequency')
-        bot_plot.grid()
-
-        top_plot.set_title('Anomaly distribution (D=%d, n=%d)' %
-                           (dim_idx + 1, curr_anoms_arr.shape[0]))
-
-        plt.savefig(str(fig_out_dir /
-                        ('anomaly_cdf_%d.png' % (dim_idx + 1))),
-                        bbox_inches='tight')
-
-        top_plot.cla()
-        bot_plot.cla()
-
-    plt.close()
-    return
-
-
-def _plot_anomaly_bjs_cdf(dims_idxs, anoms_arr, bjs_arr, fig_out_dir):
-    plt.figure(figsize=(10, 7))
-
-    top_plot = plt.subplot2grid((5, 1), (0, 0), rowspan=3)
-    bot_plot = plt.subplot2grid((5, 1), (3, 0), rowspan=2)
-
-    assert (dims_idxs[1] - dims_idxs[0]) == anoms_arr.shape[1]
-
-    for i, dim_idx in enumerate(range(dims_idxs[0], dims_idxs[1], 1)):
-        # anomaly
-        curr_anoms_arr = anoms_arr[:, i].copy()
-        curr_anoms_arr.sort()
-        curr_anoms_probs_arr = (
-            (np.arange(1, curr_anoms_arr.shape[0] + 1)) /
-            (curr_anoms_arr.shape[0] + 1))
-
-        top_plot.plot(curr_anoms_arr,
-                      curr_anoms_probs_arr,
-                      alpha=0.5,
-                      marker='o',
-                      markersize=3)
-
-        top_plot.set_xticklabels([])
-        top_plot.set_ylim(-0.05, 1.05)
-        top_plot.set_ylabel('Probability')
-        top_plot.grid()
-        top_plot.get_xaxis().set_tick_params(width=0)
-
-        bot_plot.hist(curr_anoms_arr,
-                      bins=20,
-                      alpha=0.7)
-        bot_plot.set_xlim(*top_plot.get_xlim())
-        bot_plot.set_xlabel('Anomaly')
-        bot_plot.set_ylabel('Frequency')
-        bot_plot.grid()
-
-        top_plot.set_title('Anomaly distribution (D=%d, n=%d)' %
-                           (dim_idx + 1, curr_anoms_arr.shape[0]))
-
-        plt.savefig(str(fig_out_dir /
-                        ('anomaly_cdf_%d.png' % (dim_idx + 1))),
-                        bbox_inches='tight')
-
-        top_plot.cla()
-        bot_plot.cla()
-
-        # bjs
-        curr_bjs_arr = bjs_arr[:, i].copy()
-        curr_bjs_arr.sort()
-        curr_bjs_probs_arr = (
-            (np.arange(1, curr_bjs_arr.shape[0] + 1)) /
-            (curr_bjs_arr.shape[0] + 1))
-
-        top_plot.plot(curr_bjs_arr,
-                      curr_bjs_probs_arr,
-                      alpha=0.5,
-                      marker='o',
-                      markersize=3)
-
-        top_plot.set_xticklabels([])
-        top_plot.set_ylim(-0.05, 1.05)
-        top_plot.set_ylabel('Probability')
-        top_plot.grid()
-        top_plot.get_xaxis().set_tick_params(width=0)
-
-        bot_plot.hist(curr_bjs_arr,
-                      bins=20,
-                      alpha=0.7)
-        bot_plot.set_xlim(*top_plot.get_xlim())
-        bot_plot.set_xlabel('bj')
-        bot_plot.set_ylabel('Frequency')
-        bot_plot.grid()
-
-        top_plot.set_title('bjs distribution (D=%d, n=%d)' %
-                           (dim_idx + 1, curr_bjs_arr.shape[0]))
-
-        plt.savefig(str(fig_out_dir /
-                        ('bjs_cdf_%d.png' % (dim_idx + 1))),
-                        bbox_inches='tight')
-
-        top_plot.cla()
-        bot_plot.cla()
-
-    plt.close()
-    return
-
-
-def _prep_anomaly_mp(anoms_arr, n_cpus, fig_out_dir):
-    _idxs = ret_mp_idxs(anoms_arr.shape[1], n_cpus)
-    _idxs_list = [_idxs[i: i + 2] for i in range(n_cpus)]
-    _anoms_gen = (
-        (anoms_arr[:, _idxs_list[i][0]:_idxs_list[i][1]])
-        for i in range(n_cpus))
-
-    mp_pool = ProcessPool(n_cpus)
-    mp_pool.restart(True)
-    try:
-        print(list(mp_pool.uimap(_plot_anomaly_cdf,
-                                 _idxs_list,
-                                 _anoms_gen,
-                                 [fig_out_dir] * n_cpus)))
-        mp_pool.clear()
-    except Exception as msg:
-        mp_pool.close()
-        mp_pool.join()
-        print('Error in _plot_anomaly_cdf:', msg)
-    return
-
-
-def _prep_anomaly_bjs_mp(anoms_arr, bjs_arr, n_cpus, fig_out_dir):
-    assert anoms_arr.shape == bjs_arr.shape
-
-    _idxs = ret_mp_idxs(anoms_arr.shape[1], n_cpus)
-    _idxs_list = [_idxs[i: i + 2] for i in range(n_cpus)]
-    _anoms_gen = (
-        (anoms_arr[:, _idxs_list[i][0]:_idxs_list[i][1]])
-        for i in range(n_cpus))
-
-    _bjs_gen = (
-        (bjs_arr[:, _idxs_list[i][0]:_idxs_list[i][1]])
-        for i in range(n_cpus))
-
-    mp_pool = ProcessPool(n_cpus)
-    mp_pool.restart(True)
-    try:
-        print(list(mp_pool.uimap(_plot_anomaly_bjs_cdf,
-                                 _idxs_list,
-                                 _anoms_gen,
-                                 _bjs_gen,
-                                 [fig_out_dir] * n_cpus)))
-        mp_pool.clear()
-    except Exception as msg:
-        mp_pool.close()
-        mp_pool.join()
-        print('Error in _plot_anomaly_bjs_cdf:', msg)
-    return
-
-
 class Anomaly:
-
     def __init__(self, msgs=True):
         assert isinstance(msgs, (bool, int, float))
         self.msgs = msgs
@@ -251,8 +62,8 @@ class Anomaly:
         assert self.x_coords.shape[0]
         assert self.y_coords.shape[0]
 
-        assert len(self.x_coords.shape) == 1
-        assert len(self.y_coords.shape) == 1
+        assert self.x_coords.ndim == 1
+        assert self.y_coords.ndim == 1
 
         assert check_nans_finite(self.x_coords)
         assert check_nans_finite(self.y_coords)
@@ -267,7 +78,7 @@ class Anomaly:
         self.n_timesteps_tot = self.vals_tot.shape[0]
 
         self.vals_tot_rav = self.vals_tot.reshape(self.n_timesteps_tot, -1)
-        assert len(self.vals_tot_rav.shape) == 2
+        assert self.vals_tot_rav.ndim == 2
         
         self.n_tot_vals = (self.vals_tot_rav.shape[0] * 
                            self.vals_tot_rav.shape[1])
@@ -382,6 +193,7 @@ class Anomaly:
 
     def calc_anomaly_type_a(self, anom_type_a_nan_rep=None):
         assert self._vars_read_flag
+        raise NotImplementedError('Dont use it!')
         
         if anom_type_a_nan_rep is not None:
             assert isinstance(anom_type_a_nan_rep, (int, float))
@@ -393,7 +205,7 @@ class Anomaly:
 
         self.vals_tot_anom = _1 / _2
 
-        assert len(self.vals_tot_rav.shape) == len(self.vals_tot_anom.shape)
+        assert self.vals_tot_rav.ndim == self.vals_tot_anom.ndim
 
         nan_ct = np.sum(np.isnan(self.vals_tot_anom))
         _msg = '%d NaNs out of %d in anomaly of type A.' % (nan_ct,
@@ -429,8 +241,8 @@ class Anomaly:
 
         assert isinstance(season_months, np.ndarray)
         assert check_nans_finite(season_months)
-        assert len(season_months.shape) == 1
-        assert np.all(season_months >= 0)
+        assert season_months.ndim == 1
+        assert np.all(season_months > 0) and (np.all(season_months < 13))
         assert season_months.shape[0] > 0
 
         if fig_out_dir is not None:
@@ -495,8 +307,9 @@ class Anomaly:
             self.vals_tot_anom[_] = self.anom_type_b_nan_rep
 
         if fig_out_dir is not None:
-            print('Saving anomaly CDF figs in:', fig_out_dir)
-            _prep_anomaly_mp(self.vals_tot_anom, n_cpus, fig_out_dir)
+            if self.msgs:
+                print('Saving anomaly CDF figs in:', fig_out_dir)
+            self._prep_anomaly_mp(self.vals_tot_anom, n_cpus, fig_out_dir)
         return
     
     def calc_anomaly_type_c(self,
@@ -521,8 +334,8 @@ class Anomaly:
 
         assert isinstance(season_months, np.ndarray)
         assert check_nans_finite(season_months)
-        assert len(season_months.shape) == 1
-        assert np.all(season_months >= 0)
+        assert season_months.ndim == 1
+        assert np.all(season_months > 0) and (np.all(season_months < 13))
         assert season_months.shape[0] > 0
 
         if fig_out_dir is not None:
@@ -589,8 +402,9 @@ class Anomaly:
             self.vals_tot_anom[_] = self.anom_type_c_nan_rep
 
         if fig_out_dir is not None:
-            print('Saving anomaly CDF figs in:', fig_out_dir)
-            _prep_anomaly_mp(self.vals_tot_anom, n_cpus, fig_out_dir)
+            if self.msgs:
+                print('Saving anomaly CDF figs in:', fig_out_dir)
+            self._prep_anomaly_mp(self.vals_tot_anom, n_cpus, fig_out_dir)
         return
 
     def calc_anomaly_type_d(self,
@@ -626,8 +440,8 @@ class Anomaly:
 
         assert isinstance(season_months, np.ndarray)
         assert check_nans_finite(season_months)
-        assert len(season_months.shape) == 1
-        assert np.all(season_months >= 0)
+        assert season_months.ndim == 1
+        assert np.all(season_months > 0) and (np.all(season_months < 13))
         assert season_months.shape[0] > 0
 
         if fig_out_dir is not None:
@@ -706,11 +520,199 @@ class Anomaly:
                 np.all(self.vals_anom < 1))
 
         if fig_out_dir is not None:
-            print('Saving anomaly and bjs CDF figs in:', fig_out_dir)
-            _prep_anomaly_bjs_mp(self.vals_anom,
-                                 b_j_s,
-                                 n_cpus,
-                                 fig_out_dir)
+            if self.msgs:
+                print('Saving anomaly and bjs CDF figs in:', fig_out_dir)
+            self._prep_anomaly_bjs_mp(self.vals_anom,
+                                      b_j_s,
+                                      n_cpus,
+                                      fig_out_dir)
+        return
+
+    @staticmethod
+    def _plot_anomaly_cdf(dims_idxs, anoms_arr, fig_out_dir):
+        plt.figure(figsize=(10, 7))
+
+        top_plot = plt.subplot2grid((5, 1), (0, 0), rowspan=3)
+        bot_plot = plt.subplot2grid((5, 1), (3, 0), rowspan=2)
+
+        assert (dims_idxs[1] - dims_idxs[0]) == anoms_arr.shape[1]
+
+        for i, dim_idx in enumerate(range(dims_idxs[0], dims_idxs[1], 1)):
+            curr_anoms_arr = anoms_arr[:, i].copy()
+            curr_anoms_arr.sort()
+            curr_anoms_probs_arr = (
+                (np.arange(1, curr_anoms_arr.shape[0] + 1)) /
+                (curr_anoms_arr.shape[0] + 1))
+
+            top_plot.plot(curr_anoms_arr,
+                          curr_anoms_probs_arr,
+                          alpha=0.5,
+                          marker='o',
+                          markersize=3)
+
+            top_plot.set_xticklabels([])
+            top_plot.set_ylim(-0.05, 1.05)
+            top_plot.set_ylabel('Probability')
+            top_plot.grid()
+            top_plot.get_xaxis().set_tick_params(width=0)
+
+            bot_plot.hist(curr_anoms_arr,
+                          bins=20,
+                          alpha=0.7)
+            bot_plot.set_xlim(*top_plot.get_xlim())
+            bot_plot.set_xlabel('Anomaly')
+            bot_plot.set_ylabel('Frequency')
+            bot_plot.grid()
+
+            top_plot.set_title('Anomaly distribution (D=%d, n=%d)' %
+                               (dim_idx + 1, curr_anoms_arr.shape[0]))
+
+            plt.savefig(str(fig_out_dir /
+                            ('anomaly_cdf_%d.png' % (dim_idx + 1))),
+                            bbox_inches='tight')
+
+            top_plot.cla()
+            bot_plot.cla()
+
+        plt.close()
+        return
+
+    @staticmethod
+    def _plot_anomaly_bjs_cdf(dims_idxs, anoms_arr, bjs_arr, fig_out_dir):
+        plt.figure(figsize=(10, 7))
+
+        top_plot = plt.subplot2grid((5, 1), (0, 0), rowspan=3)
+        bot_plot = plt.subplot2grid((5, 1), (3, 0), rowspan=2)
+
+        assert (dims_idxs[1] - dims_idxs[0]) == anoms_arr.shape[1]
+
+        for i, dim_idx in enumerate(range(dims_idxs[0], dims_idxs[1], 1)):
+            # anomaly
+            curr_anoms_arr = anoms_arr[:, i].copy()
+            curr_anoms_arr.sort()
+            curr_anoms_probs_arr = (
+                (np.arange(1, curr_anoms_arr.shape[0] + 1)) /
+                (curr_anoms_arr.shape[0] + 1))
+
+            top_plot.plot(curr_anoms_arr,
+                          curr_anoms_probs_arr,
+                          alpha=0.5,
+                          marker='o',
+                          markersize=3)
+
+            top_plot.set_xticklabels([])
+            top_plot.set_ylim(-0.05, 1.05)
+            top_plot.set_ylabel('Probability')
+            top_plot.grid()
+            top_plot.get_xaxis().set_tick_params(width=0)
+
+            bot_plot.hist(curr_anoms_arr,
+                          bins=20,
+                          alpha=0.7)
+            bot_plot.set_xlim(*top_plot.get_xlim())
+            bot_plot.set_xlabel('Anomaly')
+            bot_plot.set_ylabel('Frequency')
+            bot_plot.grid()
+
+            top_plot.set_title('Anomaly distribution (D=%d, n=%d)' %
+                               (dim_idx + 1, curr_anoms_arr.shape[0]))
+
+            plt.savefig(str(fig_out_dir /
+                            ('anomaly_cdf_%d.png' % (dim_idx + 1))),
+                            bbox_inches='tight')
+
+            top_plot.cla()
+            bot_plot.cla()
+
+            # bjs
+            curr_bjs_arr = bjs_arr[:, i].copy()
+            curr_bjs_arr.sort()
+            curr_bjs_probs_arr = (
+                (np.arange(1, curr_bjs_arr.shape[0] + 1)) /
+                (curr_bjs_arr.shape[0] + 1))
+
+            top_plot.plot(curr_bjs_arr,
+                          curr_bjs_probs_arr,
+                          alpha=0.5,
+                          marker='o',
+                          markersize=3)
+
+            top_plot.set_xticklabels([])
+            top_plot.set_ylim(-0.05, 1.05)
+            top_plot.set_ylabel('Probability')
+            top_plot.grid()
+            top_plot.get_xaxis().set_tick_params(width=0)
+
+            bot_plot.hist(curr_bjs_arr,
+                          bins=20,
+                          alpha=0.7)
+            bot_plot.set_xlim(*top_plot.get_xlim())
+            bot_plot.set_xlabel('bj')
+            bot_plot.set_ylabel('Frequency')
+            bot_plot.grid()
+
+            top_plot.set_title('bjs distribution (D=%d, n=%d)' %
+                               (dim_idx + 1, curr_bjs_arr.shape[0]))
+
+            plt.savefig(str(fig_out_dir /
+                            ('bjs_cdf_%d.png' % (dim_idx + 1))),
+                            bbox_inches='tight')
+
+            top_plot.cla()
+            bot_plot.cla()
+
+        plt.close()
+        return
+
+    @staticmethod
+    def _prep_anomaly_mp(anoms_arr, n_cpus, fig_out_dir):
+        _idxs = ret_mp_idxs(anoms_arr.shape[1], n_cpus)
+        _idxs_list = [_idxs[i: i + 2] for i in range(n_cpus)]
+        _anoms_gen = (
+            (anoms_arr[:, _idxs_list[i][0]:_idxs_list[i][1]])
+            for i in range(n_cpus))
+
+        mp_pool = ProcessPool(n_cpus)
+        mp_pool.restart(True)
+        try:
+            print(list(mp_pool.uimap(Anomaly._plot_anomaly_cdf,
+                                     _idxs_list,
+                                     _anoms_gen,
+                                     [fig_out_dir] * n_cpus)))
+            mp_pool.clear()
+        except Exception as msg:
+            mp_pool.close()
+            mp_pool.join()
+            print('Error in _plot_anomaly_cdf:', msg)
+        return
+
+    @staticmethod
+    def _prep_anomaly_bjs_mp(anoms_arr, bjs_arr, n_cpus, fig_out_dir):
+        assert anoms_arr.shape == bjs_arr.shape
+
+        _idxs = ret_mp_idxs(anoms_arr.shape[1], n_cpus)
+        _idxs_list = [_idxs[i: i + 2] for i in range(n_cpus)]
+        _anoms_gen = (
+            (anoms_arr[:, _idxs_list[i][0]:_idxs_list[i][1]])
+            for i in range(n_cpus))
+
+        _bjs_gen = (
+            (bjs_arr[:, _idxs_list[i][0]:_idxs_list[i][1]])
+            for i in range(n_cpus))
+
+        mp_pool = ProcessPool(n_cpus)
+        mp_pool.restart(True)
+        try:
+            print(list(mp_pool.uimap(Anomaly._plot_anomaly_bjs_cdf,
+                                     _idxs_list,
+                                     _anoms_gen,
+                                     _bjs_gen,
+                                     [fig_out_dir] * n_cpus)))
+            mp_pool.clear()
+        except Exception as msg:
+            mp_pool.close()
+            mp_pool.join()
+            print('Error in _plot_anomaly_bjs_cdf:', msg)
         return
 
 

@@ -17,7 +17,8 @@ plt.ioff()
 def plot_tri_fuzz_no(in_tri_fuzz_nos_arr, out_fig_path, fig_size=(15, 7)):
     assert isinstance(in_tri_fuzz_nos_arr, np.ndarray)
 
-    assert in_tri_fuzz_nos_arr.shape[0] > 0
+    assert in_tri_fuzz_nos_arr.ndim == 2
+    assert in_tri_fuzz_nos_arr.shape[0]
     assert in_tri_fuzz_nos_arr.shape[1] == 3
 
     assert np.all(np.ediff1d(in_tri_fuzz_nos_arr[:, 1]) > 0)
@@ -45,8 +46,6 @@ def plot_tri_fuzz_no(in_tri_fuzz_nos_arr, out_fig_path, fig_size=(15, 7)):
     plt.title('CP Classification - Fuzzy Numbers')
     plt.legend()
     plt.grid()
-
-#     plt.show()
     plt.savefig(str(out_fig_path), bbox_inches='tight')
     plt.close()
     return

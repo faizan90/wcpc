@@ -51,7 +51,6 @@ cdef void calc_membs_dof_cps(
     # Fill the membership value matrix at each time step,
     # each CP and each point.
     # Select the CP with the greatest DOF for a given step.
-    # Set everything to the previous step in case of a roll back.
     for i in prange(n_time_steps, schedule='dynamic', nogil=True, num_threads=n_cpus):
         for j in range(n_cps):
             for k in range(n_pts):

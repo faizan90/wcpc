@@ -17,9 +17,7 @@ from ..alg_dtypes import DT_D_NP
 
 
 class CPHistPlot:
-
     def __init__(self, msgs=True):
-
         assert isinstance(msgs, (bool, int))
         self.msgs = msgs
 
@@ -30,24 +28,20 @@ class CPHistPlot:
         return
 
     def set_values_ser(self, values_ser):
-
         assert isinstance(values_ser, pd.Series)
         assert check_nans_finite(values_ser.values)
-        assert len(values_ser.shape) == 1
+        assert values_ser.ndim == 1
 
         self.values_ser = pd.Series(values_ser, dtype=DT_D_NP)
-
         self._values_ser_set_flag = True
         return
 
     def set_sel_cps_ser(self, sel_cps_ser):
-
         assert isinstance(sel_cps_ser, pd.Series)
         assert check_nans_finite(sel_cps_ser)
-        assert len(sel_cps_ser.shape) == 1
+        assert sel_cps_ser.ndim == 1
 
         self.sel_cps_ser = pd.Series(sel_cps_ser, dtype=DT_D_NP)
-
         self._sel_cps_ser_set_flag = True
         return
 
@@ -58,6 +52,7 @@ class CPHistPlot:
                            season_months,
                            min_prob=None,
                            max_prob=None,
+                           n_cens_time=None,
                            freq='D'):
 
         assert isinstance(prev_steps, int)
@@ -69,6 +64,10 @@ class CPHistPlot:
         if max_prob is not None:
             assert isinstance(max_prob, float)
 
+        if n_cens_time is not None:
+            assert isinstance(n_cens_time, int)
+            assert 0 < n_cens_time < float('inf')
+
         assert isinstance(freq, str)
         assert freq == 'D'
 
@@ -77,6 +76,7 @@ class CPHistPlot:
         self.prev_steps = prev_steps
         self.post_steps = post_steps
         self.miss_cp_val = miss_cp_val
+        self.n_cens_time = n_cens_time
 
         if min_prob is not None:
             assert 0 < min_prob < 1
@@ -95,9 +95,9 @@ class CPHistPlot:
 
         assert isinstance(season_months, np.ndarray)
         assert check_nans_finite(season_months)
-        assert len(season_months.shape) == 1
-        assert np.all(season_months >= 0)
-        assert season_months.shape[0] > 0
+        assert season_months.ndim == 1
+        assert np.all(season_months > 0)
+        assert season_months.shape[0]
 
         self.season_months = season_months
 
@@ -122,6 +122,8 @@ class CPHistPlot:
         assert self._prms_set_flag
 
         assert self.values_ser.shape[0] == self.sel_cps_ser.shape[0]
+        if self.n_cens_time is not None:
+            assert self.n_cens_time < self.values_ser.shape[0]
 
         _dates = pd.date_range(self.values_ser.index[0],
                                self.values_ser.index[-1],
@@ -139,11 +141,6 @@ class CPHistPlot:
 
         self.sel_cps_ser.fillna(value=self.miss_cp_val, inplace=True)
 
-        assert np.all(self.sel_cps_ser[pd.isnull(self.values_ser)] ==
-                      self.miss_cp_val)
-        assert np.all(self.sel_cps_ser[pd.notnull(self.values_ser)] !=
-                      self.miss_cp_val)
-
         _cps, _cp_cts = np.unique(self.sel_cps_ser,
                                   return_counts=True)
 
@@ -160,22 +157,53 @@ class CPHistPlot:
         if self.min_prob is not None:
             self.lag_cp_ct_min_dict = {}
 
-            self.values_lo_prob_dates = \
-                self.values_prob_ser[self.values_prob_ser <=
-                                     self.min_prob].index
+            temp_dates = (self.values_prob_ser[self.values_prob_ser <=
+                                               self.min_prob].index)
+
+            if self.n_cens_time is not None:
+                keep_dates = []
+                for temp_date in temp_dates:
+                    _time_lag = pd.Timedelta(self.n_cens_time * self.freq)
+                    d_1 = temp_date - _time_lag
+                    d_2 = temp_date + _time_lag
+                    min_val_date = self.values_prob_ser.loc[d_1:d_2].idxmin()
+                    if min_val_date not in keep_dates:
+                        keep_dates += [min_val_date]
+
+                assert keep_dates
+            else:
+                keep_dates = temp_dates
+
+            self.values_lo_prob_dates = pd.DatetimeIndex(keep_dates)
 
             self._xx_list.append([self.lag_cp_ct_min_dict,
-                                  self.values_lo_prob_dates, 'le_events'])
+                                  self.values_lo_prob_dates,
+                                  'le_events'])
 
         if self.max_prob is not None:
             self.lag_cp_ct_max_dict = {}
 
-            self.values_hi_prob_dates = \
-                self.values_prob_ser[self.values_prob_ser >=
-                                     self.max_prob].index
+            temp_dates = (self.values_prob_ser[self.values_prob_ser >=
+                                               self.max_prob].index)
+            if self.n_cens_time is not None:
+                keep_dates = []
+                for temp_date in temp_dates:
+                    _time_lag = pd.Timedelta(self.n_cens_time * self.freq)
+                    d_1 = temp_date - _time_lag
+                    d_2 = temp_date + _time_lag
+                    max_val_date = self.values_prob_ser.loc[d_1:d_2].idxmax()
+                    if max_val_date not in keep_dates:
+                        keep_dates += [max_val_date]
+
+                assert keep_dates
+            else:
+                keep_dates = temp_dates
+
+            self.values_hi_prob_dates = pd.DatetimeIndex(keep_dates)
 
             self._xx_list.append([self.lag_cp_ct_max_dict,
-                                  self.values_hi_prob_dates, 'ge_events'])
+                                  self.values_hi_prob_dates,
+                                  'ge_events'])
 
         assert self._xx_list
 
@@ -225,8 +253,7 @@ class CPHistPlot:
 
         assert isinstance(fig_size, (tuple, list))
         assert len(fig_size) == 2
-        assert fig_size[0] > 0
-        assert fig_size[1] > 0
+        assert all(fig_size)
 
         assert isinstance(tick_txt_size, int)
         assert tick_txt_size > 0
@@ -235,9 +262,9 @@ class CPHistPlot:
         assert dpi > 0
 
         rows_seq = np.repeat(range(self.tot_splot_rows),
-                                  self.tot_splot_cols)
+                                   self.tot_splot_cols)
         cols_seq = np.tile(range(self.tot_splot_cols),
-                                self.tot_splot_rows)
+                                 self.tot_splot_rows)
 
         _dumm_cp_range = list(range(self.n_all_cps))
 
@@ -296,6 +323,7 @@ class CPHistPlot:
                 ax.bar(range(self.cp_freqs_ser.shape[0]),
                        self.cp_freqs_ser.values / self.sel_cps_ser.shape[0])
                 ax.set_xticks(range(self.cp_freqs_ser.shape[0]))
+
                 _labs = ['%d (%d)' % (self.cp_freqs_ser.index[i],
                                       self.cp_freqs_ser.values[i])
                          for i in range(self.cp_freqs_ser.shape[0])]
@@ -317,7 +345,8 @@ class CPHistPlot:
             fig, ax = plt.subplots(self.tot_splot_rows,
                                    self.tot_splot_cols,
                                    sharex=True,
-                                   sharey=False)
+                                   sharey=False,
+                                   figsize=fig_size)
 
             prob_lab = self._xx_list[j][2]
 
@@ -361,4 +390,31 @@ class CPHistPlot:
             plt.savefig(str(out_path), bbox_inches='tight', dpi=dpi)
             plt.close()
 
+        fig, ax = plt.subplots(1, 1, figsize=fig_size)
+        for cp in self.cp_freqs_ser.index:
+            idxs = self.sel_cps_ser == cp
+
+            if not idxs.sum():
+                continue
+
+            cp_ser = self.sel_cps_ser.loc[idxs]
+            cp_months = cp_ser.index.month
+            months, months_freq = np.unique(cp_months, return_counts=True)
+            _rng = np.arange(months.shape[0])
+            ax.bar(_rng, months_freq)
+            ax.set_xticks(_rng)
+            ax.set_xticklabels(months)
+
+            ax.set_xlabel('Month')
+            ax.set_ylabel('CP Frequency')
+            ax.set_title('Monthly Frequency of CP:%2d (N=%d)' %
+                         (cp, self.cp_freqs_ser.loc[cp]))
+            ax.grid()
+
+            out_path = out_fig_dir / (fig_name_suff +
+                                      ('_cp_%0.2d_monthly_freq.png' % cp))
+            plt.savefig(str(out_path), bbox_inches='tight', dpi=dpi)
+            ax.cla()
+
+        plt.close('all')
         return

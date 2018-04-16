@@ -11,7 +11,6 @@
 
 import numpy as np
 cimport numpy as np
-from cython.parallel import prange
 
 from .gen_mod_cp_rules cimport (gen_cp_rules, mod_cp_rules)
 from .memb_ftns cimport (calc_membs_dof_cps, update_membs_dof_cps)
@@ -46,7 +45,9 @@ cpdef classify_cps(dict args_dict):
     cdef:
         # ulongs
         Py_ssize_t i, j, k, l
-        DT_UL n_cps, n_pts, n_time_steps, n_fuzz_nos, n_cpus, msgs, n_max = 0
+        int no_steep_anom_flag, gen_mod_cp_err_flag = 0, thresh_steep = 1
+        DT_UL n_cps, n_pts, n_time_steps, n_fuzz_nos, msgs, n_max = 0
+        DT_UL n_cpus, n_cpus_obj, n_cpus_mem
         DT_UL curr_n_iter, curr_m_iter, max_m_iters, max_n_iters
         DT_UL best_accept_iters, accept_iters, rand_acc_iters, reject_iters
         DT_UL rand_k, rand_i, rand_v, old_v_i_k, run_type, no_cp_val
@@ -55,6 +56,7 @@ cpdef classify_cps(dict args_dict):
         DT_UL max_temp_adj_atmps, curr_temp_adj_iter = 0
         DT_UL max_iters_wo_chng, curr_iters_wo_chng = 0, temp_adjed = 0
         DT_UL temp_adj_iters, min_acc_rate, max_acc_rate
+        DT_UL n_anom_rows, n_anoms_cols, curr_anom_row, curr_anom_col
 
         # doubles
         DT_D anneal_temp_ini, temp_red_alpha, curr_anneal_temp, p_l
@@ -80,6 +82,7 @@ cpdef classify_cps(dict args_dict):
         np.ndarray[DT_UL_NP_t, ndim=2, mode='c'] best_cp_rules_idx_ctr
         np.ndarray[DT_UL_NP_t, ndim=2, mode='c'] loc_mod_ctr
         np.ndarray[np.uint32_t, ndim=2, mode='c'] rands_rec_arr
+        np.ndarray[np.uint8_t, ndim=2, mode='c'] anom_crnr_flags_arr
 
         # 2D double arrays
         np.ndarray[DT_D_NP_t, ndim=2, mode='c'] slp_anom, fuzz_nos_arr
@@ -126,7 +129,8 @@ cpdef classify_cps(dict args_dict):
     temp_red_alpha = args_dict['temp_red_alpha']
     max_m_iters = args_dict['max_m_iters']
     max_n_iters = args_dict['max_n_iters']
-    n_cpus = args_dict['n_cpus']
+    n_cpus_obj = args_dict['n_cpus_obj']
+    n_cpus_mem = args_dict['n_cpus_mem']
     max_idxs_ct = args_dict['max_idxs_ct']
     max_iters_wo_chng = args_dict['max_iters_wo_chng']
     temp_adj_iters = args_dict['temp_adj_iters']
@@ -135,6 +139,11 @@ cpdef classify_cps(dict args_dict):
     max_temp_adj_atmps = args_dict['max_temp_adj_atmps']
     lo_freq_pen_wt = args_dict['lo_freq_pen_wt']
     min_freq = args_dict['min_freq']
+    no_steep_anom_flag = <int> args_dict['no_steep_anom_flag']
+    n_anom_rows = <DT_UL> args_dict['n_anom_rows']
+    n_anom_cols = <DT_UL> args_dict['n_anom_cols']
+
+    n_cpus = <DT_UL> max(n_cpus_obj, n_cpus_mem)
 
     if 'msgs' in args_dict:
         msgs = <DT_UL> args_dict[ 'msgs']
@@ -152,6 +161,8 @@ cpdef classify_cps(dict args_dict):
         print('n_o_2_threshs:', n_o_2_threshs)
         print('n_cps:', n_cps)
         print('n_cpus:', n_cpus)
+        print('n_cpus_obj:', n_cpus_obj)
+        print('n_cpus_mem:', n_cpus_mem)
         print('no_cp_val:', no_cp_val)
         print('p_l:', p_l)
         print('fuzz_nos_arr:\n', fuzz_nos_arr)
@@ -170,6 +181,9 @@ cpdef classify_cps(dict args_dict):
         print('lo_freq_pen_wt:', lo_freq_pen_wt)
         print('min_freq:', min_freq)
         print('n_max:', n_max)
+        print('no_steep_anom_flag:', no_steep_anom_flag)
+        print('n_anom_rows:', n_anom_rows)
+        print('n_anom_cols:', n_anom_cols)
         print('in_cats_ppt_arr shape: (%d, %d)' % (in_cats_ppt_arr.shape[0], in_cats_ppt_arr.shape[1]))
 
     # initialize the required variables
@@ -177,9 +191,9 @@ cpdef classify_cps(dict args_dict):
     n_fuzz_nos = fuzz_nos_arr.shape[0]
     n_time_steps = slp_anom.shape[0]
 
-    if max_idxs_ct > (n_pts / n_fuzz_nos):
+    if max_idxs_ct > <DT_UL>(n_pts / n_fuzz_nos):
         max_idxs_ct = <DT_UL> max(1, (n_pts / n_fuzz_nos))
-        print(("\n\n\n\n######### max_idxs_ct reset to %d!#########\n\n\n\n" % max_idxs_ct))
+        print(("\n######### max_idxs_ct reset to %d!#########\n" % max_idxs_ct))
 
     curr_n_iter = 0
     curr_m_iter = 0
@@ -218,14 +232,52 @@ cpdef classify_cps(dict args_dict):
     best_cp_rules_idx_ctr = cp_rules_idx_ctr.copy()
     loc_mod_ctr = np.zeros((n_cps, n_pts), dtype=DT_UL_NP)
 
+    anom_crnr_flags_arr = np.ones((n_pts, 8), dtype=np.uint8)
+    if no_steep_anom_flag:
+        for k in range(n_pts):
+            curr_anom_row = <DT_UL> (k / n_anom_cols)
+            curr_anom_col = <DT_UL> (k % n_anom_cols)
+
+            if curr_anom_row == 0:
+                anom_crnr_flags_arr[k, 0] = 0
+                anom_crnr_flags_arr[k, 1] = 0
+                anom_crnr_flags_arr[k, 2] = 0
+
+            if curr_anom_col == 0:
+                anom_crnr_flags_arr[k, 0] = 0
+                anom_crnr_flags_arr[k, 3] = 0
+                anom_crnr_flags_arr[k, 5] = 0
+
+            if curr_anom_row == (n_anom_rows - 1):
+                anom_crnr_flags_arr[k, 5] = 0
+                anom_crnr_flags_arr[k, 6] = 0
+                anom_crnr_flags_arr[k, 7] = 0
+
+            if curr_anom_col == (n_anom_cols - 1):
+                anom_crnr_flags_arr[k, 2] = 0
+                anom_crnr_flags_arr[k, 4] = 0
+                anom_crnr_flags_arr[k, 7] = 0
+
     gen_cp_rules(
         cp_rules,
         cp_rules_idx_ctr,
+        anom_crnr_flags_arr,
+        no_steep_anom_flag,
         max_idxs_ct,
         n_cps,
         n_pts,
         n_fuzz_nos,
-        n_cpus)
+        n_cpus,
+        n_anom_cols,
+        thresh_steep,
+        &gen_mod_cp_err_flag)
+
+    if gen_mod_cp_err_flag:
+        raise RuntimeError('gen_cp_rules failed. Choose a lower value for max_idxs_ct!')
+
+#     for i in range(n_cps):
+#         print(cp_rules[i, :].reshape(n_anom_rows, n_anom_cols))
+#         print(cp_rules_idx_ctr[i, :], "\n")
 
     best_cps = cp_rules.copy()
     best_sel_cps = np.zeros(n_time_steps, dtype=DT_UL_NP)
@@ -253,7 +305,8 @@ cpdef classify_cps(dict args_dict):
     best_dofs_arr = dofs_arr.copy()
 
     # an array to save all the randomly generated integers
-    rands_rec_arr = np.full((max_n_iters + 1, 3), 9999, dtype=np.uint32)
+    rands_rec_arr = np.full((max_n_iters + 5, 3), 9999, dtype=np.uint32)
+
     # initialize the obj. ftn. variables
     ppt_cp_n_vals_arr = np.full(n_cps, 0.0, dtype=DT_D_NP)
 
@@ -279,6 +332,8 @@ cpdef classify_cps(dict args_dict):
             cp_rules,
             cp_rules_idx_ctr,
             loc_mod_ctr,
+            anom_crnr_flags_arr,
+            no_steep_anom_flag,
             max_idxs_ct,
             n_cps,
             n_pts,
@@ -287,7 +342,13 @@ cpdef classify_cps(dict args_dict):
             &rand_k,
             &rand_i,
             &rand_v,
-            &old_v_i_k)
+            &old_v_i_k,
+            n_anom_cols,
+            thresh_steep,
+            &gen_mod_cp_err_flag)
+
+        if gen_mod_cp_err_flag:
+            raise RuntimeError('mod_cp_rules failed. Choose a lower value for max_idxs_ct!')
 
         if run_type == 1:
             new_iters_ct += 1
@@ -312,7 +373,7 @@ cpdef classify_cps(dict args_dict):
                 chnge_steps,
                 no_cp_val,
                 p_l,
-                n_cpus,
+                n_cpus_mem,
                 n_time_steps,
                 n_pts,
                 n_cps,
@@ -336,7 +397,7 @@ cpdef classify_cps(dict args_dict):
                 chnge_steps,
                 no_cp_val,
                 p_l,
-                n_cpus,
+                n_cpus_mem,
                 n_time_steps,
                 n_cps,
                 n_fuzz_nos)
@@ -359,7 +420,7 @@ cpdef classify_cps(dict args_dict):
                 chnge_steps,
                 no_cp_val,
                 p_l,
-                n_cpus,
+                n_cpus_mem,
                 n_time_steps,
                 n_cps,
                 n_fuzz_nos)
@@ -380,11 +441,10 @@ cpdef classify_cps(dict args_dict):
                 sel_cps,
                 lo_freq_pen_wt,
                 min_freq,
-                n_cpus,
+                n_cpus_obj,
                 n_cps,
                 n_max,
-                n_time_steps,
-                )
+                n_time_steps)
 
             run_type = 2
 
@@ -405,11 +465,10 @@ cpdef classify_cps(dict args_dict):
                 chnge_steps,
                 lo_freq_pen_wt,
                 min_freq,
-                n_cpus,
+                n_cpus_obj,
                 n_cps,
                 n_max,
-                n_time_steps,
-                )
+                n_time_steps)
 
         #print(curr_m_iter, curr_n_iter, run_type, round(curr_obj_val, 2), round(pre_obj_val, 2))
         if run_type == 3:
@@ -551,7 +610,7 @@ cpdef classify_cps(dict args_dict):
                 else:
                     print('#######Could not converge to an acceptable annealing temperature in %d tries!#########')
                     print('Terminating optimization....')
-                    raise Exception
+                    raise RuntimeError
 
         curr_obj_vals_list.append(curr_obj_val)
         best_obj_vals_list.append(best_obj_val)

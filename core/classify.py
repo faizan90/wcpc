@@ -21,7 +21,6 @@ plt.ioff()
 
 
 class CPClassiA(CPOPTBase):
-
     def __init__(self, msgs=True):
         super(CPClassiA, self).__init__(msgs=msgs)
 
@@ -152,8 +151,11 @@ class CPClassiA(CPOPTBase):
 
         assert isinstance(self.op_mp_memb_flag, bool)
         assert isinstance(self.op_mp_obj_ftn_flag, bool)
-        
-        if max(in_max_cols_list) < (2 * self.n_threads):
+
+        max_cols = max(in_max_cols_list)
+
+        if max_cols < (self._n_threads_obj):
+            self._n_threads_obj = 1
             self.op_mp_obj_ftn_flag = False
             if self.msgs:
                 print('####op_mp_obj_ftn_flag set to False!')
@@ -161,7 +163,6 @@ class CPClassiA(CPOPTBase):
         return
 
     def _gen_classi_cyth_mods(self, force_compile=False):
-        
         cyth_dir = Path(__file__).parents[1] / 'cyth'
 
         create_classi_cython_files(self.obj_1_flag,
@@ -198,6 +199,8 @@ class CPClassiA(CPOPTBase):
             assert n_threads > 0
 
         self.n_threads = n_threads
+        self._n_threads_obj = self.n_threads
+        self._n_threads_mem = self.n_threads
     
         assert self._sim_anneal_prms_set_flag
         self._verify_input()
@@ -253,7 +256,8 @@ class CPClassiA(CPOPTBase):
         calib_dict['temp_red_alpha'] = self.tem_alpha
         calib_dict['max_m_iters'] = self.tem_chng_iters
         calib_dict['max_n_iters'] = self.max_iters
-        calib_dict['n_cpus'] = self.n_threads
+        calib_dict['n_cpus_obj'] = self._n_threads_obj
+        calib_dict['n_cpus_mem'] = self._n_threads_mem
         calib_dict['msgs'] = int(self.msgs)
         calib_dict['max_idxs_ct'] = self.max_idx_ct
         calib_dict['max_iters_wo_chng'] = self.max_iters_wo_chng
@@ -266,6 +270,10 @@ class CPClassiA(CPOPTBase):
         
         calib_dict['lo_freq_pen_wt'] = self.lo_freq_pen_wt
         calib_dict['min_freq'] = self.min_freq
+
+        calib_dict['no_steep_anom_flag'] = self.no_steep_anom_flag
+        calib_dict['n_anom_rows'] = self.n_anom_rows
+        calib_dict['n_anom_cols'] = self.n_anom_cols
 
         _strt = timeit.default_timer()
         self.calib_dict = classify_cps_ftn(calib_dict)
@@ -425,7 +433,7 @@ class CPClassiA(CPOPTBase):
             hist_ax = plt.subplot(hists_grid[rows_idxs[i], cols_idxs[i]])
             hist_ax.set_axis_off()
 
-        plt.suptitle('Counts of visited points per CP during calibration')
+        plt.suptitle('Frequency of visited points per CP during calibration')
         plt.savefig(str(out_dir / 'loc_mod_ctr.png'), bbox_inches='tight')
         plt.close()
         return

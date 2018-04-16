@@ -357,7 +357,9 @@ def gen_mod_cp_rules_cyth_files(nonecheck=True,
                                 infer_types=None,
                                 language_level=3,
                                 force_compile=False,
-                                out_dir=''):
+                                out_dir='',
+                                op_mp_memb_flag=True,
+                                op_mp_obj_ftn_flag=True):
  
     assert out_dir
 
@@ -372,6 +374,9 @@ def gen_mod_cp_rules_cyth_files(nonecheck=True,
     params_dict['language_level'] = language_level
     params_dict['infer_types'] = infer_types
     params_dict['out_dir'] = out_dir
+
+    params_dict['op_mp_memb_flag'] = op_mp_memb_flag
+    params_dict['op_mp_obj_ftn_flag'] = op_mp_obj_ftn_flag
     
     out_dir = Path(out_dir)
     path_to_gen_mod_cp_rules_pyx = out_dir / 'gen_mod_cp_rules.pyx'
@@ -380,7 +385,7 @@ def gen_mod_cp_rules_cyth_files(nonecheck=True,
         compile_gen_mod_cp_rules_ftns = True
     else:
         compile_gen_mod_cp_rules_ftns = False
-    
+
     if compile_gen_mod_cp_rules_ftns:
         write_gen_mod_cp_rules_lines(params_dict)
 

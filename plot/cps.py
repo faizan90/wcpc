@@ -3,7 +3,6 @@ Created on Jan 4, 2018
 
 @author: Faizan-Uni
 '''
-import gc
 from pathlib import Path
 from functools import partial
 from multiprocessing import Pool
@@ -29,7 +28,6 @@ from ..misc.ftns import ret_mp_idxs
 
 
 class PlotCPs:
-
     def __init__(self, msgs=True):
         assert isinstance(msgs, (int, bool))
         self.msgs = msgs
@@ -86,8 +84,10 @@ class PlotCPs:
         assert check_nans_finite(x_coords)
         assert check_nans_finite(y_coords)
 
-        assert len(x_coords.shape) == 1
-        assert len(y_coords.shape) == 1
+        assert x_coords.ndim == 1
+        assert y_coords.ndim == 1
+
+        assert x_coords.shape[0] and y_coords.shape[0]
 
         self.x_coords = np.array(x_coords, dtype=DT_D_NP, order='C')
         self.y_coords = np.array(y_coords, dtype=DT_D_NP, order='C')
@@ -100,37 +100,38 @@ class PlotCPs:
     def set_sel_cps_arr(self, sel_cps_arr):
         assert isinstance(sel_cps_arr, np.ndarray)
         assert check_nans_finite(sel_cps_arr)
-        assert len(sel_cps_arr.shape) == 1
+        assert sel_cps_arr.ndim == 1
+        assert sel_cps_arr.shape[0]
 
         self.sel_cps_arr = np.array(sel_cps_arr, dtype=DT_UL_NP, order='C')
-
         self._sel_cps_arr_set_flag = True
         return
 
     def set_cp_rules_arr(self, cp_rules_arr):
         assert isinstance(cp_rules_arr, np.ndarray)
         assert check_nans_finite(cp_rules_arr)
-        assert len(cp_rules_arr.shape) == 2
+        assert cp_rules_arr.ndim == 2
+        assert all(cp_rules_arr.shape)
 
         self.cp_rules_arr = np.array(cp_rules_arr, dtype=DT_UL_NP, order='C')
-
         self._cp_rules_arr_set_flag = True
         return
 
     def set_anoms_arr(self, anom_arr):
         assert isinstance(anom_arr, np.ndarray)
         assert check_nans_finite(anom_arr)
-        assert len(anom_arr.shape) == 2
+        assert anom_arr.ndim == 2
+        assert all(anom_arr.shape)
 
         self.anom_arr = np.array(anom_arr, dtype=DT_D_NP, order='C')
-
         self._anom_arr_set_flag = True
         return
 
     def set_other_prms(self, fuzz_nos_arr, n_cps, anom_type, in_coords_type='geo'):
         assert isinstance(fuzz_nos_arr, np.ndarray)
         assert check_nans_finite(fuzz_nos_arr)
-        assert fuzz_nos_arr.shape[0] > 0
+        assert fuzz_nos_arr.ndim == 2
+        assert fuzz_nos_arr.shape[0]
         assert fuzz_nos_arr.shape[1] == 3
 
         assert isinstance(n_cps, int)
@@ -268,8 +269,8 @@ class PlotCPs:
             if self.anom_type != 'd':
                 curr_false_idxs = self.cp_rules_arr[j] == self.n_fuzz_nos
             else:
-                curr_false_idxs = np.zeros(self.best_cps_mean_anoms[j].shape[0],
-                                           dtype=bool)
+                curr_false_idxs = (
+                    np.zeros(self.best_cps_mean_anoms[j].shape[0], dtype=bool))
 
             curr_true_idxs = np.logical_not(curr_false_idxs)
             curr_mean_cp[curr_false_idxs] = np.nan
@@ -351,7 +352,7 @@ class PlotCPs:
 
         assert isinstance(cont_levels, np.ndarray)
         assert check_nans_finite(cont_levels)
-        assert len(cont_levels.shape) == 1
+        assert cont_levels.ndim == 1
         assert cont_levels.shape[0] > 0
 
         assert isinstance(out_figs_dir, (Path, str))
@@ -362,11 +363,12 @@ class PlotCPs:
 
         assert isinstance(fig_size, (tuple, list))
         assert len(fig_size) == 2
-        assert fig_size[0] > 0
-        assert fig_size[1] > 0
+        assert all(fig_size)
 
         assert isinstance(n_cpus, int)
         assert n_cpus > 0
+
+        n_cpus = max(1, min(n_cpus, int(self.n_cps / 3)))
 
         _plot_kriged_cps_partial = (
             partial(_plot_kriged_cps,
@@ -381,7 +383,8 @@ class PlotCPs:
                     y_coords=self.y_coords,
                     best_cps_min_anoms=self.best_cps_min_anoms,
                     best_cps_max_anoms=self.best_cps_max_anoms,
-                    best_cps_std_anoms=self.best_cps_std_anoms))
+                    best_cps_std_anoms=self.best_cps_std_anoms,
+                    msgs=self.msgs))
 
         _idxs = ret_mp_idxs(self.n_cps, n_cpus)
         cp_nos_list = [_idxs[i: i + 2] for i in range(n_cpus)]
@@ -407,8 +410,6 @@ class PlotCPs:
              self.cp_rules_arr[cp_nos_list[i][0]:cp_nos_list[i][1]])
              for i in range(n_cpus))
 
-        import timeit
-        _strt = timeit.default_timer()
         if n_cpus == 1:
             _map = list(map(_plot_kriged_cps_partial, _all_gen))
         else:
@@ -417,10 +418,10 @@ class PlotCPs:
                                                _all_gen))
             mp_pool.terminate()
 
-        print(_map)
-        _stop = timeit.default_timer()
-        print('Took: %0.3f' % (_stop - _strt))
+        if self.msgs:
+            print(_map)
         return
+
 
 def _plot_kriged_cps(args,
                      fig_size,
@@ -434,38 +435,8 @@ def _plot_kriged_cps(args,
                      y_coords,
                      best_cps_min_anoms,
                      best_cps_max_anoms,
-                     best_cps_std_anoms):
-
-    __plot_kriged_cps(args,
-                         fig_size,
-                         bck_polys_list,
-                         krige_x_coords_mesh,
-                         krige_y_coords_mesh,
-                         anom_type,
-                         cont_levels,
-                         out_figs_dir,
-                         x_coords,
-                         y_coords,
-                         best_cps_min_anoms,
-                         best_cps_max_anoms,
-                         best_cps_std_anoms)
-
-    return
-    
-
-def __plot_kriged_cps(args,
-                     fig_size,
-                     bck_polys_list,
-                     krige_x_coords_mesh,
-                     krige_y_coords_mesh,
-                     anom_type,
-                     cont_levels,
-                     out_figs_dir,
-                     x_coords,
-                     y_coords,
-                     best_cps_min_anoms,
-                     best_cps_max_anoms,
-                     best_cps_std_anoms):
+                     best_cps_std_anoms,
+                     msgs):
 
     (cp_nos,
      krige_z_coords_mesh,
@@ -507,7 +478,9 @@ def __plot_kriged_cps(args,
     cp_std_ax = cp_std_fig.gca()
 
     for j, cp_no in enumerate(range(cp_nos[0], cp_nos[1])):
-        print('Plotting for CP No.', cp_no)
+        if msgs:
+            print('Plotting CP No.', cp_no)
+
         plt.figure(cps_fig.number)
 
         if bck_polys_list is not None:
@@ -648,7 +621,6 @@ def __plot_kriged_cps(args,
         plt.close()
 
     plt.close('all')
-    gc.collect()
     return
 
 
@@ -668,11 +640,12 @@ def plot_iter_cp_pcntgs(n_cps,
 
     assert isinstance(curr_n_iters_arr, np.ndarray)
     assert check_nans_finite(curr_n_iters_arr)
-    assert len(curr_n_iters_arr.shape) == 1
+    assert curr_n_iters_arr.ndim == 1
 
     assert isinstance(cp_pcntge_arr, np.ndarray)
     assert check_nans_finite(cp_pcntge_arr)
-    assert len(cp_pcntge_arr.shape) == 2
+    assert cp_pcntge_arr.ndim == 2
+    assert all(cp_pcntge_arr.shape)
     assert cp_pcntge_arr.shape[1] == n_cps
 
     assert isinstance(out_fig_loc, (str, Path))
@@ -685,7 +658,7 @@ def plot_iter_cp_pcntgs(n_cps,
     if old_new_cp_map_arr is not None:
         assert isinstance(old_new_cp_map_arr, np.ndarray)
         assert check_nans_finite(old_new_cp_map_arr)
-        assert len(old_new_cp_map_arr.shape) == 2
+        assert old_new_cp_map_arr.ndim == 2
         assert old_new_cp_map_arr.shape[1] == 2
         assert old_new_cp_map_arr.shape[0] == n_cps
     else:
@@ -719,7 +692,8 @@ def plot_iter_cp_pcntgs(n_cps,
         ax.legend(loc=0)
         ax.set_title('CP classification - CP frequency evolution')
 
-        plt.savefig(str(out_fig_pre_path / ((out_fig_name + ('_cp_%0.2d.' % i) + out_ext))),
+        plt.savefig(str(out_fig_pre_path /
+                        ((out_fig_name + ('_cp_%0.2d.' % i) + out_ext))),
                     bbox_inches='tight')
 
         ax.cla()
