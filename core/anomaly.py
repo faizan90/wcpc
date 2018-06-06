@@ -20,6 +20,7 @@ plt.ioff()
 
 
 class Anomaly:
+
     def __init__(self, msgs=True):
         assert isinstance(msgs, (bool, int, float))
         self.msgs = msgs
@@ -27,7 +28,7 @@ class Anomaly:
         self._vars_read_flag = False
         self.nc_ext = 'nc'
         return
-    
+
     def _verify_input(self):
         assert self.in_ds_path.is_file()
 
@@ -37,7 +38,7 @@ class Anomaly:
         assert isinstance(self.time_dim_lab, str)
         assert isinstance(self.time_int, str)
         assert isinstance(self.file_type, str)
-        
+
         # TODO: implement for other resolutions
         assert self.time_int == 'D'
 
@@ -79,8 +80,8 @@ class Anomaly:
 
         self.vals_tot_rav = self.vals_tot.reshape(self.n_timesteps_tot, -1)
         assert self.vals_tot_rav.ndim == 2
-        
-        self.n_tot_vals = (self.vals_tot_rav.shape[0] * 
+
+        self.n_tot_vals = (self.vals_tot_rav.shape[0] *
                            self.vals_tot_rav.shape[1])
 
         self.min_vals_tot_rav = np.nanmin(self.vals_tot_rav, axis=1)
@@ -99,7 +100,7 @@ class Anomaly:
             nan_rows, nan_cols = np.where(_nan_idxs)
             max_row = self.vals_tot_rav.shape[0] - 1
             max_col = self.vals_tot_rav.shape[1] - 1
-            
+
             for i in range(nan_rows.shape[0]):
                 curr_row = nan_rows[i]
                 curr_col = nan_cols[i]
@@ -108,13 +109,13 @@ class Anomaly:
                 _back_col = curr_col
                 _fore_row = curr_row
                 _fore_col = curr_col
-                
+
                 if _back_row:
                     _back_row -= 1
-                
+
                 if _back_col:
                     _back_col -= 1
-                    
+
                 if _fore_row < max_row:
                     _fore_row += 1
 
@@ -133,7 +134,7 @@ class Anomaly:
                 self.vals_tot_rav[curr_row, curr_col] = \
                     np.nanmean(self.vals_tot_rav[_row_col_seq[:, 0],
                                                  _row_col_seq[:, 1]])
-                    
+
         return
 
     def read_vars(self,
@@ -156,7 +157,7 @@ class Anomaly:
         self.file_type = file_type
 
         self._verify_input()
-        
+
         if self.file_type == self.nc_ext:
             self._read_nc()
 
@@ -178,7 +179,7 @@ class Anomaly:
 
         # just in case
         assert (self.times_tot.shape[0] == self.vals_tot_rav.shape[0])
-        
+
         curr_idxs = ((self.times_tot >= strt_time) &
                      ((self.times_tot <= end_time)))
 
@@ -194,10 +195,10 @@ class Anomaly:
     def calc_anomaly_type_a(self, anom_type_a_nan_rep=None):
         assert self._vars_read_flag
         raise NotImplementedError('Dont use it!')
-        
+
         if anom_type_a_nan_rep is not None:
             assert isinstance(anom_type_a_nan_rep, (int, float))
-            
+
         self.anom_type_a_nan_rep = anom_type_a_nan_rep
 
         _1 = self.vals_tot_rav - self.min_vals_tot_rav[:, None]
@@ -250,7 +251,7 @@ class Anomaly:
 
             fig_out_dir = Path(fig_out_dir)
             assert fig_out_dir.parents[0].exists()
-            
+
             if not fig_out_dir.exists():
                 fig_out_dir.mkdir()
 
@@ -286,7 +287,7 @@ class Anomaly:
 #                 (np.argsort(np.argsort(self.vals_tot_anom[:, i])) + 1) /
 #                 (self.vals_tot_anom.shape[0] + 1))
 #             self.vals_tot_anom[:, i] = curr_bjs_probs_arr
-            
+
         assert (curr_time_idxs.sum() ==
                 self.vals_tot_anom.shape[0] ==
                 self.times.shape[0])
@@ -311,7 +312,7 @@ class Anomaly:
                 print('Saving anomaly CDF figs in:', fig_out_dir)
             self._prep_anomaly_mp(self.vals_tot_anom, n_cpus, fig_out_dir)
         return
-    
+
     def calc_anomaly_type_c(self,
                             strt_time,
                             end_time,
@@ -364,7 +365,7 @@ class Anomaly:
                 d_idxs = (m_idxs &
                           (self.times_tot.day == (j + 1)) &
                           curr_time_idxs)
-                
+
                 if not d_idxs.sum():
                     continue
 
