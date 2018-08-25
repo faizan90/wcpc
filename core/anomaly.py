@@ -488,7 +488,7 @@ class Anomaly:
                                                   time_fmt)[curr_time_all_idxs]
 
         self.times = self.times[curr_time_idxs]
-        b_j_s = np.dot(self.vals_tot_anom, eig_mat.T)[curr_time_idxs]
+        b_j_s = np.dot(self.vals_tot_anom, eig_mat)[curr_time_idxs]
         self.vals_anom_for_cp_plots = self.vals_tot_anom[curr_time_idxs]
 
         if eig_sum_flag:
