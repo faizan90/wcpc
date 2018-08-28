@@ -275,10 +275,6 @@ cpdef classify_cps(dict args_dict):
     if gen_mod_cp_err_flag:
         raise RuntimeError('gen_cp_rules failed. Choose a lower value for max_idxs_ct!')
 
-#     for i in range(n_cps):
-#         print(cp_rules[i, :].reshape(n_anom_rows, n_anom_cols))
-#         print(cp_rules_idx_ctr[i, :], "\n")
-
     best_cps = cp_rules.copy()
     best_sel_cps = np.zeros(n_time_steps, dtype=DT_UL_NP)
 

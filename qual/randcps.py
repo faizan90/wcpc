@@ -24,6 +24,7 @@ plt.ioff()
 
 
 class RandCPsGen:
+
     def __init__(self, msgs=True):
         self.msgs = msgs
         self._mult_cps_gened = False
@@ -143,7 +144,7 @@ class RandCPsGen:
         gen_dict['no_cp_val'] = no_cp_val
         gen_dict['p_l'] = p_l
         gen_dict['fuzz_nos_arr'] = fuzz_nos_arr
-        gen_dict['anom'] = anom
+        gen_dict['anom'] = anom.astype(np.float64)
 
         gen_dict['no_steep_anom_flag'] = no_steep_anom_flag
         gen_dict['n_anom_rows'] = n_anom_rows
@@ -157,6 +158,7 @@ class RandCPsGen:
 
 
 class RandCPsPerfComp(CPAssignA, RandCPsGen, ObjVals):
+
     def __init__(self):
         CPAssignA.__init__(self)
         RandCPsGen.__init__(self)
@@ -183,7 +185,7 @@ class RandCPsPerfComp(CPAssignA, RandCPsGen, ObjVals):
         assert check_nans_finite(mult_cp_rules)
         assert mult_cp_rules.ndim == 3
         assert all(mult_cp_rules.shape)
-        
+
         self.mult_cp_rules = np.array(mult_cp_rules, dtype=DT_UL_NP, order='C')
         self.n_gens = self.mult_cp_rules.shape[0]
         self._mult_cp_rules_set_flag = True
@@ -275,11 +277,11 @@ class RandCPsPerfComp(CPAssignA, RandCPsGen, ObjVals):
             in_max_cols_list.append(self.lorenz_arr.shape[1])
 
         in_lens_list.append(self.mult_sel_cps_arr.shape[1])
-        
+
         _len = in_lens_list[0]
         for curr_len in in_lens_list[1:]:
             assert curr_len == _len
-        
+
         assert isinstance(self.op_mp_obj_ftn_flag, bool)
 
         max_cols = max(in_max_cols_list)
@@ -291,7 +293,7 @@ class RandCPsPerfComp(CPAssignA, RandCPsGen, ObjVals):
                 print('####op_mp_obj_ftn_flag set to False!')
 
         return
-    
+
     def _prep_mult_sim_obj_vals_input(self,
                                       sel_cps,
                                       n_threads='auto',
@@ -391,7 +393,7 @@ class RandCPsPerfComp(CPAssignA, RandCPsGen, ObjVals):
         self._curr_cmpt_var = 'mult'
         self._cmpt_wettnesses(in_ppt_arr)
         return
-    
+
     def cmpt_sim_wettnesses(self, in_ppt_arr):
         self._curr_cmpt_var = 'sim'
         self._cmpt_wettnesses(in_ppt_arr)
@@ -411,7 +413,7 @@ class RandCPsPerfComp(CPAssignA, RandCPsGen, ObjVals):
 
         wettness = WettnessIndex(False)
         wettness.set_ppt_arr(in_ppt_arr)
-        
+
         if self._curr_cmpt_var == 'mult':
             self.mult_cp_rules_sorted = np.zeros_like(self.mult_cp_rules)
             self.mean_mult_wett_arrs = np.zeros((self.n_gens, self.n_cps),
