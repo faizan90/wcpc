@@ -38,6 +38,7 @@ class Anomaly:
         assert isinstance(self.time_dim_lab, str)
         assert isinstance(self.time_int, str)
         assert isinstance(self.file_type, str)
+        assert isinstance(self.sub_daily_flag, bool)
 
         # TODO: implement for other resolutions
         assert self.time_int == 'D'
@@ -51,7 +52,10 @@ class Anomaly:
         in_ds = xr.open_dataset(str(self.in_ds_path))
 
         _ = pd.DatetimeIndex(getattr(in_ds, self.time_dim_lab).values)
-        self.times_tot = pd.DatetimeIndex(pd.DatetimeIndex(_).date)
+        self.times_tot = pd.DatetimeIndex(_)
+
+        if not self.sub_daily_flag:
+            self.times_tot = pd.DatetimeIndex(self.times_tot.date)
 
         assert not np.sum(self.times_tot.duplicated())
 
@@ -69,8 +73,8 @@ class Anomaly:
         assert check_nans_finite(self.x_coords)
         assert check_nans_finite(self.y_coords)
 
-        self.x_coords_mesh, self.y_coords_mesh = np.meshgrid(self.x_coords,
-                                                             self.y_coords)
+        self.x_coords_mesh, self.y_coords_mesh = np.meshgrid(
+            self.x_coords, self.y_coords)
 
         self.x_coords_rav = self.x_coords_mesh.ravel()
         self.y_coords_rav = self.y_coords_mesh.ravel()
@@ -144,7 +148,8 @@ class Anomaly:
                   time_dim_lab='time',
                   vals_dim_lab='slp',
                   file_type='nc',
-                  time_int='D'):
+                  time_int='D',
+                  sub_daily_flag=False):
 
         self.in_ds_path = Path(in_ds_path)
 
@@ -153,6 +158,7 @@ class Anomaly:
         self.vals_dim_lab = vals_dim_lab
         self.time_dim_lab = time_dim_lab
         self.time_int = time_int
+        self.sub_daily_flag = sub_daily_flag
 
         self.file_type = file_type
 
@@ -320,7 +326,9 @@ class Anomaly:
                             time_fmt='%Y-%m-%d',
                             anom_type_c_nan_rep=None,
                             fig_out_dir=None,
-                            n_cpus=1):
+                            n_cpus=1,
+                            sub_daily_flag=False):
+
         assert self._vars_read_flag
 
         if anom_type_c_nan_rep is not None:
@@ -336,8 +344,8 @@ class Anomaly:
         assert isinstance(season_months, np.ndarray)
         assert check_nans_finite(season_months)
         assert season_months.ndim == 1
-        assert np.all(season_months > 0) and (np.all(season_months < 13))
         assert season_months.shape[0] > 0
+        assert np.all(season_months > 0) and (np.all(season_months < 13))
 
         if fig_out_dir is not None:
             assert isinstance(fig_out_dir, (Path, str))
@@ -359,23 +367,59 @@ class Anomaly:
 
         self.times = self.times_tot[curr_time_idxs]
 
-        for i in range(12):
-            m_idxs = self.times_tot.month == (i + 1)
-            for j in range(31):
-                d_idxs = (m_idxs &
-                          (self.times_tot.day == (j + 1)) &
-                          curr_time_idxs)
+        if sub_daily_flag:
 
-                if not d_idxs.sum():
+            unique_hrs = np.unique(self.times_tot.hour)
+
+            if self.msgs:
+                print('Unique hours for sub-daily anomaly:', unique_hrs)
+
+            for i in range(12):
+                m_idxs = self.times_tot.month == (i + 1)
+
+                if not m_idxs.sum():
                     continue
 
-                curr_vals = self.vals_tot_rav[d_idxs]
+                for j in range(31):
+                    d_idxs = (m_idxs &
+                              (self.times_tot.day == (j + 1)) &
+                              curr_time_idxs)
 
-                mean_arr = np.mean(curr_vals, axis=0)
-                sigma_arr = np.std(curr_vals, axis=0)
+                    if not d_idxs.sum():
+                        continue
 
-                curr_anoms = (curr_vals - mean_arr) / sigma_arr
-                self.vals_tot_anom[d_idxs] = curr_anoms
+                    for k in unique_hrs:
+                        h_idxs = d_idxs & (self.times_tot.day == k)
+
+                        if not h_idxs.sum():
+                            continue
+
+                        curr_vals = self.vals_tot_rav[h_idxs]
+
+                        mean_arr = np.mean(curr_vals, axis=0)
+                        sigma_arr = np.std(curr_vals, axis=0)
+
+                        curr_anoms = (curr_vals - mean_arr) / sigma_arr
+                        self.vals_tot_anom[h_idxs] = curr_anoms
+
+        else:
+            for i in range(12):
+                m_idxs = self.times_tot.month == (i + 1)
+                for j in range(31):
+                    d_idxs = (m_idxs &
+                              (self.times_tot.day == (j + 1)) &
+                              curr_time_idxs)
+
+                    if not d_idxs.sum():
+                        continue
+
+                    curr_vals = self.vals_tot_rav[d_idxs]
+
+                    mean_arr = np.mean(curr_vals, axis=0)
+                    sigma_arr = np.std(curr_vals, axis=0)
+
+                    curr_anoms = (curr_vals - mean_arr) / sigma_arr
+                    self.vals_tot_anom[d_idxs] = curr_anoms
 
         self.vals_tot_anom = self.vals_tot_anom[curr_time_idxs]
 
