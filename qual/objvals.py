@@ -19,6 +19,7 @@ from ..codegenr.gen_all import create_obj_cython_files
 
 
 class ObjVals(CPDataBase):
+
     def __init__(self, msgs=True):
         super().__init__(msgs=msgs)
 
@@ -140,6 +141,8 @@ class ObjVals(CPDataBase):
 
         if self.obj_4_flag:
             obj_dict['o_4_p_thresh_arr'] = self.o_4_wett_thresh_arr
+
+        if self.obj_6_flag:
             assert self.neb_wett_arr.shape[1] == 2, (
                 'Implmented for two neibors only!')
 
@@ -154,7 +157,7 @@ class ObjVals(CPDataBase):
 
         if self.obj_2_flag or self.obj_5_flag:
             obj_dict['in_cats_ppt_arr_calib'] = self.cat_ppt_arr
-            
+
         if self.obj_4_flag or self.obj_6_flag or self.obj_7_flag:
             obj_dict['in_wet_arr_calib'] = self.neb_wett_arr
 

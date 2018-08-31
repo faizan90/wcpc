@@ -21,6 +21,7 @@ plt.ioff()
 
 
 class CPClassiA(CPOPTBase):
+
     def __init__(self, msgs=True):
         super(CPClassiA, self).__init__(msgs=msgs)
 
@@ -50,7 +51,7 @@ class CPClassiA(CPOPTBase):
             assert self.temp_adj_iters == 'auto'
         else:
             assert 0 < self.temp_adj_iters
-            
+
         assert 0 <= self.min_acc_rate < 100
         assert 0 <= self.max_acc_rate <= 100
         assert self.min_acc_rate < self.max_acc_rate
@@ -155,10 +156,16 @@ class CPClassiA(CPOPTBase):
         max_cols = max(in_max_cols_list)
 
         if max_cols < (self._n_threads_obj):
-            self._n_threads_obj = 1
-            self.op_mp_obj_ftn_flag = False
-            if self.msgs:
-                print('####op_mp_obj_ftn_flag set to False!')
+            self._n_threads_obj = min(
+                max_cols, int(0.5 * self._n_threads_obj))
+
+            self._n_threads_obj = 1  # max(1, self._n_threads_obj)
+
+            if self._n_threads_obj == 1:
+                self.op_mp_obj_ftn_flag = False
+
+                if self.msgs:
+                    print('####op_mp_obj_ftn_flag set to False!')
 
         return
 
@@ -189,7 +196,7 @@ class CPClassiA(CPOPTBase):
 
         return importlib.import_module('..cyth.classi_alg',
                                        package='wcpc.core').classify_cps
-    
+
     def classify(self, n_threads='auto', force_compile=False):
         assert isinstance(n_threads, (int, str))
 
@@ -201,7 +208,7 @@ class CPClassiA(CPOPTBase):
         self.n_threads = n_threads
         self._n_threads_obj = self.n_threads
         self._n_threads_mem = self.n_threads
-    
+
         assert self._sim_anneal_prms_set_flag
         self._verify_input()
 
@@ -221,6 +228,8 @@ class CPClassiA(CPOPTBase):
 
         if self.obj_4_flag:
             calib_dict['o_4_p_thresh_arr'] = self.o_4_wett_thresh_arr
+
+        if self.obj_6_flag:
             assert self.neb_wett_arr.shape[1] == 2, (
                 'Implmented for two neibors only!')
 
@@ -267,7 +276,7 @@ class CPClassiA(CPOPTBase):
         calib_dict['min_acc_rate'] = self.min_acc_rate
         calib_dict['max_acc_rate'] = self.max_acc_rate
         calib_dict['max_temp_adj_atmps'] = self.max_temp_adj_atmps
-        
+
         calib_dict['lo_freq_pen_wt'] = self.lo_freq_pen_wt
         calib_dict['min_freq'] = self.min_freq
 
@@ -296,7 +305,7 @@ class CPClassiA(CPOPTBase):
 
         self._classified_flag = True
         return
-    
+
     def plot_iter_obj_vals(self, out_fig_loc, fig_size=(17, 10)):
         if self.msgs:
             print('\n\nPlotting objective function evolution...')
@@ -377,11 +386,11 @@ class CPClassiA(CPOPTBase):
 
         fig = plt.figure(figsize=fig_size)
         ax = fig.gca()
-        
-        for i, (unq, cts) in enumerate(((unq_cps, unq_cps_cts), 
-                                        (unq_pts, unq_pts_cts), 
+
+        for i, (unq, cts) in enumerate(((unq_cps, unq_cps_cts),
+                                        (unq_pts, unq_pts_cts),
                                         (unq_fuz, unq_fuz_cts))):
-            
+
             ax.plot(unq, cts / float(cts[0]), alpha=0.7)
             ax.set_xlabel(_vars[i][0] + ' No.')
             ax.set_ylabel('Relative count')
@@ -416,7 +425,7 @@ class CPClassiA(CPOPTBase):
             hist_ax = plt.subplot(hists_grid[rows_idxs[i], cols_idxs[i]])
             hist_ax.bar(pt_rng, loc_mod_ctr_arr[i, :])
             hist_ax.set_title('CP No. %2d' % i)
-            
+
             if rows_idxs[i] == rows_idxs[-1]:
                 hist_ax.set_xlabel('Point no.')
             else:

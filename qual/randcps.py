@@ -324,6 +324,8 @@ class RandCPsPerfComp(CPAssignA, RandCPsGen, ObjVals):
 
         if self.obj_4_flag:
             obj_dict['o_4_p_thresh_arr'] = self.o_4_wett_thresh_arr
+
+        if self.obj_6_flag:
             assert self.neb_wett_arr.shape[1] == 2, (
                 'Implmented for two neibors only!')
 
