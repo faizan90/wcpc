@@ -218,7 +218,7 @@ def write_memb_ftns_lines(params_dict):
     pyxcd.ded()
 
     pyxcd.w('best_dof_cp = no_cp_val')
-    pyxcd.w('max_dof = 1e-5')
+    pyxcd.w('max_dof = 1e-10')
     pyxcd.w('for j in range(n_cps):')
     pyxcd.ind()
     pyxcd.w('if dofs_arr[i, j] > max_dof:')
@@ -391,7 +391,7 @@ def write_memb_ftns_lines(params_dict):
     pyxcd.w('dofs_arr[i, curr_cp] = curr_dof')
 
     pyxcd.w('best_dof_cp = no_cp_val')
-    pyxcd.w('max_dof = 1e-5')
+    pyxcd.w('max_dof = 1e-10')
     pyxcd.w('for j in range(n_cps):')
     pyxcd.ind()
     pyxcd.w('if dofs_arr[i, j] > max_dof:')

@@ -4,7 +4,7 @@
 # cython: cdivision=True
 # cython: language_level=3
 
-### obj_ftns:False;False;False;True;False;False;False;False
+### obj_ftns:False;False;True;False;False;False;False;False
 
 ### op_mp_obj_ftn_flag:True
 
@@ -58,32 +58,21 @@ cpdef get_obj_val(dict args_dict):
         np.ndarray[DT_D_NP_t, ndim=1, mode='c'] obj_vals_arr
         np.ndarray[DT_D_NP_t, ndim=1, mode='c'] ppt_cp_n_vals_arr
 
+        np.ndarray[DT_D_NP_t, ndim=2, mode='c'] in_ppt_arr
+
         # ulongs for obj. ftns.
+        Py_ssize_t m
+        DT_UL n_stns
 
-        # ulongs obj. ftns. 4
-        DT_UL n_nebs
-
-        # arrays for obj. ftns. 4 and 6
-        np.ndarray[DT_D_NP_t, ndim=2, mode='c'] in_wet_arr_calib
-
-        # ulongs obj. ftn. 4
-        Py_ssize_t n, o
-        DT_UL n_o_4_threshs
-
-        # arrays for obj. ftn. 4
-        np.ndarray[DT_D_NP_t, ndim=1, mode='c'] o_4_p_thresh_arr
-        np.ndarray[DT_D_NP_t, ndim=2, mode='c'] ppt_mean_wet_arr
-        np.ndarray[DT_D_NP_t, ndim=2, mode='c'] nebs_wet_obj_vals_arr
-        np.ndarray[DT_UL_NP_t, ndim=3, mode='c'] ppt_cp_mean_wet_arr
+        # arrays for obj. ftn. 3
+        np.ndarray[DT_D_NP_t, ndim=1, mode='c'] ppt_mean_arr
+        np.ndarray[DT_D_NP_t, ndim=2, mode='c'] ppt_cp_mean_arr
 
     # read everythings from the given dict. Must do explicitly.
-    in_wet_arr_calib = args_dict['in_wet_arr_calib']
-    n_time_steps = in_wet_arr_calib.shape[0]
-    n_nebs = in_wet_arr_calib.shape[1]
-    n_max = max(n_max, n_nebs)
-    assert n_nebs, 'n_nebs cannot be zero!'
-    o_4_p_thresh_arr = args_dict['o_4_p_thresh_arr']
-    n_o_4_threshs = o_4_p_thresh_arr.shape[0]
+    in_ppt_arr = args_dict['in_ppt_arr_calib']
+    n_stns = in_ppt_arr.shape[1]
+    n_max = max(n_max, n_stns)
+    n_time_steps = in_ppt_arr.shape[0]
 
     obj_ftn_wts_arr = args_dict['obj_ftn_wts_arr']
     if 'mult_obj_vals_flag' in args_dict:
@@ -111,10 +100,7 @@ cpdef get_obj_val(dict args_dict):
     if msgs:
         print('\n')
         print('Getting objective function value...')
-        print('n_nebs:', n_nebs)
-        print('o_4_p_thresh_arr:', o_4_p_thresh_arr)
-        print('n_o_4_threshs:', n_o_4_threshs)
-        print('in_wet_arr shape:', (in_wet_arr_calib.shape[0], in_wet_arr_calib.shape[1]))
+        print('n_stns:', n_stns)
         print('n_cps:', n_cps)
         print('n_cpus:', n_cpus)
         print('obj_ftn_wts_arr:', obj_ftn_wts_arr)
@@ -123,33 +109,29 @@ cpdef get_obj_val(dict args_dict):
         print('n_max:', n_max)
         print('mult_obj_vals_flag:', mult_obj_vals_flag)
         print('n_gens:', n_gens)
+        print('in_ppt_arr shape: (%d, %d)' % (in_ppt_arr.shape[0], in_ppt_arr.shape[1]))
 
     # initialize the required variables
     ppt_cp_n_vals_arr = np.full(n_cps, 0.0, dtype=DT_D_NP)
     obj_vals_arr = np.full(n_gens, 0.0, dtype=DT_D_NP)
 
-    # initialize obj. ftn. 4 variables
-    ppt_mean_wet_arr = np.full((n_nebs, n_o_4_threshs), 0.0, dtype=DT_D_NP)
-    ppt_cp_mean_wet_arr = np.full((n_nebs, n_cps, n_o_4_threshs), 0.0, dtype=DT_UL_NP)
-    nebs_wet_obj_vals_arr = np.full((n_nebs, n_o_4_threshs), 0.0, dtype=DT_D_NP)
+    # initialize obj. ftn. 3 variables
+    ppt_mean_arr = np.full(n_stns, 0.0, dtype=DT_D_NP)
+    ppt_cp_mean_arr = np.full((n_cps, n_stns), 0.0, dtype=DT_D_NP)
 
-    # fill some arrays used for obj. 4 ftns.
-    for n in range(n_nebs):
-        for o in range(n_o_4_threshs):
-            ppt_mean_wet_arr[n, o] = np.mean(in_wet_arr_calib[:, n] > o_4_p_thresh_arr[o])
-            assert (not isnan(ppt_mean_wet_arr[n, o]))
+    # fill some arrays used for obj. 1 and 3 ftns.
+    for m in range(n_stns):
+        ppt_mean_arr[m] = np.mean(in_ppt_arr[:, m])
+        assert ((not isnan(ppt_mean_arr[m])) and (ppt_mean_arr[m]> 0))
 
     # calc obj ftn value
     if mult_obj_vals_flag:
         for i in range(n_gens):
             curr_obj_val = obj_ftn_refresh(
-                in_wet_arr_calib,
-                ppt_mean_wet_arr,
-                o_4_p_thresh_arr,
-                ppt_cp_mean_wet_arr,
-                nebs_wet_obj_vals_arr,
-                n_o_4_threshs,
-                n_nebs,
+                in_ppt_arr,
+                n_stns,
+                ppt_cp_mean_arr,
+                ppt_mean_arr,
                 ppt_cp_n_vals_arr,
                 obj_ftn_wts_arr,
                 mult_sel_cps[i],
@@ -165,13 +147,10 @@ cpdef get_obj_val(dict args_dict):
 
     else:
         curr_obj_val = obj_ftn_refresh(
-            in_wet_arr_calib,
-            ppt_mean_wet_arr,
-            o_4_p_thresh_arr,
-            ppt_cp_mean_wet_arr,
-            nebs_wet_obj_vals_arr,
-            n_o_4_threshs,
-            n_nebs,
+            in_ppt_arr,
+            n_stns,
+            ppt_cp_mean_arr,
+            ppt_mean_arr,
             ppt_cp_n_vals_arr,
             obj_ftn_wts_arr,
             sel_cps,

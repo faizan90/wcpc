@@ -86,7 +86,7 @@ cdef void calc_membs_dof_cps(
             dofs_arr[i, j] = curr_dof
 
         best_dof_cp = no_cp_val
-        max_dof = 1e-5
+        max_dof = 1e-10
         for j in range(n_cps):
             if dofs_arr[i, j] > max_dof:
                 max_dof = dofs_arr[i, j]
@@ -189,7 +189,7 @@ cdef void update_membs_dof_cps(
 
         dofs_arr[i, curr_cp] = curr_dof
         best_dof_cp = no_cp_val
-        max_dof = 1e-5
+        max_dof = 1e-10
         for j in range(n_cps):
             if dofs_arr[i, j] > max_dof:
                 max_dof = dofs_arr[i, j]

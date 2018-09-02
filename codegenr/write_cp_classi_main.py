@@ -813,7 +813,7 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.ind()
     pyxcd.w('curr_m_iter = 0')
     pyxcd.w('curr_anneal_temp *= temp_red_alpha')
-    pyxcd.w('run_type = 1')
+    pyxcd.w('#run_type = 1')
     pyxcd.ded()
 
     pyxcd.w('mod_cp_rules(')
@@ -1228,44 +1228,44 @@ def write_cp_classi_main_lines(params_dict):
     pyxcd.w('if ants[0] and ants[1]:')
     pyxcd.ind()
     pyxcd.w('#print(ants)')
-    
+
     pyxcd.w('if acc_rate < min_acc_rate:')
     pyxcd.ind()
     pyxcd.w('print(\'accp_rate (%0.2f%%) is too low!\' % acc_rate)')
     pyxcd.w('ants[0] = [acc_rate, anneal_temp_ini]')
     pyxcd.ded()
-    
+
     pyxcd.w('elif acc_rate > max_acc_rate:')
     pyxcd.ind()
     pyxcd.w('print(\'accp_rate (%0.2f%%) is too high!\' % acc_rate)')
     pyxcd.w('ants[1] = [acc_rate, anneal_temp_ini]')
     pyxcd.ded()
-    
+
     pyxcd.w('#print(anneal_temp_ini)')
     pyxcd.w('anneal_temp_ini = 0.5 * ((ants[1][1] + ants[0][1]))')
-    
+
     pyxcd.w('curr_anneal_temp = anneal_temp_ini')
     pyxcd.w('#print(anneal_temp_ini)')
     pyxcd.w('#print(ants)')
     pyxcd.ded()
-    
+
     pyxcd.w('else:')
     pyxcd.ind()
     pyxcd.w('if acc_rate < min_acc_rate:')
     pyxcd.ind()
     pyxcd.w('ants[0] = [acc_rate, anneal_temp_ini]')
-    
+
     pyxcd.w('print(\'accp_rate (%0.2f%%) is too low!\' % acc_rate)')
     pyxcd.w('temp_inc = (1 + ((min_acc_rate) * 0.01))')
     pyxcd.w('print(\'Increasing anneal_temp_ini by %0.2f%%...\' % (100 * (temp_inc - 1)))')
     pyxcd.w('anneal_temp_ini = anneal_temp_ini * temp_inc')
     pyxcd.w('curr_anneal_temp = anneal_temp_ini')
     pyxcd.ded()
-    
+
     pyxcd.w('elif acc_rate > max_acc_rate:')
     pyxcd.ind()
     pyxcd.w('ants[1] = [acc_rate, anneal_temp_ini]')
-    
+
     pyxcd.w('print(\'accp_rate (%0.2f%%) is too high!\' % acc_rate)')
     pyxcd.w('temp_inc = max(1e-6, (1 - ((acc_rate) * 0.01)))')
     pyxcd.w('print(\'Reducing anneal_temp_ini to %0.2f%%...\' %  (100 * (1 - temp_inc)))')
