@@ -38,6 +38,7 @@ if __name__ == '__main__':
 
     time_fmt = '%Y-%m-%d'
     sub_daily_flag = False
+    normalize = False
 
     os.chdir(main_dir)
 
@@ -64,7 +65,8 @@ if __name__ == '__main__':
         season_months=np.arange(1, 13),
         time_fmt=time_fmt,
         eig_cum_sum_ratio=1.0,
-        eig_sum_flag=False)
+        eig_sum_flag=False,
+        normalize=normalize)
 
 #     with open(out_anomaly_pkl, 'wb') as _pkl_hdl:
 #         pickle.dump(anomaly, _pkl_hdl)

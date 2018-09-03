@@ -255,7 +255,8 @@ class Anomaly:
             time_fmt='%Y-%m-%d',
             anom_type_b_nan_rep=None,
             fig_out_dir=None,
-            n_cpus=1):
+            n_cpus=1,
+            normalize=True):
 
         assert self._vars_read_flag
 
@@ -297,13 +298,14 @@ class Anomaly:
             (self.vals_tot_rav[curr_time_idxs] - self.mean_arr) /
             self.sigma_arr)
 
-        _anom_min = np.nanmin(self.vals_tot_anom, axis=1)
-        _anom_max = np.nanmax(self.vals_tot_anom, axis=1)
+        if normalize:
+            _anom_min = np.nanmin(self.vals_tot_anom, axis=1)
+            _anom_max = np.nanmax(self.vals_tot_anom, axis=1)
 
-        _1 = self.vals_tot_anom - _anom_min[:, None]
-        _2 = (_anom_max - _anom_min)[:, None]
+            _1 = self.vals_tot_anom - _anom_min[:, None]
+            _2 = (_anom_max - _anom_min)[:, None]
 
-        self.vals_tot_anom = _1 / _2
+            self.vals_tot_anom = _1 / _2
 
 #         for i in range(self.vals_tot_anom.shape[1]):
 #             curr_bjs_probs_arr = (
@@ -347,7 +349,8 @@ class Anomaly:
             time_fmt='%Y-%m-%d',
             anom_type_c_nan_rep=None,
             fig_out_dir=None,
-            n_cpus=1):
+            n_cpus=1,
+            normalize=True):
 
         assert self._vars_read_flag
 
@@ -442,13 +445,14 @@ class Anomaly:
 
         self.vals_tot_anom = self.vals_tot_anom[curr_time_idxs]
 
-        _anom_min = np.nanmin(self.vals_tot_anom, axis=1)
-        _anom_max = np.nanmax(self.vals_tot_anom, axis=1)
+        if normalize:
+            _anom_min = np.nanmin(self.vals_tot_anom, axis=1)
+            _anom_max = np.nanmax(self.vals_tot_anom, axis=1)
 
-        _1 = self.vals_tot_anom - _anom_min[:, None]
-        _2 = (_anom_max - _anom_min)[:, None]
+            _1 = self.vals_tot_anom - _anom_min[:, None]
+            _2 = (_anom_max - _anom_min)[:, None]
 
-        self.vals_tot_anom = _1 / _2
+            self.vals_tot_anom = _1 / _2
 
         nan_ct = np.sum(np.isnan(self.vals_tot_anom))
         _msg = '%d NaNs out of %d in anomaly of type C.' % (
@@ -485,7 +489,8 @@ class Anomaly:
             eig_cum_sum_ratio=0.95,
             eig_sum_flag=False,
             fig_out_dir=None,
-            n_cpus=1):
+            n_cpus=1,
+            normalize=True):
 
         assert self._vars_read_flag
 
@@ -528,7 +533,8 @@ class Anomaly:
             end_time_all,
             season_months,
             time_fmt,
-            self.anom_type_d_nan_rep)
+            self.anom_type_d_nan_rep,
+            normalize=normalize)
 
         corr_mat = np.corrcoef(self.vals_tot_anom.T)
         eig_val, eig_mat = np.linalg.eig(corr_mat)
@@ -564,19 +570,22 @@ class Anomaly:
 
         assert check_nans_finite(b_j_s)
 
-        self.vals_anom = np.full(
+        if normalize:
+            self.vals_anom = np.full(
             (curr_time_idxs.sum(), self.n_dims), np.nan)
 
-        for i in range(self.n_dims):
-            curr_bjs_arr = b_j_s[:, i]
-            curr_bjs_probs_arr = (
-                (np.argsort(np.argsort(curr_bjs_arr)) + 1) /
-                (curr_bjs_arr.shape[0] + 1))
+            for i in range(self.n_dims):
+                curr_bjs_arr = b_j_s[:, i]
+                curr_bjs_probs_arr = (
+                    (np.argsort(np.argsort(curr_bjs_arr)) + 1) /
+                    (curr_bjs_arr.shape[0] + 1))
 
-            self.vals_anom[:, i] = curr_bjs_probs_arr
-#             curr_bjs_arr = ((curr_bjs_arr - curr_bjs_arr.min()) /
-#                             (curr_bjs_arr.max() - curr_bjs_arr.min()))
+                self.vals_anom[:, i] = curr_bjs_probs_arr
+    #             curr_bjs_arr = ((curr_bjs_arr - curr_bjs_arr.min()) /
+    #                             (curr_bjs_arr.max() - curr_bjs_arr.min()))
 #             self.vals_anom[:, i] = curr_bjs_arr
+        else:
+            self.vals_anom = b_j_s
 
         assert check_nans_finite(self.vals_anom)
         assert (
@@ -584,7 +593,8 @@ class Anomaly:
             self.vals_anom.shape[0] ==
             self.times.shape[0])
 
-        assert (np.all(self.vals_anom > 0) and np.all(self.vals_anom < 1))
+        if normalize:
+            assert (np.all(self.vals_anom > 0) and np.all(self.vals_anom < 1))
 
         if fig_out_dir is not None:
             if self.msgs:
@@ -605,7 +615,8 @@ class Anomaly:
             eig_cum_sum_ratio=0.95,
             eig_sum_flag=False,
             fig_out_dir=None,
-            n_cpus=1):
+            n_cpus=1,
+            normalize=True):
 
         assert self._vars_read_flag
 
@@ -650,7 +661,8 @@ class Anomaly:
             time_fmt,
             self.anom_type_e_nan_rep,
             fig_out_dir,
-            n_cpus)
+            n_cpus,
+            normalize=normalize)
 
         corr_mat = np.corrcoef(self.vals_tot_anom.T)
         eig_val, eig_mat = np.linalg.eig(corr_mat)
@@ -686,19 +698,22 @@ class Anomaly:
 
         assert check_nans_finite(b_j_s)
 
-        self.vals_anom = np.full(
-            (curr_time_idxs.sum(), self.n_dims), np.nan)
+        if normalize:
+            self.vals_anom = np.full(
+                (curr_time_idxs.sum(), self.n_dims), np.nan)
 
-        for i in range(self.n_dims):
-            curr_bjs_arr = b_j_s[:, i]
-            curr_bjs_probs_arr = (
-                (np.argsort(np.argsort(curr_bjs_arr)) + 1) /
-                (curr_bjs_arr.shape[0] + 1))
+            for i in range(self.n_dims):
+                curr_bjs_arr = b_j_s[:, i]
+                curr_bjs_probs_arr = (
+                    (np.argsort(np.argsort(curr_bjs_arr)) + 1) /
+                    (curr_bjs_arr.shape[0] + 1))
 
-            self.vals_anom[:, i] = curr_bjs_probs_arr
-#             curr_bjs_arr = ((curr_bjs_arr - curr_bjs_arr.min()) /
-#                             (curr_bjs_arr.max() - curr_bjs_arr.min()))
-#             self.vals_anom[:, i] = curr_bjs_arr
+                self.vals_anom[:, i] = curr_bjs_probs_arr
+    #             curr_bjs_arr = ((curr_bjs_arr - curr_bjs_arr.min()) /
+    #                             (curr_bjs_arr.max() - curr_bjs_arr.min()))
+    #             self.vals_anom[:, i] = curr_bjs_arr
+        else:
+            self.vals_anom = b_j_s
 
         assert check_nans_finite(self.vals_anom)
         assert (
@@ -706,7 +721,8 @@ class Anomaly:
             self.vals_anom.shape[0] ==
             self.times.shape[0])
 
-        assert (np.all(self.vals_anom > 0) and np.all(self.vals_anom < 1))
+        if normalize:
+            assert (np.all(self.vals_anom > 0) and np.all(self.vals_anom < 1))
 
         if fig_out_dir is not None:
             if self.msgs:
