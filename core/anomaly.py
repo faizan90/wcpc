@@ -100,9 +100,10 @@ class Anomaly:
 
         if nan_ct:
             if self.msgs:
-                print_warning(('\nWarning in read_vars: %s'
-                               ' Setting all to the mean of the D8 at the '
-                               'given time steps.') % (_msg))
+                print_warning((
+                    '\nWarning in read_vars: %s'
+                    ' Setting all to the mean of the D8 at the '
+                    'given time steps.') % (_msg))
 
             nan_rows, nan_cols = np.where(_nan_idxs)
             max_row = self.vals_tot_rav.shape[0] - 1
@@ -346,8 +347,7 @@ class Anomaly:
             time_fmt='%Y-%m-%d',
             anom_type_c_nan_rep=None,
             fig_out_dir=None,
-            n_cpus=1,
-            sub_daily_flag=False):
+            n_cpus=1):
 
         assert self._vars_read_flag
 
@@ -385,7 +385,7 @@ class Anomaly:
 
         self.times = self.times_tot[curr_time_idxs]
 
-        if sub_daily_flag:
+        if self.sub_daily_flag:
 
             unique_hrs = np.unique(self.times_tot.hour)
 
@@ -399,15 +399,16 @@ class Anomaly:
                     continue
 
                 for j in range(31):
-                    d_idxs = (m_idxs &
-                              (self.times_tot.day == (j + 1)) &
-                              curr_time_idxs)
+                    d_idxs = (
+                        m_idxs &
+                        (self.times_tot.day == (j + 1)) &
+                        curr_time_idxs)
 
                     if not d_idxs.sum():
                         continue
 
                     for k in unique_hrs:
-                        h_idxs = d_idxs & (self.times_tot.day == k)
+                        h_idxs = d_idxs & (self.times_tot.hour == k)
 
                         if not h_idxs.sum():
                             continue
@@ -538,9 +539,10 @@ class Anomaly:
         self.eig_val_cum_sum_arr = np.cumsum(eig_val) / eig_val_sum
 
         _idxs = self.eig_val_cum_sum_arr <= eig_cum_sum_ratio
-        assert _idxs.sum()
 
-        self.n_dims = np.where(_idxs)[0][0] + 1
+        self.n_dims = _idxs.sum()
+        assert self.n_dims
+
         if eig_sum_flag:
             self.n_dims += 1
 
@@ -599,17 +601,16 @@ class Anomaly:
             end_time_all,
             season_months,
             time_fmt='%Y-%m-%d',
-            anom_type_d_nan_rep=None,
+            anom_type_e_nan_rep=None,
             eig_cum_sum_ratio=0.95,
             eig_sum_flag=False,
             fig_out_dir=None,
-            n_cpus=1,
-            sub_daily_flag=False):
+            n_cpus=1):
 
         assert self._vars_read_flag
 
-        if anom_type_d_nan_rep is not None:
-            assert isinstance(anom_type_d_nan_rep, (int, float))
+        if anom_type_e_nan_rep is not None:
+            assert isinstance(anom_type_e_nan_rep, (int, float))
 
         assert isinstance(strt_time, str)
         assert isinstance(end_time, str)
@@ -640,17 +641,16 @@ class Anomaly:
             if not fig_out_dir.exists():
                 fig_out_dir.mkdir()
 
-        self.anom_type_d_nan_rep = anom_type_d_nan_rep
+        self.anom_type_e_nan_rep = anom_type_e_nan_rep
 
         self.calc_anomaly_type_c(
             strt_time_all,
             end_time_all,
             season_months,
             time_fmt,
-            self.anom_type_d_nan_rep,
+            self.anom_type_e_nan_rep,
             fig_out_dir,
-            n_cpus,
-            sub_daily_flag)
+            n_cpus)
 
         corr_mat = np.corrcoef(self.vals_tot_anom.T)
         eig_val, eig_mat = np.linalg.eig(corr_mat)
@@ -661,9 +661,10 @@ class Anomaly:
         self.eig_val_cum_sum_arr = np.cumsum(eig_val) / eig_val_sum
 
         _idxs = self.eig_val_cum_sum_arr <= eig_cum_sum_ratio
-        assert _idxs.sum()
+        self.n_dims = _idxs.sum()
 
-        self.n_dims = np.where(_idxs)[0][0] + 1
+        assert self.n_dims
+
         if eig_sum_flag:
             self.n_dims += 1
 
