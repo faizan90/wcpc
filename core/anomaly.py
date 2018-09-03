@@ -537,7 +537,7 @@ class Anomaly:
         eig_val_sum = eig_val.sum()
         self.eig_val_cum_sum_arr = np.cumsum(eig_val) / eig_val_sum
 
-        _idxs = self.eig_val_cum_sum_arr >= eig_cum_sum_ratio
+        _idxs = self.eig_val_cum_sum_arr <= eig_cum_sum_ratio
         assert _idxs.sum()
 
         self.n_dims = np.where(_idxs)[0][0] + 1
@@ -660,7 +660,7 @@ class Anomaly:
         eig_val_sum = eig_val.sum()
         self.eig_val_cum_sum_arr = np.cumsum(eig_val) / eig_val_sum
 
-        _idxs = self.eig_val_cum_sum_arr >= eig_cum_sum_ratio
+        _idxs = self.eig_val_cum_sum_arr <= eig_cum_sum_ratio
         assert _idxs.sum()
 
         self.n_dims = np.where(_idxs)[0][0] + 1
