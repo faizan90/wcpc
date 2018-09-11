@@ -23,15 +23,15 @@ if __name__ == '__main__':
 
     main_dir = Path(r'P:\Synchronize\IWS\2016_DFG_SPATE\data')
 
-    out_dir = main_dir / r'moving_window_volumes_test_01/ncar_pp'
+    out_dir = main_dir / r'moving_window_volumes_test_01/ncep_pp'
 
-    in_net_cdf_file = main_dir / r'NCAR_ds010.0_19610101_20151231_dailydata_europe.nc'
-    out_anomaly_pkl = out_dir / 'NCAR_ds010.0_19610101_20151231_dailydata_europe_ate.pkl'
-    nc_var_lab = 'slp'
+#     in_net_cdf_file = main_dir / r'NCAR_ds010.0_19610101_20151231_dailydata_europe.nc'
+#     out_anomaly_pkl = out_dir / 'NCAR_ds010.0_19610101_20151231_dailydata_europe_ate.pkl'
+#     nc_var_lab = 'slp'
 
-#     in_net_cdf_file = main_dir / r'ncep_19480101_20141231_level_500.nc'
-#     out_anomaly_pkl = out_dir / 'ncep_500_atd_1948_2014.pkl'
-#     nc_var_lab = 'hgt'
+    in_net_cdf_file = main_dir / r'ncep_1948_2017_level_500_europe.nc'
+    out_anomaly_pkl = out_dir / 'ncep_500_ate_1948_2015.pkl'
+    nc_var_lab = 'hgt'
 
     strt_time = '1961-01-01'
     end_time = '2015-12-31'
@@ -42,8 +42,7 @@ if __name__ == '__main__':
 
     os.chdir(main_dir)
 
-    if not out_dir.exists():
-        out_dir.mkdir()
+    out_dir.mkdir(exist_ok=True)
 
     anomaly = Anomaly()
 
