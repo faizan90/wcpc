@@ -4,7 +4,7 @@
 # cython: cdivision=True
 # cython: language_level=3
 
-### obj_ftns:False;False;True;False;False;False;False;False
+### obj_ftns:True;False;False;False;False;False;False;False
 
 ### op_mp_obj_ftn_flag:True
 
@@ -64,15 +64,23 @@ cpdef get_obj_val(dict args_dict):
         Py_ssize_t m
         DT_UL n_stns
 
-        # arrays for obj. ftn. 3
-        np.ndarray[DT_D_NP_t, ndim=1, mode='c'] ppt_mean_arr
-        np.ndarray[DT_D_NP_t, ndim=2, mode='c'] ppt_cp_mean_arr
+        # ulongs obj. ftn. 1
+        Py_ssize_t p
+        DT_UL n_o_1_threshs
+
+        # arrays for obj. ftn. 1
+        np.ndarray[DT_D_NP_t, ndim=1, mode='c'] o_1_ppt_thresh_arr
+        np.ndarray[DT_D_NP_t, ndim=2, mode='c'] ppt_mean_pis_arr
+        np.ndarray[DT_D_NP_t, ndim=2, mode='c'] stns_obj_1_vals_arr
+        np.ndarray[DT_D_NP_t, ndim=3, mode='c'] ppt_cp_mean_pis_arr
 
     # read everythings from the given dict. Must do explicitly.
     in_ppt_arr = args_dict['in_ppt_arr_calib']
     n_stns = in_ppt_arr.shape[1]
     n_max = max(n_max, n_stns)
     n_time_steps = in_ppt_arr.shape[0]
+    o_1_ppt_thresh_arr = args_dict['o_1_ppt_thresh_arr']
+    n_o_1_threshs = o_1_ppt_thresh_arr.shape[0]
 
     obj_ftn_wts_arr = args_dict['obj_ftn_wts_arr']
     if 'mult_obj_vals_flag' in args_dict:
@@ -101,6 +109,8 @@ cpdef get_obj_val(dict args_dict):
         print('\n')
         print('Getting objective function value...')
         print('n_stns:', n_stns)
+        print('o_1_ppt_thresh_arr:', o_1_ppt_thresh_arr)
+        print('n_o_1_threshs:', n_o_1_threshs)
         print('n_cps:', n_cps)
         print('n_cpus:', n_cpus)
         print('obj_ftn_wts_arr:', obj_ftn_wts_arr)
@@ -115,14 +125,16 @@ cpdef get_obj_val(dict args_dict):
     ppt_cp_n_vals_arr = np.full(n_cps, 0.0, dtype=DT_D_NP)
     obj_vals_arr = np.full(n_gens, 0.0, dtype=DT_D_NP)
 
-    # initialize obj. ftn. 3 variables
-    ppt_mean_arr = np.full(n_stns, 0.0, dtype=DT_D_NP)
-    ppt_cp_mean_arr = np.full((n_cps, n_stns), 0.0, dtype=DT_D_NP)
+    # initialize obj. ftn. 1 variables
+    ppt_mean_pis_arr = np.full((n_stns, n_o_1_threshs), 0.0, dtype=DT_D_NP)
+    ppt_cp_mean_pis_arr = np.full((n_stns, n_cps, n_o_1_threshs), 0.0, dtype=DT_D_NP)
+    stns_obj_1_vals_arr = np.full((n_stns, n_o_1_threshs), 0.0, dtype=DT_D_NP)
 
     # fill some arrays used for obj. 1 and 3 ftns.
     for m in range(n_stns):
-        ppt_mean_arr[m] = np.mean(in_ppt_arr[:, m])
-        assert ((not isnan(ppt_mean_arr[m])) and (ppt_mean_arr[m]> 0))
+        for p in range(n_o_1_threshs):
+            ppt_mean_pis_arr[m, p] = np.mean(in_ppt_arr[:, m] > o_1_ppt_thresh_arr[p])
+            assert (not isnan(ppt_mean_pis_arr[m, p]) and (ppt_mean_pis_arr[m, p] > 0))
 
     # calc obj ftn value
     if mult_obj_vals_flag:
@@ -130,8 +142,11 @@ cpdef get_obj_val(dict args_dict):
             curr_obj_val = obj_ftn_refresh(
                 in_ppt_arr,
                 n_stns,
-                ppt_cp_mean_arr,
-                ppt_mean_arr,
+                ppt_cp_mean_pis_arr,
+                ppt_mean_pis_arr,
+                o_1_ppt_thresh_arr,
+                stns_obj_1_vals_arr,
+                n_o_1_threshs,
                 ppt_cp_n_vals_arr,
                 obj_ftn_wts_arr,
                 mult_sel_cps[i],
@@ -149,8 +164,11 @@ cpdef get_obj_val(dict args_dict):
         curr_obj_val = obj_ftn_refresh(
             in_ppt_arr,
             n_stns,
-            ppt_cp_mean_arr,
-            ppt_mean_arr,
+            ppt_cp_mean_pis_arr,
+            ppt_mean_pis_arr,
+            o_1_ppt_thresh_arr,
+            stns_obj_1_vals_arr,
+            n_o_1_threshs,
             ppt_cp_n_vals_arr,
             obj_ftn_wts_arr,
             sel_cps,
