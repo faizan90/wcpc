@@ -28,6 +28,7 @@ from ..misc.ftns import ret_mp_idxs
 
 
 class PlotCPs:
+
     def __init__(self, msgs=True):
         assert isinstance(msgs, (int, bool))
         self.msgs = msgs
@@ -59,7 +60,7 @@ class PlotCPs:
 
         self._epsg_set_flag = True
         return
-    
+
     def set_bck_shp(self, bck_shp_path=None):
 
         if bck_shp_path is not None:
@@ -204,13 +205,13 @@ class PlotCPs:
         assert n_krige_intervals > 0
 
         assert self.sel_cps_arr.shape[0] == self.anom_arr.shape[0]
-        
+
         assert self.anom_arr.shape[1] == self.n_pts
-        
+
         self.n_krige_intervals = n_krige_intervals
 
         self._prep_coords()
-        
+
         self.best_cps_mean_anoms = np.empty(shape=(self.n_cps, self.n_pts),
                                            dtype=float)
         self.best_cps_std_anoms = np.empty(shape=(self.n_cps,
@@ -230,7 +231,7 @@ class PlotCPs:
                                     self.y_coords_mesh.ravel())
 
         assert self.x_coords_mesh_rav.shape[0] == self.n_pts
-        
+
         for j in range(self.n_cps):
             _ = self.sel_cps_arr == j
             _ = self.anom_arr[_]
@@ -339,7 +340,7 @@ class PlotCPs:
 
             krige_z_coords_mesh = krige_z_coords.reshape(self.krige_pts_shape)
             self.krige_z_coords_mesh[j] = krige_z_coords_mesh
-        
+
         self._kriged_flag = True
         return
 
@@ -412,6 +413,7 @@ class PlotCPs:
 
         if n_cpus == 1:
             _map = list(map(_plot_kriged_cps_partial, _all_gen))
+
         else:
             mp_pool = Pool(processes=n_cpus, maxtasksperchild=1)
             _map = list(mp_pool.imap_unordered(_plot_kriged_cps_partial,
@@ -570,7 +572,7 @@ def _plot_kriged_cps(args,
         cp_min_max_grid = gridspec.GridSpec(1, 2)
         cp_min_ax = plt.subplot(cp_min_max_grid[0, 0])
         cp_max_ax = plt.subplot(cp_min_max_grid[0, 1])
-    
+
         plt.figure(cp_min_max_fig.number)
 
         # Min
@@ -669,7 +671,7 @@ def plot_iter_cp_pcntgs(n_cps,
 
     fig = plt.figure(figsize=fig_size)
     ax = fig.gca()
-    
+
     best_idx = int(np.where(curr_n_iters_arr == best_iter_idx)[0][0])
 
     for i in range(n_cps):

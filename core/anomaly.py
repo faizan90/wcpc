@@ -670,7 +670,9 @@ class Anomaly:
         eig_val = eig_val[sort_idxs]
         eig_mat = eig_mat[:, sort_idxs]
         eig_val_sum = eig_val.sum()
+
         self.eig_val_cum_sum_arr = np.cumsum(eig_val) / eig_val_sum
+        self.eig_vecs_mat = eig_mat
 
         _idxs = self.eig_val_cum_sum_arr <= eig_cum_sum_ratio
         self.n_dims = _idxs.sum()
