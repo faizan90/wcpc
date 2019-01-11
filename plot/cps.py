@@ -15,9 +15,7 @@ import matplotlib.gridspec as gridspec
 
 plt.ioff()
 
-import pyximport
-pyximport.install()
-from krigings import OrdinaryKriging
+from spinterps import OrdinaryKriging
 
 import geostatistics_mixed_vg as gs
 
