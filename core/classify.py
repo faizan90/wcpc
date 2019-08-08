@@ -67,7 +67,7 @@ class CPClassiA(CPOPTBase):
                             temp_adj_iters='auto',
                             min_acc_rate=60,
                             max_acc_rate=80,
-                            max_temp_adj_atmps=500):
+                            max_temp_adj_atmps=10):
 
         self.ini_anneal_temp = ini_anneal_temp
         self.tem_alpha = tem_alpha
@@ -148,7 +148,7 @@ class CPClassiA(CPOPTBase):
 
         _len = in_lens_list[0]
         for curr_len in in_lens_list[1:]:
-            assert curr_len == _len
+            assert curr_len == _len, (curr_len, _len)
 
         assert isinstance(self.op_mp_memb_flag, bool)
         assert isinstance(self.op_mp_obj_ftn_flag, bool)

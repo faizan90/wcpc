@@ -733,6 +733,145 @@ class Anomaly:
                 self.vals_anom, b_j_s, n_cpus, fig_out_dir)
         return
 
+    def calc_anomaly_type_f(
+            self,
+            strt_time,
+            end_time,
+            strt_time_all,
+            end_time_all,
+            season_months,
+            ft_ll_steps_thresh=None,
+            ft_ul_steps_thresh=None,
+            time_fmt='%Y-%m-%d',
+            anom_type_f_nan_rep=None,
+            fig_out_dir=None,
+            n_cpus=1,
+            normalize=True):
+
+        assert self._vars_read_flag
+
+        if anom_type_f_nan_rep is not None:
+            assert isinstance(anom_type_f_nan_rep, (int, float))
+
+        assert isinstance(strt_time, str)
+        assert isinstance(end_time, str)
+
+        assert isinstance(strt_time_all, str)
+        assert isinstance(end_time_all, str)
+
+        assert isinstance(time_fmt, str)
+
+        assert isinstance(n_cpus, int)
+        assert n_cpus > 0
+
+        assert isinstance(season_months, np.ndarray)
+        assert check_nans_finite(season_months)
+        assert season_months.ndim == 1
+        assert np.all(season_months > 0) and (np.all(season_months < 13))
+        assert season_months.shape[0] > 0
+
+        if ft_ll_steps_thresh is not None:
+            assert isinstance(ft_ll_steps_thresh, int)
+            assert ft_ll_steps_thresh > 0
+
+        if ft_ul_steps_thresh is not None:
+            assert isinstance(ft_ul_steps_thresh, int)
+            assert ft_ul_steps_thresh > 0
+
+        assert np.any(
+            (ft_ll_steps_thresh is not None, ft_ul_steps_thresh is not None))
+
+        if ((ft_ll_steps_thresh is not None) and
+            (ft_ul_steps_thresh is not None)):
+
+            assert ft_ll_steps_thresh > ft_ul_steps_thresh
+
+        if fig_out_dir is not None:
+            assert isinstance(fig_out_dir, (Path, str))
+
+            fig_out_dir = Path(fig_out_dir)
+            assert fig_out_dir.parents[0].exists()
+
+            if not fig_out_dir.exists():
+                fig_out_dir.mkdir()
+
+#         curr_time_all_idxs = self.get_time_range_idxs(
+#             strt_time_all, end_time_all, season_months, time_fmt)
+#
+#         curr_time_idxs = self.get_time_range_idxs(
+#             strt_time, end_time, season_months, time_fmt)[curr_time_all_idxs]
+#
+        assert np.unique(season_months).shape[0] == 12
+
+        curr_time_idxs = self.get_time_range_idxs(
+            strt_time, end_time, season_months, time_fmt)
+
+        assert not (curr_time_idxs.sum() % 2), 'Gotta be even steps!'
+
+        self.ft_trans = np.fft.rfft(
+            self.vals_tot_rav[curr_time_idxs, :].copy(order='c'), axis=0)
+
+        assert self.ft_trans.shape[1] == self.vals_tot_rav.shape[1]
+
+        self.times = self.times_tot[curr_time_idxs]
+
+        self.ft_trans_sens = self.ft_trans.copy()
+
+        if ft_ll_steps_thresh is not None:
+            censor_ll_idx = int(curr_time_idxs.sum() / ft_ll_steps_thresh)
+
+            if self.msgs:
+                print('FT censor_ll_idx:', censor_ll_idx)
+
+            assert censor_ll_idx <= (curr_time_idxs.sum() // 2)
+
+            self.ft_trans_sens[:censor_ll_idx, :] = 0.0
+
+        if ft_ul_steps_thresh is not None:
+            censor_ul_idx = int(curr_time_idxs.sum() / ft_ul_steps_thresh)
+
+            if self.msgs:
+                print('FT censor_ul_idx:', censor_ul_idx)
+
+            assert 1 < censor_ul_idx <= (curr_time_idxs.sum() // 2)
+
+            if ft_ll_steps_thresh is not None:
+                assert censor_ul_idx > censor_ll_idx
+
+            self.ft_trans_sens[censor_ul_idx:, :] = 0.0
+
+        self.vals_tot_anom = np.fft.irfft(self.ft_trans_sens, axis=0)
+
+        mean_arr = np.mean(self.vals_tot_anom, axis=0)
+        sigma_arr = np.std(self.vals_tot_anom, axis=0)
+
+        self.vals_tot_anom = (self.vals_tot_anom - mean_arr) / sigma_arr
+
+        if normalize:
+            _anom_min = np.nanmin(self.vals_tot_anom, axis=1)
+            _anom_max = np.nanmax(self.vals_tot_anom, axis=1)
+
+            _1 = self.vals_tot_anom - _anom_min[:, None]
+            _2 = (_anom_max - _anom_min)[:, None]
+
+            self.vals_tot_anom = _1 / _2
+
+        assert not np.any(np.isnan(self.vals_tot_anom))
+
+        if normalize:
+            assert (
+                np.all(self.vals_tot_anom >= 0) and
+                np.all(self.vals_tot_anom <= 1))
+
+        assert self.vals_tot_anom.shape[0] == self.times.shape[0], (
+            self.vals_tot_anom.shape[0], self.times.shape[0])
+
+        if fig_out_dir is not None:
+            if self.msgs:
+                print('Saving anomaly CDF figs in:', fig_out_dir)
+            self._prep_anomaly_mp(self.vals_tot_anom, n_cpus, fig_out_dir)
+        return
+
     @staticmethod
     def _plot_anomaly_cdf(dims_idxs, anoms_arr, fig_out_dir):
 

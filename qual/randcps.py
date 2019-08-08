@@ -280,7 +280,7 @@ class RandCPsPerfComp(CPAssignA, RandCPsGen, ObjVals):
 
         _len = in_lens_list[0]
         for curr_len in in_lens_list[1:]:
-            assert curr_len == _len
+            assert curr_len == _len, (curr_len, _len)
 
         assert isinstance(self.op_mp_obj_ftn_flag, bool)
 

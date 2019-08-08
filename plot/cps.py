@@ -141,7 +141,7 @@ class PlotCPs:
 
         assert isinstance(anom_type, str)
         assert len(anom_type) == 1
-        assert 'b' <= anom_type <= 'd'
+        assert 'b' <= anom_type <= 'f'
 
         self.n_fuzz_nos = fuzz_nos_arr.shape[0]
         self.n_cps = n_cps
