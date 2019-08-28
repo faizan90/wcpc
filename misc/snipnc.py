@@ -182,7 +182,10 @@ class SnipNC:
         _2 = np.sum(_1)
 
         if _2:
-            print_warning('Warning: Duplicate times exists in the input!')
+            print_warning(
+                f'Warning: Duplicate times (n={_2}) exists in the '
+                f'entire input series!')
+
             print_warning('Duplicate times:')
             print_warning(time_idxs[_1])
             print_warning('These are not included in the output.')

@@ -37,7 +37,7 @@ if __name__ == '__main__':
 
     main_dir = Path(r'Q:\CP_Classification_Results\mulde')
 
-    in_net_cdf_file = main_dir / r'NCAR_ds010.0_19800101_20091231_dailydata_europe.nc'
+    in_net_cdf_file = main_dir / r'NCAR_ds010.0_19500101_20151231_dailydata_europe.nc'
 
     in_ppt_df_pkl = main_dir / r'ppt_19500101_20151231_point.pkl'
 
@@ -46,7 +46,7 @@ if __name__ == '__main__':
     in_nebs_stns_pkl = main_dir / r''
 
     in_cats_ppt_df_pkl = main_dir / r'ppt_19500101_20151231_areal.pkl'
-    in_cats_dis_df_pkl = main_dir / r'dis_19500101_20151231.pkl'
+    in_cats_dis_df_pkl = main_dir / r'dis_19500101_20151031.pkl'
 
     in_lorenz_df_pkl = main_dir / r''
 
@@ -55,21 +55,21 @@ if __name__ == '__main__':
 
     cats_areas_df_path = main_dir / r''
 
-    main_out_dir = main_dir / 'seasonal_areal_ppt_cps'
+    main_out_dir = main_dir / 'seasonal_areal_ppt_cps__longer_ts'
 
     suff = ''
     x_coords_lab = 'lon'
     y_coords_lab = 'lat'
     time_lab = 'time'
     anom_var_lab = 'slp'
-    anom_type = 'b'
+    anom_type = 'c'
     nan_anom_val = 0.5
 
     # number of days in between should be even for anom_type = f
-    calib_period_list = [['1980-01-01', '1989-12-31']]
-    valid_period_list = [['1990-01-01', '2009-12-30']]
-    n_cps_list = [4, 8, 12]
-    max_idxs_ct_list = [10]
+    calib_period_list = [['1950-01-01', '1982-12-31'], ['1983-01-01', '2015-10-31']]
+    valid_period_list = [['1983-01-01', '2015-10-31'], ['1950-01-01', '1982-12-31']]
+    n_cps_list = [8]
+    max_idxs_ct_list = [7, 10]
     p_l_list = [1.5]
     temp_red_alpha_list = [0.99]
 
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     anneal_temp_ini = 0.05
     temp_adj_iters = 10000
 
-    n_cpus = 'auto'
+    n_cpus = 3  # 'auto'
 
     no_cp_val = 99
     miss_cp_val = 98

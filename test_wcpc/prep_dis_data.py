@@ -28,12 +28,12 @@ def main():
     in_dis_coords_file = Path(
         r'dis_infilled_1950_2015_daily_coords.csv')
 
-    out_dis_file = Path('dis_19500101_20151231.pkl')
+    out_dis_file = Path('dis_19500101_20151031.pkl')
 
-    out_dis_coords_file = Path('dis_19500101_20151231_coords.pkl')
+    out_dis_coords_file = Path('dis_19500101_20151031_coords.pkl')
 
     stt_time = '1950-01-01'  # same as input
-    end_time = '2015-12-31'
+    end_time = '2015-10-31'
     time_fmt = '%Y-%m-%d'
     sep = ';'
 
