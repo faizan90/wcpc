@@ -17,6 +17,7 @@ from ..alg_dtypes import DT_D_NP
 
 
 class CPHistPlot:
+
     def __init__(self, msgs=True):
         assert isinstance(msgs, (bool, int))
         self.msgs = msgs
@@ -113,6 +114,9 @@ class CPHistPlot:
         if freq == 'D':
             self.freq = pd.offsets.Day()
 
+        else:
+            raise NotImplementedError(f'Frequency: {freq}!')
+
         self._prms_set_flag = True
         return
 
@@ -123,7 +127,7 @@ class CPHistPlot:
 
         assert self.values_ser.shape[0] == self.sel_cps_ser.shape[0]
         if self.n_cens_time is not None:
-            assert self.n_cens_time < self.values_ser.shape[0]
+            assert (1 + (self.n_cens_time * 2)) < self.values_ser.shape[0]
 
         _dates = pd.date_range(self.values_ser.index[0],
                                self.values_ser.index[-1],
@@ -356,7 +360,7 @@ class CPHistPlot:
                 _cp_ct_ser = self._xx_list[j][0][lag]
 
                 _rel_freq = _cp_ct_ser / self.cp_freqs_ser[_cp_ct_ser.index]
-                
+
                 _ax.bar(_dumm_cp_range, _rel_freq.values)
                 _ax.set_xticks(_dumm_cp_range)
 
@@ -386,6 +390,56 @@ class CPHistPlot:
             fig.set_size_inches(*fig_size)
             fig.suptitle(fig_title + '\n(%s)' % prob_lab)
             out_path = out_fig_dir / ((fig_name_suff + '_cond_%s.png') %
+                                      (prob_lab))
+            plt.savefig(str(out_path), bbox_inches='tight', dpi=dpi)
+            plt.close()
+
+            # relative frequencies before/after le_/ge_events
+            fig, ax = plt.subplots(self.tot_splot_rows,
+                                   self.tot_splot_cols,
+                                   sharex=True,
+                                   sharey=False,
+                                   figsize=fig_size)
+
+            prob_lab = self._xx_list[j][2]
+
+            for i, lag in enumerate(self.time_lags_list):
+                _ax = ax[rows_seq[i], cols_seq[i]]
+
+                _cp_ct_ser = self._xx_list[j][0][lag]
+
+                _rel_freq = _cp_ct_ser / self.cp_freqs_ser[_cp_ct_ser.index]
+                _rel_freq /= _rel_freq.sum()
+
+                _ax.bar(_dumm_cp_range, _rel_freq.values)
+                _ax.set_xticks(_dumm_cp_range)
+
+                if rows_seq[i] == rows_seq[-1]:
+                    _ax.set_xticklabels(_cp_ct_ser.index.astype(int))
+                    _ax.set_xlabel('CP')
+                else:
+                    _ax.set_xticklabels([])
+                    _ax.set_xlabel('')
+
+                if cols_seq[i] == 0:
+                    _ax.set_ylabel('Relative CP Frequency')
+                else:
+                    _ax.set_ylabel('')
+
+                _ax.tick_params(axis='both',
+                                which='major',
+                                labelsize=tick_txt_size)
+
+                _at = AnchoredText('lag: %d step(s)' % lag,
+                                   frameon=False,
+                                   loc=2)
+
+                _at.patch.set_boxstyle("round,pad=0.,rounding_size=0.2")
+                _ax.add_artist(_at)
+
+            fig.set_size_inches(*fig_size)
+            fig.suptitle(fig_title + '\n(%s)' % prob_lab)
+            out_path = out_fig_dir / ((fig_name_suff + '_rel_%s.png') %
                                       (prob_lab))
             plt.savefig(str(out_path), bbox_inches='tight', dpi=dpi)
             plt.close()
