@@ -15,11 +15,9 @@ import matplotlib.gridspec as gridspec
 
 plt.ioff()
 
-from spinterps import OrdinaryKriging
+from spinterps import Variogram, OrdinaryKriging
 
-import geostatistics_mixed_vg as gs
-
-from ..misc.ftns import change_pt_crs
+from ..misc.ftns import change_pts_crs
 from ..misc.checks import check_nans_finite
 from ..alg_dtypes import DT_D_NP, DT_UL_NP
 from ..misc.ftns import ret_mp_idxs
@@ -157,9 +155,6 @@ class PlotCPs:
                                      self.x_coords - 360,
                                      self.x_coords)
 
-        krige_x_coords = []
-        krige_y_coords = []
-
         _1 = np.linspace(self.x_coords.min(),
                          self.x_coords.max(),
                          self.n_krige_intervals)
@@ -175,16 +170,11 @@ class PlotCPs:
         self.n_pts_krige = _1_mesh.shape[0] * _1_mesh.shape[1]
         self.krige_pts_shape = _1_mesh.shape
 
-        for i in range(self.n_pts_krige):
-            _1, _2 = change_pt_crs(_1_mesh_rav[i],
-                                   _2_mesh_rav[i],
-                                   self.anom_epsg,
-                                   self.out_epsg)
-            krige_x_coords.append(_1)
-            krige_y_coords.append(_2)
-
-        self.krige_x_coords = np.array(krige_x_coords)
-        self.krige_y_coords = np.array(krige_y_coords)
+        self.krige_x_coords, self.krige_y_coords = change_pts_crs(
+            _1_mesh_rav,
+            _2_mesh_rav,
+            self.anom_epsg,
+            self.out_epsg)
 
         self.krige_x_coords_mesh = self.krige_x_coords.reshape(_1_mesh.shape)
         self.krige_y_coords_mesh = self.krige_y_coords.reshape(_1_mesh.shape)
@@ -284,19 +274,11 @@ class PlotCPs:
             # Reproject to out_epsg
             #==================================================================
 
-            curr_re_x_coords = []
-            curr_re_y_coords = []
-
-            for i in range(curr_x_coord_vals.shape[0]):
-                _1, _2 = change_pt_crs(curr_x_coord_vals[i],
-                                       curr_y_coord_vals[i],
-                                       self.anom_epsg,
-                                       self.out_epsg)
-                curr_re_x_coords.append(_1)
-                curr_re_y_coords.append(_2)
-
-            curr_re_x_coords = np.array(curr_re_x_coords)
-            curr_re_y_coords = np.array(curr_re_y_coords)
+            curr_re_x_coords, curr_re_y_coords = change_pts_crs(
+                curr_x_coord_vals,
+                curr_y_coord_vals,
+                self.anom_epsg,
+                self.out_epsg)
 
             self.cp_x_coords_list.append(curr_re_x_coords)
             self.cp_y_coords_list.append(curr_re_y_coords)
@@ -305,13 +287,14 @@ class PlotCPs:
             #==================================================================
             # Fit Variogram
             #==================================================================
-            variogram = gs.Variogram(x=curr_re_x_coords,
-                                     y=curr_re_y_coords,
-                                     z=curr_cp_vals,
-                                     perm_r_list=[1],
-                                     fit_vgs=['Sph'])
+            variogram = Variogram(
+                x=curr_re_x_coords,
+                y=curr_re_y_coords,
+                z=curr_cp_vals,
+                perm_r_list=[1],
+                fit_vgs=['Sph'])
 
-            variogram.call_vg()
+            variogram.fit()
             fit_vg = variogram.vg_str_list[0]
             assert fit_vg
 

@@ -20,20 +20,21 @@ plt.ioff()
 
 def main():
 
-    main_dir = Path(r'Q:\CP_Classification_Results\mulde')
+    main_dir = Path(r'P:\Synchronize\IWS\Projects\2016_DFG_SPATE\data\cp_classi_for_partners\ts')
     os.chdir(main_dir)
 
-    in_dis_file = Path(r'dis_infilled_1950_2015_daily.csv')
+    in_dis_file = Path(
+        r'P:\Synchronize\IWS\Projects\2016_DFG_SPATE\data\spate_engine_data\Mulde\reorganized_data\mulde_daily_discharge_infilling_20201027__1910_2014\02_combined_station_outputs\infilled_var_df_infill_stns.csv')
 
     in_dis_coords_file = Path(
-        r'dis_infilled_1950_2015_daily_coords.csv')
+        r'P:\Synchronize\IWS\Projects\2016_DFG_SPATE\data\spate_engine_data\Mulde\reorganized_data\mulde_daily_discharge_infilling_20201027__1910_2014\02_combined_station_outputs\infilled_var_df_infill_stns_coords.csv')
 
-    out_dis_file = Path('dis_19500101_20151031.pkl')
+    out_dis_file = Path('dis_mulde_19100101_20141231.pkl')
 
-    out_dis_coords_file = Path('dis_19500101_20151031_coords.pkl')
+    out_dis_coords_file = Path('dis_mulde_19100101_20141231_coords.pkl')
 
-    stt_time = '1950-01-01'  # same as input
-    end_time = '2015-10-31'
+    stt_time = '1910-01-01'  # same as input
+    end_time = '2014-12-31'
     time_fmt = '%Y-%m-%d'
     sep = ';'
 

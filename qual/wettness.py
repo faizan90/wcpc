@@ -14,7 +14,9 @@ from ..misc.checks import check_nans_finite
 
 plt.ioff()
 
+
 class WettnessIndex(QualBases):
+
     def __init__(self, msgs=True):
         super().__init__(msgs)
 
@@ -23,7 +25,7 @@ class WettnessIndex(QualBases):
         self._wettness_cmptd_flag = False
         self._cps_reordered_flag = False
         return
-    
+
     def cmpt_wettness_idx(self):
         self._verify_input()
 
@@ -44,6 +46,8 @@ class WettnessIndex(QualBases):
                 self.ppt_cp_wett_arr[j, m] = _
 
         self.mean_cp_wett_arr = np.round(self.ppt_cp_wett_arr.mean(axis=1), 5)
+        self.min_cp_wett_arr = np.round(self.ppt_cp_wett_arr.min(axis=1), 5)
+        self.max_cp_wett_arr = np.round(self.ppt_cp_wett_arr.max(axis=1), 5)
         self._wettness_cmptd_flag = True
         return
 
@@ -103,7 +107,7 @@ class WettnessIndex(QualBases):
         assert isinstance(fig_size, (tuple, list))
         assert len(fig_size) == 2
         assert all(fig_size)
-        
+
         if self.msgs:
             print('Plotting Wettness index...')
 
@@ -210,6 +214,7 @@ class WettnessIndex(QualBases):
 
 
 class WettnessIndexPCA(WettnessIndex):
+
     def __init__(self, msgs=True):
         super().__init__(msgs)
         self._ppt_ref_arr_set_flag = False

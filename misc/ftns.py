@@ -9,22 +9,43 @@ import pyproj
 import numpy as np
 from scipy.stats import rankdata
 
+# use change_pts_crs as it way faster.
+# def change_pt_crs(x, y, in_epsg, out_epsg):
+#     """
+#     Purpose:
+#         To return the coordinates of given points in a different coordinate system.
+#
+#     Description of arguments:
+#         x (int or float, single or list): The horizontal position of the input point
+#         y (int or float, single or list): The vertical position of the input point
+#         Note: In case of x and y in list form, the output is also in a list form.
+#         in_epsg (string or int): The EPSG code of the input coordinate system
+#         out_epsg (string or int): The EPSG code of the output coordinate system
+#     """
+#     in_crs = pyproj.Proj("+init=EPSG:" + str(in_epsg))
+#     out_crs = pyproj.Proj("+init=EPSG:" + str(out_epsg))
+#     return pyproj.transform(in_crs, out_crs, float(x), float(y))
 
-def change_pt_crs(x, y, in_epsg, out_epsg):
+
+def change_pts_crs(xs, ys, in_epsg, out_epsg):
+
     """
     Purpose:
         To return the coordinates of given points in a different coordinate system.
 
     Description of arguments:
-        x (int or float, single or list): The horizontal position of the input point
-        y (int or float, single or list): The vertical position of the input point
-        Note: In case of x and y in list form, the output is also in a list form.
+        x (array): The horizontal position of the input point
+        y (array): The vertical position of the input point
         in_epsg (string or int): The EPSG code of the input coordinate system
         out_epsg (string or int): The EPSG code of the output coordinate system
     """
-    in_crs = pyproj.Proj("+init=EPSG:" + str(in_epsg))
-    out_crs = pyproj.Proj("+init=EPSG:" + str(out_epsg))
-    return pyproj.transform(in_crs, out_crs, float(x), float(y))
+
+    tfmr = pyproj.Transformer.from_crs(
+        f'EPSG:{in_epsg}', f'EPSG:{out_epsg}', always_xy=True)
+
+    out_crds = tfmr.transform(xs, ys)
+
+    return out_crds
 
 
 def ret_mp_idxs(n_vals, n_cpus):

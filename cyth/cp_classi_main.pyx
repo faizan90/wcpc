@@ -7,7 +7,7 @@
 ### obj_ftns:False;True;False;False;False;False;False;False
 
 ### op_mp_memb_flag:True
-### op_mp_obj_ftn_flag:True
+### op_mp_obj_ftn_flag:False
 
 import numpy as np
 cimport numpy as np
