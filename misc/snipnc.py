@@ -195,6 +195,8 @@ class SnipNC:
 
             assert not np.sum(time_idxs[time_idxs_bool].duplicated())
 
+        assert np.any(time_idxs_bool)
+
         if self.x_min > self.x_max:
             _1 = x_coords >= self.x_min
             _2 = x_coords <= self.x_max
@@ -206,7 +208,6 @@ class SnipNC:
 
         y_coords_bool = (y_coords >= self.y_min) & (y_coords <= self.y_max)
 
-        assert np.any(time_idxs_bool)
         assert np.any(x_coords_bool)
         assert np.any(y_coords_bool)
 

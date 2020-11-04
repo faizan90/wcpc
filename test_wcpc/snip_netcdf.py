@@ -18,20 +18,20 @@ def main():
 
     main_dir = Path(r'P:\Synchronize\IWS\Projects\2016_DFG_SPATE\data')
 
-    in_net_cdf_file = main_dir / r'NCAR_ds010.0_18990101_20171030_dailydata.nc'
-    out_net_cdf_file = main_dir / r'NCAR_ds010.0_19000101_20151231_dailydata_europe.nc'
+    in_net_cdf_file = r'P:\pmsl_1901_2010_daymean.nc'
+    out_net_cdf_file = main_dir / r'pmsl_1901_2010_daymean_europe.nc'
 
     lon_min = 345  # the westward it has upto 355 degrees max
     lat_min = 35
     lon_max = 40  # eastward
     lat_max = 65
 
-    stt_time = '1900-01-01'
-    end_time = '2015-12-31'
+    stt_time = '1901-01-01'
+    end_time = '2010-12-31'
     time_fmt = '%Y-%m-%d'
 
     # list of integers, multiple because NCAR has variable sample times
-    hours_list = [12, 13]  # should be one per day for CP classification
+    hours_list = [10]  # should be one per day for CP classification
 
 #
 #     in_xr_ds = xr.open_dataset(in_net_cdf_file)
