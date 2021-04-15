@@ -27,6 +27,7 @@ class Anomaly:
         self.msgs = msgs
 
         self._vars_read_flag = False
+        self._subset_tss_set_flag = False
         self.nc_ext = 'nc'
         return
 
@@ -202,6 +203,22 @@ class Anomaly:
 
         curr_idxs = (
             (self.times_tot >= strt_time) & ((self.times_tot <= end_time)))
+
+        if self._subset_tss_set_flag:
+
+            assert self.times_tot.union(self._subset_tss).size, (
+                'No common time steps in anomaly and subset!')
+
+            print('Info: Using subset time steps!')
+            subset_idxs = np.zeros_like(self.times_tot, dtype=bool)
+
+            for time_step in self._subset_tss:
+                ts_idx = self.times_tot.get_loc(time_step)
+                subset_idxs[ts_idx] = True
+
+            assert np.any(subset_idxs), 'No subset indices selected!'
+
+            curr_idxs &= subset_idxs
 
         month_idxs = np.zeros(self.times_tot.shape[0], dtype=bool)
 
@@ -566,7 +583,7 @@ class Anomaly:
             b_j_s[:, self.n_dims - 1] = (
                 (b_j_s[:, self.n_dims - 1:] ** 2).sum(axis=1))
 
-        b_j_s = b_j_s[:, :self.n_dims]
+        b_j_s = b_j_s[:,:self.n_dims]
 
         assert check_nans_finite(b_j_s)
 
@@ -696,7 +713,7 @@ class Anomaly:
             b_j_s[:, self.n_dims - 1] = (
                 (b_j_s[:, self.n_dims - 1:] ** 2).sum(axis=1))
 
-        b_j_s = b_j_s[:, :self.n_dims]
+        b_j_s = b_j_s[:,:self.n_dims]
 
         assert check_nans_finite(b_j_s)
 
@@ -809,7 +826,7 @@ class Anomaly:
         assert not (curr_time_idxs.sum() % 2), 'Gotta be even steps!'
 
         self.ft_trans = np.fft.rfft(
-            self.vals_tot_rav[curr_time_idxs, :].copy(order='c'), axis=0)
+            self.vals_tot_rav[curr_time_idxs,:].copy(order='c'), axis=0)
 
         assert self.ft_trans.shape[1] == self.vals_tot_rav.shape[1]
 
@@ -825,7 +842,7 @@ class Anomaly:
 
             assert censor_ll_idx <= (curr_time_idxs.sum() // 2)
 
-            self.ft_trans_sens[:censor_ll_idx, :] = 0.0
+            self.ft_trans_sens[:censor_ll_idx,:] = 0.0
 
         if ft_ul_steps_thresh is not None:
             censor_ul_idx = int(curr_time_idxs.sum() / ft_ul_steps_thresh)
@@ -838,7 +855,7 @@ class Anomaly:
             if ft_ll_steps_thresh is not None:
                 assert censor_ul_idx > censor_ll_idx
 
-            self.ft_trans_sens[censor_ul_idx:, :] = 0.0
+            self.ft_trans_sens[censor_ul_idx:,:] = 0.0
 
         self.vals_tot_anom = np.fft.irfft(self.ft_trans_sens, axis=0)
 
@@ -870,6 +887,21 @@ class Anomaly:
             if self.msgs:
                 print('Saving anomaly CDF figs in:', fig_out_dir)
             self._prep_anomaly_mp(self.vals_tot_anom, n_cpus, fig_out_dir)
+        return
+
+    def set_subset_timesteps(self, subset_time_steps):
+
+        assert isinstance(subset_time_steps, pd.DatetimeIndex), (
+            'subset_time_steps is a pd.DatetimeIndex object!')
+
+        assert subset_time_steps.size, 'Empty subset_time_steps!'
+
+        assert not np.any(pd.isnull(subset_time_steps)), (
+            'NaTs in subset_time_steps!')
+
+        self._subset_tss = subset_time_steps.copy()
+
+        self._subset_tss_set_flag = True
         return
 
     @staticmethod
