@@ -20,13 +20,9 @@ DT_UL_NP = np.uint64
 
 
 cdef DT_D obj_ftn_refresh(
-    const DT_D_NP_t[:, :] in_cats_ppt_arr,
-    const DT_UL n_cats,
-    DT_D_NP_t[:, :, :] cats_ppt_cp_mean_pis_arr,
-    DT_D_NP_t[:, :] cats_ppt_mean_pis_arr,
-    DT_D_NP_t[:] o_2_ppt_thresh_arr,
-    DT_D_NP_t[:, :] cats_obj_2_vals_arr,
-    const DT_UL n_o_2_threshs,
+    const DT_D mean_tri_wet,
+    DT_D_NP_t[:] mean_cp_tri_wet_arr,
+    const DT_D_NP_t[:] tri_wet_arr,
     DT_D_NP_t[:] ppt_cp_n_vals_arr,
     const DT_D_NP_t[:] obj_ftn_wts_arr,
     const DT_UL_NP_t[:] sel_cps,
@@ -39,13 +35,9 @@ cdef DT_D obj_ftn_refresh(
     ) nogil
 
 cdef DT_D obj_ftn_update(
-    const DT_D_NP_t[:, :] in_cats_ppt_arr,
-    const DT_UL n_cats,
-    DT_D_NP_t[:, :, :] cats_ppt_cp_mean_pis_arr,
-    DT_D_NP_t[:, :] cats_ppt_mean_pis_arr,
-    DT_D_NP_t[:] o_2_ppt_thresh_arr,
-    DT_D_NP_t[:, :] cats_obj_2_vals_arr,
-    const DT_UL n_o_2_threshs,
+    const DT_D mean_tri_wet,
+    DT_D_NP_t[:] mean_cp_tri_wet_arr,
+    const DT_D_NP_t[:] tri_wet_arr,
     DT_D_NP_t[:] ppt_cp_n_vals_arr,
     const DT_D_NP_t[:] obj_ftn_wts_arr,
     const DT_UL_NP_t[:] sel_cps,

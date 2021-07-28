@@ -212,9 +212,9 @@ class SnipNC:
         assert np.any(y_coords_bool)
 
         out_nc_ds = in_nc_ds.loc[
-            {self.time_dim_lab: time_idxs_bool,
-             self.x_dim_lab: x_coords_bool,
-             self.y_dim_lab: y_coords_bool}]
+            {self.time_dim_lab: in_nc_ds[self.time_dim_lab][time_idxs_bool],
+             self.x_dim_lab: in_nc_ds[self.x_dim_lab][x_coords_bool],
+             self.y_dim_lab: in_nc_ds[self.y_dim_lab][y_coords_bool]}]
 
         self.out_nc_ds = out_nc_ds
 
