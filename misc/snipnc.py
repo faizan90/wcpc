@@ -201,7 +201,8 @@ class SnipNC:
             _1 = x_coords >= self.x_min
             _2 = x_coords <= self.x_max
 
-            x_coords_bool = np.concatenate((x_coords[_1], x_coords[_2]))
+            # x_coords_bool = np.concatenate((x_coords[_1], x_coords[_2]))
+            x_coords_bool = np.concatenate((np.where(_1)[0], np.where(_2)[0]))
 
         else:
             x_coords_bool = (x_coords >= self.x_min) & (x_coords <= self.x_max)
@@ -211,10 +212,19 @@ class SnipNC:
         assert np.any(x_coords_bool)
         assert np.any(y_coords_bool)
 
-        out_nc_ds = in_nc_ds.loc[
-            {self.time_dim_lab: in_nc_ds[self.time_dim_lab][time_idxs_bool],
-             self.x_dim_lab: in_nc_ds[self.x_dim_lab][x_coords_bool],
-             self.y_dim_lab: in_nc_ds[self.y_dim_lab][y_coords_bool]}]
+        if False:
+            # This fails if there are non-unique time indices in in_nc_ds.
+            out_nc_ds = in_nc_ds.loc[
+                {self.x_dim_lab: in_nc_ds[self.x_dim_lab][x_coords_bool],
+                 self.y_dim_lab: in_nc_ds[self.y_dim_lab][y_coords_bool],
+                 self.time_dim_lab:
+                    in_nc_ds[self.time_dim_lab][time_idxs_bool]}]
+
+        else:
+            out_nc_ds = in_nc_ds.loc[
+                {self.time_dim_lab: time_idxs_bool,
+                 self.x_dim_lab: in_nc_ds[self.x_dim_lab][x_coords_bool],
+                 self.y_dim_lab: in_nc_ds[self.y_dim_lab][y_coords_bool]}]
 
         self.out_nc_ds = out_nc_ds
 
