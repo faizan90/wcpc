@@ -3,10 +3,12 @@ Created on Jan 4, 2018
 
 @author: Faizan-Uni
 '''
+from math import ceil
 from pathlib import Path
 from functools import partial
 from multiprocessing import Pool
 
+import pyproj
 import numpy as np
 import shapefile as shp
 import matplotlib.pyplot as plt
@@ -17,7 +19,7 @@ plt.ioff()
 
 from spinterps import Variogram, OrdinaryKriging
 
-from ..misc.ftns import change_pts_crs
+# from ..misc.ftns import change_pts_crs
 from ..misc.checks import check_nans_finite
 from ..alg_dtypes import DT_D_NP, DT_UL_NP
 from ..misc.ftns import ret_mp_idxs
@@ -124,7 +126,9 @@ class PlotCPs:
         self._anom_arr_set_flag = True
         return
 
-    def set_other_prms(self, fuzz_nos_arr, n_cps, anom_type, in_coords_type='geo'):
+    def set_other_prms(
+            self, fuzz_nos_arr, n_cps, anom_type, in_coords_type='geo'):
+
         assert isinstance(fuzz_nos_arr, np.ndarray)
         assert check_nans_finite(fuzz_nos_arr)
         assert fuzz_nos_arr.ndim == 2
@@ -170,17 +174,23 @@ class PlotCPs:
         self.n_pts_krige = _1_mesh.shape[0] * _1_mesh.shape[1]
         self.krige_pts_shape = _1_mesh.shape
 
-        self.krige_x_coords, self.krige_y_coords = change_pts_crs(
-            _1_mesh_rav,
-            _2_mesh_rav,
-            self.anom_epsg,
-            self.out_epsg)
+#         self.krige_x_coords, self.krige_y_coords = change_pts_crs(
+#             _1_mesh_rav,
+#             _2_mesh_rav,
+#             self.anom_epsg,
+#             self.out_epsg)
+
+        tfmr = pyproj.Transformer.from_crs(
+            f'EPSG:{self.anom_epsg}', f'EPSG:{self.out_epsg}', always_xy=True)
+
+        self.krige_x_coords, self.krige_y_coords = tfmr.transform(
+            _1_mesh_rav, _2_mesh_rav,)
 
         self.krige_x_coords_mesh = self.krige_x_coords.reshape(_1_mesh.shape)
         self.krige_y_coords_mesh = self.krige_y_coords.reshape(_1_mesh.shape)
         return
 
-    def krige(self, n_krige_intervals):
+    def krige(self, n_krige_intervals, cps_to_plot_idxs=None):
         assert self._epsg_set_flag
         assert self._bck_shp_set_flag
         assert self._coords_arr_set_flag
@@ -192,7 +202,8 @@ class PlotCPs:
         assert isinstance(n_krige_intervals, int)
         assert n_krige_intervals > 0
 
-        assert self.sel_cps_arr.shape[0] == self.anom_arr.shape[0]
+        assert self.sel_cps_arr.shape[0] == self.anom_arr.shape[0], (
+            self.sel_cps_arr.shape[0], self.anom_arr.shape[0])
 
         assert self.anom_arr.shape[1] == self.n_pts
 
@@ -221,6 +232,13 @@ class PlotCPs:
         assert self.x_coords_mesh_rav.shape[0] == self.n_pts
 
         for j in range(self.n_cps):
+
+            if cps_to_plot_idxs is not None:
+
+                if (j - self.n_cps) not in cps_to_plot_idxs:
+
+                    continue
+
             _ = self.sel_cps_arr == j
             _ = self.anom_arr[_]
 
@@ -250,6 +268,13 @@ class PlotCPs:
         self.vgs_list = []
 
         for j in range(self.n_cps):
+
+            if cps_to_plot_idxs is not None:
+
+                if (j - self.n_cps) not in cps_to_plot_idxs:
+
+                    continue
+
             if self.msgs:
                 print('Kriging CP:', (j))
 
@@ -274,11 +299,19 @@ class PlotCPs:
             # Reproject to out_epsg
             #==================================================================
 
-            curr_re_x_coords, curr_re_y_coords = change_pts_crs(
-                curr_x_coord_vals,
-                curr_y_coord_vals,
-                self.anom_epsg,
-                self.out_epsg)
+#             curr_re_x_coords, curr_re_y_coords = change_pts_crs(
+#                 curr_x_coord_vals,
+#                 curr_y_coord_vals,
+#                 self.anom_epsg,
+#                 self.out_epsg)
+
+            tfmr = pyproj.Transformer.from_crs(
+                f'EPSG:{self.anom_epsg}',
+                f'EPSG:{self.out_epsg}',
+                always_xy=True)
+
+            curr_re_x_coords, curr_re_y_coords = tfmr.transform(
+                curr_x_coord_vals, curr_y_coord_vals,)
 
             self.cp_x_coords_list.append(curr_re_x_coords)
             self.cp_y_coords_list.append(curr_re_y_coords)
@@ -329,7 +362,8 @@ class PlotCPs:
                         cont_levels,
                         out_figs_dir,
                         fig_size=((10, 7)),
-                        n_cpus=1):
+                        n_cpus=1,
+                        dpi=150):
         assert self._kriged_flag
 
         assert isinstance(cont_levels, np.ndarray)
@@ -350,7 +384,10 @@ class PlotCPs:
         assert isinstance(n_cpus, int)
         assert n_cpus > 0
 
-        n_cpus = max(1, min(n_cpus, int(self.n_cps / 3)))
+        assert isinstance(dpi, int)
+        assert dpi > 0
+
+        n_cpus = max(1, min(n_cpus, int(self.n_cps)))
 
         _plot_kriged_cps_partial = (
             partial(_plot_kriged_cps,
@@ -366,7 +403,8 @@ class PlotCPs:
                     best_cps_min_anoms=self.best_cps_min_anoms,
                     best_cps_max_anoms=self.best_cps_max_anoms,
                     best_cps_std_anoms=self.best_cps_std_anoms,
-                    msgs=self.msgs))
+                    msgs=self.msgs,
+                    dpi=dpi))
 
         _idxs = ret_mp_idxs(self.n_cps, n_cpus)
         cp_nos_list = [_idxs[i: i + 2] for i in range(n_cpus)]
@@ -405,21 +443,71 @@ class PlotCPs:
             print(_map)
         return
 
+    def plot_kriged_cps_comb(
+            self,
+            cont_levels,
+            out_figs_dir,
+            fig_size=((10, 7)),
+            n_cpus=1,
+            dpi=150,
+            cps_to_plot_idxs=None):
 
-def _plot_kriged_cps(args,
-                     fig_size,
-                     bck_polys_list,
-                     krige_x_coords_mesh,
-                     krige_y_coords_mesh,
-                     anom_type,
-                     cont_levels,
-                     out_figs_dir,
-                     x_coords,
-                     y_coords,
-                     best_cps_min_anoms,
-                     best_cps_max_anoms,
-                     best_cps_std_anoms,
-                     msgs):
+        assert self._kriged_flag
+
+        assert isinstance(cont_levels, np.ndarray)
+        assert check_nans_finite(cont_levels)
+        assert cont_levels.ndim == 1
+        assert cont_levels.shape[0] > 0
+
+        assert isinstance(out_figs_dir, (Path, str))
+        out_figs_dir = Path(out_figs_dir)
+        assert out_figs_dir.parents[0].exists()
+        if not out_figs_dir.exists():
+            out_figs_dir.mkdir()
+
+        assert isinstance(fig_size, (tuple, list))
+        assert len(fig_size) == 2
+        assert all(fig_size)
+
+        assert isinstance(n_cpus, int)
+        assert n_cpus > 0
+
+        assert isinstance(dpi, int)
+        assert dpi > 0
+
+        _plot_kriged_cps_comb(
+            self.n_cps,
+            fig_size,
+            self.bck_polys_list,
+            self.krige_x_coords_mesh,
+            self.krige_y_coords_mesh,
+            self.krige_z_coords_mesh,
+            self.cp_x_coords_list,
+            self.cp_y_coords_list,
+            self.anom_type,
+            out_figs_dir,
+            dpi,
+            cps_to_plot_idxs)
+
+        return
+
+
+def _plot_kriged_cps(
+        args,
+        fig_size,
+        bck_polys_list,
+        krige_x_coords_mesh,
+        krige_y_coords_mesh,
+        anom_type,
+        cont_levels,
+        out_figs_dir,
+        x_coords,
+        y_coords,
+        best_cps_min_anoms,
+        best_cps_max_anoms,
+        best_cps_std_anoms,
+        msgs,
+        dpi):
 
     (cp_nos,
      krige_z_coords_mesh,
@@ -427,6 +515,8 @@ def _plot_kriged_cps(args,
      cp_y_coords_list,
      vgs_list,
      cp_rules_arr) = args
+
+    del vgs_list
 
     max_n_coords = 10
     n_x_coords = x_coords.shape[0]
@@ -460,6 +550,17 @@ def _plot_kriged_cps(args,
     cp_std_fig = plt.figure(figsize=fig_size)
     cp_std_ax = cp_std_fig.gca()
 
+    # krige_z_coords_mesh is nomralized between -1.2 and +1.2 for each cp.
+    # This was for for the 2021 iran paper.
+    plt.rcParams['contour.negative_linestyle'] = 'dashed'
+    plt.rcParams['lines.dashed_pattern'] = [5.0, 7.0]  # [dash, white space]
+
+    cont_levels_all = np.linspace(-1, +1, 11)
+
+    # These are for two types of lines.
+    cont_levels_fine = cont_levels_all[
+        (cont_levels_all != +0)]
+
     for j, cp_no in enumerate(range(cp_nos[0], cp_nos[1])):
         if msgs:
             print('Plotting CP No.', cp_no)
@@ -471,21 +572,39 @@ def _plot_kriged_cps(args,
                 cps_ax.add_patch(PolygonPatch(poly,
                                               alpha=0.5,
                                               fc='#999999',
-                                              ec='#999999'))
+                                              ec='#999999',
+                                              zorder=1))
 
-        cs = cps_ax.contour(krige_x_coords_mesh,
-                            krige_y_coords_mesh,
-                            krige_z_coords_mesh[j],
-                            levels=cont_levels,
-                            vmin=0.0,
-                            vmax=1.0,
-                            linestyles='solid',
-                            extend='both')
+        z_vals = krige_z_coords_mesh[j].copy()
+
+        z_vals_min = z_vals.min()
+        z_vals_max = z_vals.max()
+
+        z_vals -= z_vals_min
+        z_vals /= (z_vals_max - z_vals_min)
+
+        z_vals = -1.2 + (1.2 * 2 * z_vals)
+
+        cs = cps_ax.contour(
+            krige_x_coords_mesh,
+            krige_y_coords_mesh,
+            z_vals,
+            levels=cont_levels_fine,
+            vmin=-1,
+            vmax=+1,
+            cmap='seismic',
+            linewidths=2,
+            zorder=10)
 
         if anom_type != 'd':
-            cps_ax.scatter(cp_x_coords_list[j], cp_y_coords_list[j])
+            cps_ax.scatter(
+                cp_x_coords_list[j],
+                cp_y_coords_list[j],
+                color='k',
+                alpha=0.8,
+                zorder=5)
 
-        cps_ax.set_title('CP no. %d, %s' % (cp_no, vgs_list[j]))
+        cps_ax.set_title('CP%d' % (cp_no))
 
         cps_ax.set_xlim(krige_x_coords_mesh.min(),
                         krige_x_coords_mesh.max())
@@ -495,10 +614,46 @@ def _plot_kriged_cps(args,
         cps_ax.set_xlabel('Eastings')
         cps_ax.set_ylabel('Northings')
 
-        cps_ax.clabel(cs, inline=True, inline_spacing=0.01, fontsize=10)
+        cps_ax.set_aspect('equal')
+
+        # A hack to have dashed lines when cmap is used from stackoverflow.
+        cs.monochrome = True
+        for col, ls in zip(cs.collections, cs._process_linestyles()):
+            col.set_linestyle(ls)
+
+        # Show labels for cont_levels_fine.
+        cps_ax.clabel(
+            cs, levels=[-1, 1],
+            inline=True,
+            inline_spacing=0.01,
+            fontsize=12,
+            colors='k',
+            zorder=10,
+            fmt='%0.1f')
+
+        ks = cps_ax.contour(
+            krige_x_coords_mesh,
+            krige_y_coords_mesh,
+            z_vals,
+            levels=[0.0],
+            vmin=-1,
+            vmax=+1,
+            colors='k',
+            linewidths=2,
+            zorder=10)
+
+        cps_ax.clabel(
+            ks,
+            inline=True,
+            inline_spacing=0.01,
+            fontsize=12,
+            colors='k',
+            fmt='%0.1f',
+            zorder=10)
 
         plt.savefig(str(out_figs_dir / ('cp_map_%0.2d.png' % (cp_no))),
-                    bbox_inches='tight')
+                    bbox_inches='tight',
+                    dpi=dpi)
 
         cps_ax.cla()
 
@@ -544,7 +699,8 @@ def _plot_kriged_cps(args,
         cp_std_ax.set_title('Std. CP no. %d' % (cp_no))
 
         plt.savefig(str(out_figs_dir / ('std_cp_map_%0.2d.png' % (cp_no))),
-                    bbox_inches='tight')
+                    bbox_inches='tight',
+                    dpi=dpi)
         cbar.remove()
         cp_std_ax.cla()
 
@@ -599,9 +755,196 @@ def _plot_kriged_cps(args,
 
         plt.savefig(str(out_figs_dir /
                         ('min_max_cp_map_%0.2d.png' % (cp_no))),
-                    bbox_inches='tight')
+                    bbox_inches='tight',
+                    dpi=dpi)
 
         plt.close()
+
+    plt.close('all')
+    return
+
+
+def _plot_kriged_cps_comb(
+        n_cps,
+        fig_size,
+        bck_polys_list,
+        krige_x_coords_mesh,
+        krige_y_coords_mesh,
+        krige_z_coords_mesh,
+        cp_x_coords_list,
+        cp_y_coords_list,
+        anom_type,
+        out_figs_dir,
+        dpi,
+        cps_to_plot_idxs=None):
+
+    from matplotlib.ticker import ScalarFormatter, MaxNLocator
+
+    tick_fmt = ScalarFormatter(useOffset=False)
+    # tick_fmt.set_scientific(False)
+
+    if cps_to_plot_idxs is not None:
+        n_cps = len(cps_to_plot_idxs)
+
+    fs = 12
+    cols = int(ceil(n_cps ** 0.5))
+    rows = ceil(n_cps / cols)
+
+    axes = plt.subplots(
+        rows,
+        cols,
+        squeeze=False,
+        figsize=fig_size,
+        sharex=True,
+        sharey=True)[1]
+
+    # krige_z_coords_mesh is nomralized between -1.2 and +1.2 for each cp.
+    # This was for for the 2021 iran paper.
+    plt.rcParams['contour.negative_linestyle'] = 'dashed'
+    plt.rcParams['lines.dashed_pattern'] = [5.0, 7.0]  # [dash, white space]
+
+    cont_levels_all = np.linspace(-1, +1, 11)
+
+    # These are for two types of lines.
+    cont_levels_fine = cont_levels_all[(cont_levels_all != +0)]
+
+    ax_row = 0
+    ax_col = 0
+    for i in range(rows * cols):
+        cps_ax = axes[ax_row, ax_col]
+
+        if i >= (n_cps):
+            cps_ax.set_axis_off()
+
+        else:
+            if bck_polys_list is not None:
+                for poly in bck_polys_list:
+                    cps_ax.add_patch(PolygonPatch(
+                        poly,
+                        lw=0.5,
+                        alpha=0.5,
+                        fc='#999999',
+                        ec='#999999',
+                        zorder=1))
+
+            cp_idx = cps_to_plot_idxs[i]
+
+            z_vals = krige_z_coords_mesh[cp_idx].copy()
+
+            z_vals_min = z_vals.min()
+            z_vals_max = z_vals.max()
+
+            z_vals -= z_vals_min
+            z_vals /= (z_vals_max - z_vals_min)
+
+            z_vals = -1.2 + (1.2 * 2 * z_vals)
+
+            cs = cps_ax.contour(
+                krige_x_coords_mesh,
+                krige_y_coords_mesh,
+                z_vals,
+                levels=cont_levels_fine,
+                vmin=-1,
+                vmax=+1,
+                cmap='seismic',
+                linewidths=0.5,
+                zorder=10)
+
+            if anom_type != 'd':
+                cps_ax.scatter(
+                    cp_x_coords_list[cp_idx],
+                    cp_y_coords_list[cp_idx],
+                    0.5,
+                    color='k',
+                    alpha=0.8,
+                    zorder=5)
+
+            cps_ax.set_xlim(krige_x_coords_mesh.min(),
+                            krige_x_coords_mesh.max())
+            cps_ax.set_ylim(krige_y_coords_mesh.min(),
+                            krige_y_coords_mesh.max())
+
+            if ax_col:
+                # cps_ax.set_yticklabels([])
+                pass
+
+            else:
+                # # cps_ax.set_ylabel('Northings', fontsize=fs)
+                # cps_ax.set_ylabel('Hochwert', fontsize=fs)
+                # cps_ax.yaxis.set_major_formatter(tick_fmt)
+                # cps_ax.yaxis.set_major_locator(MaxNLocator(4))
+                #
+                # cps_ax.yaxis.get_offset_text().set_fontsize(fs - 2)
+                #
+                # cps_ax.tick_params(
+                #     axis='y', which='major', labelsize=fs)
+
+                cps_ax.get_yaxis().set_ticks([])
+
+            if ax_row < (rows - 1):
+                # cps_ax.set_xticklabels([])
+                pass
+
+            else:
+
+                # # cps_ax.set_xlabel('Eastings', fontsize=fs)
+                # cps_ax.set_xlabel('Rechtswert', fontsize=fs)
+                # cps_ax.xaxis.set_major_formatter(tick_fmt)
+                # cps_ax.xaxis.set_major_locator(MaxNLocator(4))
+                #
+                # cps_ax.xaxis.get_offset_text().set_fontsize(fs - 2)
+                #
+                # cps_ax.tick_params(
+                #     axis='x', which='major', labelsize=fs)
+
+                cps_ax.get_xaxis().set_ticks([])
+
+            cps_ax.set_aspect('equal')
+
+            # A hack to have dashed lines when cmap is used from stackoverflow.
+            cs.monochrome = True
+            for col, ls in zip(cs.collections, cs._process_linestyles()):
+                col.set_linestyle(ls)
+
+            # Show labels for cont_levels_fine.
+            cps_ax.clabel(
+                cs, levels=[-1, 1],
+                inline=True,
+                inline_spacing=0.01,
+                fontsize=fs,
+                colors='k',
+                zorder=10,
+                fmt='%0.1f')
+
+            ks = cps_ax.contour(
+                krige_x_coords_mesh,
+                krige_y_coords_mesh,
+                z_vals,
+                levels=[0.0],
+                vmin=-1,
+                vmax=+1,
+                colors='k',
+                linewidths=0.5,
+                zorder=10)
+
+            cps_ax.clabel(
+                ks,
+                inline=True,
+                inline_spacing=0.01,
+                fontsize=fs,
+                colors='k',
+                fmt='%0.1f',
+                zorder=10)
+
+        ax_col += 1
+        if not (ax_col % cols):
+            ax_row += 1
+            ax_col = 0
+
+    plt.tight_layout()
+
+    plt.savefig(
+        str(out_figs_dir / 'cp_maps.png'), bbox_inches='tight', dpi=dpi)
 
     plt.close('all')
     return

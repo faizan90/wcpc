@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import xarray as xr
+import netCDF4 as nc
 
 from .error_msgs import print_warning
 
@@ -151,6 +152,29 @@ class SnipNC:
         assert self._paths_set_flag
         assert self._coords_set_flag
         assert self._times_set_flag
+
+        in_nc = nc.Dataset(self.in_nc_path, 'a')
+
+        for variable in in_nc.variables:
+
+            c1 = '_FillValue' in in_nc[variable].ncattrs()
+            c2 = 'missing_value' in in_nc[variable].ncattrs()
+
+            if c1 and c2:
+
+                fil_val = in_nc[variable].getncattr('_FillValue')
+                mis_val = in_nc[variable].getncattr('missing_value')
+
+                if fil_val != mis_val:
+
+                    print(
+                        f'_FillValue ({fil_val}) and missing_value '
+                        f'({mis_val}) conflict for attribute: {variable}!')
+
+                in_nc[variable].setncattr('fill_value', mis_val)
+                in_nc[variable].delncattr('_FillValue')
+
+        in_nc.close()
 
         in_nc_ds = xr.open_dataset(self.in_nc_path)
 
